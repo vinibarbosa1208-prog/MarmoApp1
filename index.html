@@ -915,7 +915,11 @@ let currentMarmoraria = null;
 <div class="modal-overlay" id="modal-orcamento">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <div class="modal-title" id="modal-orc-title">Novo Orçamento</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-orcamento')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-orc-title">Novo Orçamento</div>
       <button class="btn-close" onclick="closeModal('modal-orcamento')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -931,7 +935,11 @@ let currentMarmoraria = null;
 <div class="modal-overlay" id="modal-cliente">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="modal-cli-title">Novo Cliente</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-cliente')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-cli-title">Novo Cliente</div>
       <button class="btn-close" onclick="closeModal('modal-cliente')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -963,7 +971,11 @@ let currentMarmoraria = null;
 <div class="modal-overlay" id="modal-estoque">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="modal-est-title">Novo Material</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-estoque')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-est-title">Novo Material</div>
       <button class="btn-close" onclick="closeModal('modal-estoque')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -979,7 +991,11 @@ let currentMarmoraria = null;
 <div class="modal-overlay" id="modal-os">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="modal-os-title">Nova Ordem de Serviço</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-os')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-os-title">Nova Ordem de Serviço</div>
       <button class="btn-close" onclick="closeModal('modal-os')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -1013,7 +1029,12 @@ let currentMarmoraria = null;
 <div class="pricing-modal-overlay" id="modal-servicos">
   <div class="pricing-modal" style="max-width:620px">
     <div class="modal-header">
-      <div class="modal-title">🔧 Adicionar Serviço / Acabamento</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById('modal-servicos').classList.remove('open')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title">Adicionar Serviço / Acabamento</div>
+      </div>
       <button class="btn-close" onclick="document.getElementById('modal-servicos').classList.remove('open')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -1048,7 +1069,12 @@ let currentMarmoraria = null;
 <div class="desenhos-modal-overlay" id="modal-desenhos">
   <div class="desenhos-modal">
     <div class="modal-header">
-      <div class="modal-title">📐 Inserir Desenho Padrão</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-desenhos')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title">Inserir Desenho Padrão</div>
+      </div>
       <button class="btn-close" onclick="closeModal('modal-desenhos')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -1113,38 +1139,12 @@ let currentMarmoraria = null;
 // ═══════════════════════════════════════════
 let state = {
   user: null,
-  company: { name: 'Marmoraria Demo', phone: '(11) 99999-0000', email: 'contato@demo.com' },
-  clientes: [
-    { id: 1, nome: 'João Silva', tipo: 'pf', doc: '123.456.789-00', tel: '(11) 98765-4321', email: 'joao@email.com', origem: 'indicação', obs: '' },
-    { id: 2, nome: 'Construtora ABC', tipo: 'pj', doc: '12.345.678/0001-00', tel: '(11) 3333-4444', email: 'obras@abc.com', origem: 'google', obs: 'Cliente VIP' },
-    { id: 3, nome: 'Maria Souza', tipo: 'pf', doc: '987.654.321-00', tel: '(11) 91234-5678', email: 'maria@email.com', origem: 'instagram', obs: '' },
-  ],
-  orcamentos: [
-    { id: 1, titulo: 'Bancada Cozinha - João Silva', clienteId: 1, data: '2025-04-10', validade: '2025-05-10', status: 'aprovado', pagamento: 'À vista', obs: 'Granito Preto São Gabriel', itens: [
-      { desc: 'Bancada Cozinha Granito Preto São Gabriel 3cm', mat: 'Granito', largura: 2.5, altura: 0.6, esp: '3cm', qtd: 1, vlrm2: 850, total: 1275 },
-      { desc: 'Mão de obra instalação', mat: '-', largura: 0, altura: 0, esp: '-', qtd: 1, vlrm2: 0, total: 400 },
-    ], maoObra: 0, desconto: 0 },
-    { id: 2, titulo: 'Revestimento Banheiro - Construtora ABC', clienteId: 2, data: '2025-04-15', validade: '2025-05-15', status: 'enviado', pagamento: '50% entrada + 50% entrega', obs: '', itens: [
-      { desc: 'Porcelanato Bianco 60x60', mat: 'Porcelanato', largura: 3.0, altura: 2.4, esp: '10mm', qtd: 2, vlrm2: 120, total: 1728 },
-      { desc: 'Rejunte e Instalação', mat: '-', largura: 0, altura: 0, esp: '-', qtd: 1, vlrm2: 0, total: 600 },
-    ], maoObra: 0, desconto: 200 },
-    { id: 3, titulo: 'Soleira Sala - Maria Souza', clienteId: 3, data: '2025-04-20', validade: '2025-05-20', status: 'rascunho', pagamento: 'A combinar', obs: '', itens: [
-      { desc: 'Mármore Branco Carrara Soleira', mat: 'Mármore', largura: 1.2, altura: 0.15, esp: '2cm', qtd: 3, vlrm2: 1200, total: 648 },
-    ], maoObra: 150, desconto: 0 },
-  ],
-  os: [
-    { id: 1, orcId: 1, titulo: 'Bancada João Silva', cliente: 'João Silva', dataProd: '2025-04-22', dataInst: '2025-04-26', endInst: 'Rua das Flores, 100', resp: 'Carlos', status: 'ready', obs: '' },
-    { id: 2, orcId: 2, titulo: 'Revestimento Construtora ABC', cliente: 'Construtora ABC', dataProd: '2025-04-28', dataInst: '2025-05-02', endInst: 'Av. Brasil, 500', resp: 'Marcos', status: 'prod', obs: 'Aguardar liberação do andar' },
-  ],
-  materiais: [
-    { id: 1, nome: 'Granito Preto São Gabriel', cat: 'chapa', unid: 'm²', custo: 280, estoque: 45, minimo: 20 },
-    { id: 2, nome: 'Mármore Branco Carrara', cat: 'chapa', unid: 'm²', custo: 620, estoque: 8, minimo: 15 },
-    { id: 3, nome: 'Porcelanato Bianco 60x60', cat: 'chapa', unid: 'm²', custo: 75, estoque: 120, minimo: 30 },
-    { id: 4, nome: 'Cola para pedras', cat: 'insumo', unid: 'kg', custo: 18, estoque: 40, minimo: 20 },
-    { id: 5, nome: 'Rejunte Branco', cat: 'insumo', unid: 'kg', custo: 12, estoque: 15, minimo: 10 },
-    { id: 6, nome: 'Perfil Alumínio 3m', cat: 'acessório', unid: 'peça', custo: 45, estoque: 30, minimo: 10 },
-  ],
-  nextOrcId: 4, nextCliId: 4, nextOsId: 3, nextMatId: 7,
+  company: { name: '', phone: '', email: '' },
+  clientes: [],
+  orcamentos: [],
+  os: [],
+  materiais: [],
+  nextOrcId: 1, nextCliId: 1, nextOsId: 1, nextMatId: 1,
   editingOrcId: null, editingCliId: null, editingOsId: null, editingMatId: null,
   orcItems: [],
 };
