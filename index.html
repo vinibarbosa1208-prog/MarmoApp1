@@ -218,6 +218,7 @@ let currentMarmoraria = null;
   .form-textarea { resize: vertical; min-height: 80px; }
   .form-row { display: grid; gap: 14px; }
   .form-row-2 { grid-template-columns: 1fr 1fr; }
+  @media(max-width:640px){ .form-row-2,.form-row-3,.form-row-4{ grid-template-columns:1fr; } }
   .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
   .form-row-4 { grid-template-columns: 2fr 1fr 1fr 1fr; }
 
@@ -231,7 +232,9 @@ let currentMarmoraria = null;
     background: var(--white); border-radius: 14px; width: 100%; max-width: 760px;
     max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 32px 80px rgba(0,0,0,0.25);
   }
-  .modal-lg { max-width: 960px; }
+  .modal-lg { max-width: min(96vw, 1000px); }
+  .modal { max-height: 92vh; }
+  .modal-body { padding: 20px 24px; }
   .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; }
   .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
@@ -912,6 +915,92 @@ let currentMarmoraria = null;
 </div>
 
 <!-- MODALS -->
+<!-- QUICK CLIENT MODAL -->
+<div class="modal-overlay" id="modal-quick-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-quick-cliente')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title">Cadastrar Novo Cliente</div>
+      </div>
+      <button class="btn-close" onclick="closeModal('modal-quick-cliente')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">NOME COMPLETO *</label>
+          <input class="form-input" id="qc-nome" placeholder="Nome do cliente">
+        </div>
+        <div class="form-group">
+          <label class="form-label">TIPO</label>
+          <select class="form-select" id="qc-tipo">
+            <option value="pf">Pessoa Física</option>
+            <option value="pj">Pessoa Jurídica</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">TELEFONE / WHATSAPP *</label>
+          <input class="form-input" id="qc-tel" placeholder="(00) 00000-0000" maxlength="15" oninput="maskPhoneInput(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-MAIL</label>
+          <input class="form-input" type="email" id="qc-email" placeholder="email@cliente.com">
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">CPF / CNPJ</label>
+          <input class="form-input" id="qc-doc" placeholder="000.000.000-00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">CEP</label>
+          <input class="form-input" id="qc-cep" placeholder="00000-000" maxlength="9"
+            oninput="maskCEPInput(this)" onblur="fetchCEPQuick()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ENDEREÇO COMPLETO</label>
+        <input class="form-input" id="qc-endereco" placeholder="Rua, número, bairro">
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">CIDADE</label>
+          <input class="form-input" id="qc-cidade" placeholder="Cidade">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ESTADO</label>
+          <input class="form-input" id="qc-estado" placeholder="SP" maxlength="2">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ORIGEM</label>
+        <select class="form-select" id="qc-origem">
+          <option value="indicação">Indicação</option>
+          <option value="google">Google</option>
+          <option value="instagram">Instagram</option>
+          <option value="presencial">Presencial</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">OBSERVAÇÕES</label>
+        <textarea class="form-textarea" id="qc-obs" placeholder="Anotações sobre o cliente..." style="min-height:60px"></textarea>
+      </div>
+      <div id="qc-error" style="color:var(--red);font-size:12px;display:none;margin-top:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-quick-cliente')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveQuickCliente()">💾 Salvar e Selecionar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-orcamento">
   <div class="modal modal-lg">
     <div class="modal-header">
@@ -1537,7 +1626,9 @@ async function sbSaveCliente(data) {
   const payload = {
     marmoraria_id: currentMarmoraria.id,
     nome: data.nome, tipo: data.tipo, cpf_cnpj: data.doc,
-    telefone: data.tel, email: data.email, origem: data.origem, observacoes: data.obs,
+    telefone: data.tel, email: data.email, origem: data.origem,
+    observacoes: data.obs, cep: data.cep||'',
+    endereco: data.endereco||'', cidade: data.cidade||'', estado: data.estado||'',
   };
   if (state.editingCliId && typeof state.editingCliId === 'string') {
     return sb.from('clientes').update(payload).eq('id', state.editingCliId);
@@ -1853,7 +1944,13 @@ function renderOrcForm(o = null) {
       </div>
       <div class="form-group">
         <label class="form-label">CLIENTE</label>
-        <select class="form-select" id="orc-cliente"><option value="">Selecionar cliente...</option>${cliOptions}</select>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="form-select" id="orc-cliente" style="flex:1"><option value="">Selecionar cliente...</option>${cliOptions}</select>
+          <button type="button" class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0;height:40px"
+            onclick="openQuickCliente()" title="Cadastrar novo cliente">
+            + Cliente
+          </button>
+        </div>
       </div>
     </div>
     <div class="form-row form-row-3">
@@ -2171,11 +2268,30 @@ function renderClienteForm(c = null) {
         </select>
       </div>
     </div>
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">CEP</label>
+        <input class="form-input" id="cli-cep" placeholder="00000-000" maxlength="9" value="${c ? (c.cep||'') : ''}"
+          oninput="maskCEPInput(this)" onblur="fetchCEPCli()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ESTADO</label>
+        <input class="form-input" id="cli-estado" placeholder="SP" maxlength="2" value="${c ? (c.estado||'') : ''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">CIDADE</label>
+      <input class="form-input" id="cli-cidade" placeholder="Cidade" value="${c ? (c.cidade||'') : ''}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ENDEREÇO COMPLETO</label>
+      <input class="form-input" id="cli-endereco" placeholder="Rua, número, bairro" value="${c ? (c.endereco||'') : ''}">
+    </div>
     <div class="form-group">
       <label class="form-label">OBSERVAÇÕES</label>
       <textarea class="form-textarea" id="cli-obs" placeholder="Anotações sobre o cliente...">${c ? c.obs : ''}</textarea>
     </div>
-  `;
+  \`;
 }
 
 async function saveCliente() {
@@ -2189,6 +2305,10 @@ async function saveCliente() {
     email: document.getElementById('cli-email').value,
     origem: document.getElementById('cli-origem').value,
     obs: document.getElementById('cli-obs').value,
+    cep: document.getElementById('cli-cep')?.value || '',
+    endereco: document.getElementById('cli-endereco')?.value || '',
+    cidade: document.getElementById('cli-cidade')?.value || '',
+    estado: document.getElementById('cli-estado')?.value || '',
   };
   try {
     const { data: res, error } = await sbSaveCliente(data);
@@ -3591,6 +3711,116 @@ function importarOrcamentoIA() {
   openModal('modal-orcamento');
 
   addAgentMessage('agent', `✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado no formulário. Revise os dados, vincule a um cliente e salve.`);
+}
+
+
+// ─── QUICK CLIENT ─────────────────────────────────────────────
+function maskPhoneInput(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length<=10) v=v.replace(/(\d{2})(\d{4})(\d)/,'($1) $2-$3');
+  else v=v.replace(/(\d{2})(\d{5})(\d)/,'($1) $2-$3');
+  el.value=v;
+}
+function maskCEPInput(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,8);
+  v = v.replace(/(\d{5})(\d)/,'$1-$2');
+  el.value = v;
+}
+async function fetchCEPQuick() {
+  const cep = document.getElementById('qc-cep').value.replace(/\D/g,'');
+  if(cep.length!==8) return;
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const d = await r.json();
+    if(!d.erro) {
+      document.getElementById('qc-cidade').value = d.localidade||'';
+      document.getElementById('qc-estado').value = d.uf||'';
+      document.getElementById('qc-endereco').value = d.logradouro||'';
+    }
+  } catch(e) {}
+}
+
+function openQuickCliente() {
+  // Clear fields
+  ['qc-nome','qc-tel','qc-email','qc-doc','qc-cep','qc-endereco','qc-cidade','qc-estado','qc-obs'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
+  document.getElementById('qc-error').style.display='none';
+  openModal('modal-quick-cliente');
+}
+
+async function saveQuickCliente() {
+  const nome = document.getElementById('qc-nome').value.trim();
+  const tel  = document.getElementById('qc-tel').value.trim();
+  const errEl = document.getElementById('qc-error');
+  if(!nome) { errEl.textContent='Informe o nome do cliente'; errEl.style.display='block'; return; }
+  if(!tel)  { errEl.textContent='Informe o telefone'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+
+  const data = {
+    nome,
+    tipo:     document.getElementById('qc-tipo').value,
+    doc:      document.getElementById('qc-doc').value,
+    tel,
+    email:    document.getElementById('qc-email').value,
+    origem:   document.getElementById('qc-origem').value,
+    obs:      document.getElementById('qc-obs').value,
+    endereco: document.getElementById('qc-endereco').value,
+    cidade:   document.getElementById('qc-cidade').value,
+    estado:   document.getElementById('qc-estado').value,
+    cep:      document.getElementById('qc-cep').value,
+  };
+
+  try {
+    // Save to Supabase
+    const payload = {
+      marmoraria_id: currentMarmoraria.id,
+      nome: data.nome, tipo: data.tipo, cpf_cnpj: data.doc,
+      telefone: data.tel, email: data.email, origem: data.origem,
+      observacoes: data.obs, endereco: data.endereco,
+      cidade: data.cidade, estado: data.estado, cep: data.cep,
+    };
+    const { data: res, error } = await sb.from('clientes').insert(payload).select().single();
+    if(error) throw error;
+
+    // Add to local state
+    const newCli = { id: res.id, nome: res.nome, tipo: res.tipo, doc: res.cpf_cnpj,
+      tel: res.telefone, email: res.email, origem: res.origem, obs: res.observacoes };
+    state.clientes.push(newCli);
+
+    // Update select in orcamento form
+    const sel = document.getElementById('orc-cliente');
+    if(sel) {
+      const opt = document.createElement('option');
+      opt.value = res.id;
+      opt.textContent = res.nome;
+      opt.selected = true;
+      sel.appendChild(opt);
+    }
+
+    closeModal('modal-quick-cliente');
+    showToast(`Cliente "${nome}" cadastrado e selecionado!`, 'ok2');
+  } catch(e) {
+    errEl.textContent = e.message || 'Erro ao salvar cliente';
+    errEl.style.display = 'block';
+  }
+}
+
+
+function fetchCEPCli() {
+  const cep = document.getElementById('cli-cep')?.value?.replace(/\D/g,'');
+  if(!cep || cep.length!==8) return;
+  fetch(`https://viacep.com.br/ws/${cep}/json/`).then(r=>r.json()).then(d=>{
+    if(!d.erro) {
+      const cidade = document.getElementById('cli-cidade');
+      const estado = document.getElementById('cli-estado');
+      const end    = document.getElementById('cli-endereco');
+      if(cidade && !cidade.value) cidade.value = d.localidade||'';
+      if(estado && !estado.value) estado.value = d.uf||'';
+      if(end && !end.value) end.value = d.logradouro||'';
+    }
+  }).catch(()=>{});
 }
 
 // ═══════════════════════════════════════════
