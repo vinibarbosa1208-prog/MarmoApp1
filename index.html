@@ -225,17 +225,21 @@ let currentMarmoraria = null;
   /* ── MODAL ── */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
-    display: none; align-items: center; justify-content: center; padding: 20px;
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 16px; overflow-y: auto;
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: var(--white); border-radius: 14px; width: 100%; max-width: 760px;
-    max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+    background: var(--white); border-radius: 14px; width: 100%; max-width: 860px;
+    max-height: calc(100vh - 32px); display: flex; flex-direction: column;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.25); margin: auto;
+    overflow: hidden;
   }
-  .modal-lg { max-width: min(96vw, 1000px); }
-  .modal { max-height: 92vh; }
-  .modal-body { padding: 20px 24px; }
-  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .modal-lg { max-width: min(calc(100vw - 32px), 1060px); }
+  .modal-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+  .modal-header { padding: 16px 20px; flex-shrink: 0; }
+  .modal-footer { padding: 14px 20px; flex-shrink: 0; }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 10px; }
   .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; }
   .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
   .modal-footer { padding: 16px 24px; border-top: 1px solid var(--marble2); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
@@ -243,22 +247,23 @@ let currentMarmoraria = null;
   .btn-close:hover { background: var(--marble2); color: var(--dark); }
 
   /* ── BUDGET ITEMS ── */
-  .items-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  .items-table th { background: #2D2D2D; color: #FFFFFF; padding: 10px 12px; font-size: 12px; font-weight: 500; text-align: left; }
+  .items-table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 8px; }
+  .items-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+  .items-table th { background: #2D2D2D; color: #FFFFFF; padding: 10px 10px; font-size: 11.5px; font-weight: 500; text-align: left; white-space: nowrap; }
   .items-table th:first-child { border-radius: 8px 0 0 0; }
   .items-table th:last-child { border-radius: 0 8px 0 0; }
-  .items-table td { padding: 8px 6px; border-bottom: 1px solid var(--marble2); vertical-align: middle; }
+  .items-table td { padding: 7px 5px; border-bottom: 1px solid var(--marble2); vertical-align: middle; }
   .items-table input, .items-table select {
-    width: 100%; padding: 7px 9px; border: 1.5px solid var(--marble2); border-radius: 6px;
+    width: 100%; padding: 6px 8px; border: 1.5px solid var(--marble2); border-radius: 6px;
     font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--white); outline: none;
   }
   .items-table input:focus, .items-table select:focus { border-color: var(--gold); }
-  .item-total { font-weight: 600; color: var(--dark); font-size: 13.5px; }
-  .btn-remove { background: none; border: none; cursor: pointer; color: var(--gray); padding: 4px 8px; border-radius: 5px; font-size: 16px; }
+  .item-total { font-weight: 600; color: var(--dark); font-size: 13px; white-space: nowrap; }
+  .btn-remove { background: none; border: none; cursor: pointer; color: var(--gray); padding: 4px 6px; border-radius: 5px; font-size: 16px; }
   .btn-remove:hover { color: var(--red); background: rgba(192,57,43,0.1); }
 
   /* ── TOTAL BOX ── */
-  .total-box { background: var(--dark); border-radius: 10px; padding: 18px 22px; margin-top: 16px; }
+  .total-box { background: var(--dark); border-radius: 10px; padding: 16px 18px; margin-top: 12px; }
   .total-line { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
   .total-line span:first-child { color: rgba(255,255,255,0.6); font-size: 13px; }
   .total-line span:last-child { color: var(--white); font-size: 13px; font-weight: 500; }
@@ -1970,20 +1975,20 @@ function renderOrcForm(o = null) {
       </div>
     </div>
     <hr class="divider">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <strong style="font-size:14px">Itens do Orçamento</strong>
-      <div class="flex gap-2">
-        <button class="btn btn-ghost btn-sm" onclick="openPricingConfig()" title="Configurar preços" style="font-size:11px">⚙️ Markup: <strong id="markup-label">${state.pricing?.markup||3}×</strong></button>
-        <button class="btn btn-outline btn-sm" onclick="applyMarkupToAll()" style="font-size:12px" id="btn-apply-markup">💰 Aplicar a todos</button>
-        <button class="btn btn-outline btn-sm" onclick="openServicos()" style="border-color:var(--blue);color:var(--blue)">🔧 Serviço</button>
-        <button class="btn btn-outline btn-sm" onclick="openDesenhos()" style="border-color:var(--gold);color:var(--gold)">📐 Desenho</button>
-        <button class="btn btn-outline btn-sm" onclick="addItem()">+ Manual</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="openPricingConfig()" title="Configurar preços" style="font-size:11px;padding:6px 10px">⚙️ <strong id="markup-label">${state.pricing?.markup||3}×</strong></button>
+        <button class="btn btn-outline btn-sm" onclick="applyMarkupToAll()" style="font-size:11px;padding:6px 10px" id="btn-apply-markup">💰 Markup</button>
+        <button class="btn btn-outline btn-sm" onclick="openServicos()" style="border-color:var(--blue);color:var(--blue);font-size:11px;padding:6px 10px">🔧 Serviço</button>
+        <button class="btn btn-outline btn-sm" onclick="openDesenhos()" style="border-color:var(--gold);color:var(--gold);font-size:11px;padding:6px 10px">📐 Desenho</button>
+        <button class="btn btn-outline btn-sm" onclick="addItem()" style="font-size:11px;padding:6px 10px">+ Manual</button>
       </div>
     </div>
-    <table class="items-table">
-      <thead><tr><th style="width:30%">Descrição</th><th>Material</th><th>Larg (m)</th><th>Alt (m)</th><th>Qtd</th><th>R$/m²</th><th>Total</th><th></th></tr></thead>
+    <div class="items-table-wrap"><table class="items-table">
+      <thead><tr><th style="width:28%">Descrição</th><th>Material</th><th>Larg(m)</th><th>Alt(m)</th><th>Qtd</th><th>R$/m²</th><th>Total</th><th></th></tr></thead>
       <tbody id="items-tbody"></tbody>
-    </table>
+    </table></div>
     <div class="form-row form-row-2 mt-4">
       <div class="form-group">
         <label class="form-label">MÃO DE OBRA (R$)</label>
