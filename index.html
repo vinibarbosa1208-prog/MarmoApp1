@@ -147,7 +147,7 @@ let currentMarmoraria = null;
   }
   .topbar-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--dark); }
   .topbar-actions { display: flex; align-items: center; gap: 10px; }
-  .content { padding: 28px; flex: 1; }
+  .content { padding: 28px; flex: 1; width: 100%; max-width: none; box-sizing: border-box; }
 
   /* ── BUTTONS ── */
   .btn {
@@ -1853,7 +1853,7 @@ function renderOrcamentos() {
   setPage('Orçamentos',
     `<button class="btn btn-gold" onclick="openNovoOrcamento()">+ Novo Orçamento</button>`,
     `
-    <div class="card">
+    <div class="card" style="width:100%;max-width:none">
       <div class="card-header">
         <span class="card-title">Todos os Orçamentos</span>
         <div class="search-bar">
@@ -1862,8 +1862,19 @@ function renderOrcamentos() {
         </div>
       </div>
       <div class="table-wrap">
-        <table id="orc-table">
-          <thead><tr><th>#</th><th>Título</th><th>Cliente</th><th>Data</th><th>Validade</th><th>Total</th><th>Margem</th><th>Status</th><th>Ações</th></tr></thead>
+        <table id="orc-table" style="width:100%;table-layout:fixed">
+          <colgroup>
+            <col style="width:4%">
+            <col style="width:28%">
+            <col style="width:16%">
+            <col style="width:9%">
+            <col style="width:9%">
+            <col style="width:10%">
+            <col style="width:8%">
+            <col style="width:10%">
+            <col style="width:6%">
+          </colgroup>
+          <thead><tr><th>#</th><th>Título</th><th>Cliente</th><th style="white-space:nowrap">Data</th><th>Validade</th><th style="white-space:nowrap">Total</th><th style="white-space:nowrap">Margem</th><th style="white-space:nowrap">Status</th><th>Ações</th></tr></thead>
           <tbody id="orc-tbody"></tbody>
         </table>
       </div>
@@ -1885,13 +1896,13 @@ function renderOrcTable(list) {
     const margem = custo > 0 ? Math.round((total - custo) / total * 100) : null;
     return `<tr>
       <td class="text-gray text-sm">#${o.id}</td>
-      <td style="font-weight:500;max-width:200px">${o.titulo}</td>
-      <td class="text-gray">${clienteNome(o.clienteId)}</td>
-      <td class="text-sm">${o.data}</td>
-      <td class="text-sm">${o.validade}</td>
-      <td class="font-bold">${fmt(total)}</td>
-      <td>${margem !== null ? `<span class="${margem >= 30 ? 'text-green' : margem >= 15 ? 'text-gold' : 'text-red'}">${margem}%</span>` : '<span class="text-gray">—</span>'}</td>
-      <td>${statusBadge(o.status)}</td>
+      <td style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.titulo}</td>
+      <td class="text-gray" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${clienteNome(o.clienteId)}</td>
+      <td class="text-sm" style="white-space:nowrap">${o.data}</td>
+      <td class="text-sm" style="white-space:nowrap">${o.validade}</td>
+      <td class="font-bold" style="white-space:nowrap">${fmt(total)}</td>
+      <td style="white-space:nowrap">${margem !== null ? `<span class="${margem >= 30 ? 'text-green' : margem >= 15 ? 'text-gold' : 'text-red'}">${margem}%</span>` : '<span class="text-gray">—</span>'}</td>
+      <td style="white-space:nowrap">${statusBadge(o.status)}</td>
       <td>
         <div class="flex gap-2">
           <button class="btn btn-ghost btn-sm btn-icon" title="Visualizar PDF" onclick="viewPDF(${o.id})">📄</button>
