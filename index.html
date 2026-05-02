@@ -147,7 +147,7 @@ let currentMarmoraria = null;
   }
   .topbar-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--dark); }
   .topbar-actions { display: flex; align-items: center; gap: 10px; }
-  .content { padding: 28px; flex: 1; width: 100%; max-width: none; box-sizing: border-box; }
+  .content { padding: 28px; flex: 1; max-width: 100%; box-sizing: border-box; }
 
   /* ── BUTTONS ── */
   .btn {
@@ -167,7 +167,9 @@ let currentMarmoraria = null;
   .btn-icon { padding: 7px; border-radius: 7px; }
 
   /* ── CARDS ── */
-  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); width: 100%; box-sizing: border-box; }
+  .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .hero-actions { display: flex; gap: 12px; }
   .card-header { padding: 18px 22px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; }
   .card-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; }
   .card-body { padding: 22px; }
@@ -218,7 +220,83 @@ let currentMarmoraria = null;
   .form-textarea { resize: vertical; min-height: 80px; }
   .form-row { display: grid; gap: 14px; }
   .form-row-2 { grid-template-columns: 1fr 1fr; }
-  @media(max-width:640px){ .form-row-2,.form-row-3,.form-row-4{ grid-template-columns:1fr; } }
+  @media (max-width: 768px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 300;
+    }
+    .sidebar.mobile-open {
+      transform: translateX(0);
+    }
+    .main {
+      margin-left: 0 !important;
+    }
+    .topbar {
+      padding: 0 16px;
+    }
+    .content {
+      padding: 16px;
+    }
+    .stats-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .dash-grid {
+      grid-template-columns: 1fr;
+    }
+    .kanban {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .plans-grid {
+      grid-template-columns: 1fr;
+    }
+    .modal-overlay {
+      padding: 8px;
+      align-items: flex-start;
+    }
+    .modal, .modal-lg {
+      max-width: 100% !important;
+      width: 100% !important;
+      border-radius: 10px;
+      margin-top: 8px;
+    }
+    .modal-body {
+      padding: 14px 16px;
+    }
+    .form-row-2, .form-row-3, .form-row-4 {
+      grid-template-columns: 1fr;
+    }
+    .topbar-title {
+      font-size: 16px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      min-width: 500px;
+    }
+    .stat-card {
+      padding: 14px 16px;
+    }
+    .stat-value {
+      font-size: 18px;
+    }
+    .items-table {
+      min-width: 540px;
+    }
+    #mobile-menu-btn { display: flex !important; align-items: center; }
+  }
+
+  @media (max-width: 480px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero-actions {
+      flex-direction: column;
+    }
+  }
   .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
   .form-row-4 { grid-template-columns: 2fr 1fr 1fr 1fr; }
 
@@ -235,7 +313,7 @@ let currentMarmoraria = null;
     box-shadow: 0 32px 80px rgba(0,0,0,0.25); margin: auto;
     overflow: hidden;
   }
-  .modal-lg { max-width: min(calc(100vw - 32px), 1060px); }
+  .modal-lg { max-width: min(calc(100vw - 32px), 1100px); width: 100%; }
   .modal-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
   .modal-header { padding: 16px 20px; flex-shrink: 0; }
   .modal-footer { padding: 14px 20px; flex-shrink: 0; }
@@ -912,7 +990,17 @@ let currentMarmoraria = null;
   <!-- MAIN -->
   <div class="main">
     <div class="topbar">
-      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div style="display:flex;align-items:center">
+        <button id="mobile-menu-btn" onclick="toggleMobileSidebar()"
+          style="display:none;background:none;border:none;cursor:pointer;padding:8px;margin-right:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+      </div>
       <div class="topbar-actions" id="topbar-actions"><div id="plan-indicator-wrap"></div></div>
     </div>
     <div class="content" id="page-content"></div>
@@ -1853,7 +1941,7 @@ function renderOrcamentos() {
   setPage('Orçamentos',
     `<button class="btn btn-gold" onclick="openNovoOrcamento()">+ Novo Orçamento</button>`,
     `
-    <div class="card" style="width:100%;max-width:none">
+    <div class="card" style="width:100%">
       <div class="card-header">
         <span class="card-title">Todos os Orçamentos</span>
         <div class="search-bar">
@@ -1865,14 +1953,14 @@ function renderOrcamentos() {
         <table id="orc-table" style="width:100%;table-layout:fixed">
           <colgroup>
             <col style="width:4%">
-            <col style="width:28%">
+            <col style="width:26%">
             <col style="width:16%">
             <col style="width:9%">
             <col style="width:9%">
             <col style="width:10%">
             <col style="width:8%">
-            <col style="width:10%">
-            <col style="width:6%">
+            <col style="width:11%">
+            <col style="width:7%">
           </colgroup>
           <thead><tr><th>#</th><th>Título</th><th>Cliente</th><th style="white-space:nowrap">Data</th><th>Validade</th><th style="white-space:nowrap">Total</th><th style="white-space:nowrap">Margem</th><th style="white-space:nowrap">Status</th><th>Ações</th></tr></thead>
           <tbody id="orc-tbody"></tbody>
@@ -1964,7 +2052,7 @@ function renderOrcForm(o = null) {
         <div style="display:flex;gap:8px;align-items:center">
           <select class="form-select" id="orc-cliente" style="flex:1"><option value="">Selecionar cliente...</option>${cliOptions}</select>
           <button type="button" class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0;height:40px"
-            id="btn-orc-quick-cliente" title="Cadastrar novo cliente">
+            id="btn-orc-quick-cli" title="Cadastrar novo cliente">
             + Cliente
           </button>
         </div>
@@ -2020,28 +2108,14 @@ function renderOrcForm(o = null) {
   renderItemsTable();
   recalcTotal();
 
-  // Bind buttons after innerHTML is set
   setTimeout(() => {
-    const btnPricing = document.getElementById('btn-orc-pricing');
-    const btnMarkup  = document.getElementById('btn-orc-markup');
-    const btnServico = document.getElementById('btn-orc-servico');
-    const btnDesenho = document.getElementById('btn-orc-desenho');
-    const btnItem    = document.getElementById('btn-orc-item');
-    const btnQC      = document.getElementById('btn-orc-quick-cliente');
-    if(btnPricing) btnPricing.onclick = () => openPricingConfig();
-    if(btnMarkup)  btnMarkup.onclick  = () => applyMarkupToAll();
-    if(btnServico) btnServico.onclick = () => openServicos();
-    if(btnDesenho) btnDesenho.onclick = () => openDesenhos();
-    if(btnItem)    btnItem.onclick    = () => addItem();
-    if(btnQC)      btnQC.onclick      = () => openQuickCliente();
-
-    // Delegação de eventos para a tabela de itens (sobrevive aos re-renders do tbody)
-    const tbody = document.getElementById('items-tbody');
-    if (tbody && !tbody._delegated) {
-      tbody.addEventListener('click',  _orcItemsTableHandler);
-      tbody.addEventListener('change', _orcItemsTableHandler);
-      tbody._delegated = true;
-    }
+    const b = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
+    b('btn-orc-pricing',   () => openPricingConfig());
+    b('btn-orc-markup',    () => applyMarkupToAll());
+    b('btn-orc-servico',   () => openServicos());
+    b('btn-orc-desenho',   () => openDesenhos());
+    b('btn-orc-item',      () => addItem());
+    b('btn-orc-quick-cli', () => openQuickCliente());
   }, 0);
 }
 
@@ -2049,52 +2123,45 @@ function renderItemsTable() {
   const tb = document.getElementById('items-tbody');
   if (!tb) return;
   tb.innerHTML = state.orcItems.map((item, i) => `
-    <tr id="item-row-${i}">
-      <td><input value="${item.desc}" data-idx="${i}" data-field="desc" data-type="str" placeholder="Descrição do item"></td>
+    <tr id="item-row-${i}" data-idx="${i}">
+      <td><input value="${item.desc}" data-field="desc" placeholder="Descrição do item"></td>
       <td>
-        <select data-idx="${i}" data-field="mat" data-type="str">
+        <select data-field="mat">
           <option value="-">—</option>
           ${state.materiais.map(m => `<option value="${m.nome}" ${item.mat===m.nome?'selected':''}>${m.nome}</option>`).join('')}
           <option value="Outro" ${item.mat==='Outro'?'selected':''}>Outro</option>
         </select>
       </td>
-      <td><input type="number" value="${item.largura}" step="0.01" data-idx="${i}" data-field="largura" data-type="float" style="width:70px"></td>
-      <td><input type="number" value="${item.altura}" step="0.01" data-idx="${i}" data-field="altura" data-type="float" style="width:70px"></td>
-      <td><input type="number" value="${item.qtd||1}" min="1" data-idx="${i}" data-field="qtd" data-type="int" style="width:55px"></td>
+      <td><input type="number" value="${item.largura}" step="0.01" data-field="largura" style="width:70px"></td>
+      <td><input type="number" value="${item.altura}" step="0.01" data-field="altura" style="width:70px"></td>
+      <td><input type="number" value="${item.qtd||1}" min="1" data-field="qtd" style="width:55px"></td>
       <td style="white-space:nowrap">
         <div style="display:flex;align-items:center;gap:4px">
-          <input type="number" value="${item.vlrm2}" step="0.01" data-idx="${i}" data-field="vlrm2" data-type="float" style="width:75px">
-          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button data-action="auto" data-idx="${i}" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
+          <input type="number" value="${item.vlrm2}" step="0.01" data-field="vlrm2" style="width:75px">
+          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button data-auto="true" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
         </div>
       </td>
       <td class="item-total">${fmt(item.total||0)}</td>
-      <td><button class="btn-remove" data-action="remove" data-idx="${i}">×</button></td>
+      <td><button class="btn-remove" data-remove="true">×</button></td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--gray);padding:20px;font-size:13px">Nenhum item. Clique em "+ Adicionar Item"</td></tr>';
-}
 
-// Handler global para delegação na tbody dos itens
-function _orcItemsTableHandler(e) {
-  const t = e.target;
-  if (e.type === 'click') {
-    const btn = t.closest('[data-action]');
-    if (!btn) return;
-    const idx = parseInt(btn.dataset.idx, 10);
-    const action = btn.dataset.action;
-    if (action === 'remove') return removeItem(idx);
-    if (action === 'auto') return applyAutoPrice(idx);
-    return;
-  }
-  // change/input em inputs/selects com data-idx + data-field
-  const el = t.closest('[data-idx][data-field]');
-  if (!el) return;
-  const idx = parseInt(el.dataset.idx, 10);
-  const field = el.dataset.field;
-  const type = el.dataset.type || 'str';
-  let val = el.value;
-  if (type === 'float') val = parseFloat(val) || 0;
-  else if (type === 'int') val = parseInt(val) || (field === 'qtd' ? 1 : 0);
-  updateItem(idx, field, val);
+  tb.querySelectorAll('input[data-field], select[data-field]').forEach(el => {
+    const row = el.closest('tr[data-idx]');
+    if (!row) return;
+    const i = parseInt(row.dataset.idx);
+    const fld = el.dataset.field;
+    el.addEventListener('input',  () => { let v = el.type==='number'?(parseFloat(el.value)||0):el.value; updateItem(i,fld,v); });
+    el.addEventListener('change', () => { let v = el.type==='number'?(parseFloat(el.value)||0):el.value; updateItem(i,fld,v); });
+  });
+  tb.querySelectorAll('[data-remove]').forEach(btn => {
+    const row = btn.closest('tr[data-idx]');
+    if (row) btn.addEventListener('click', () => removeItem(parseInt(row.dataset.idx)));
+  });
+  tb.querySelectorAll('[data-auto]').forEach(btn => {
+    const row = btn.closest('tr[data-idx]');
+    if (row) btn.addEventListener('click', () => applyAutoPrice(parseInt(row.dataset.idx)));
+  });
 }
 
 function addItem() {
@@ -3887,6 +3954,20 @@ function fetchCEPCli() {
     }
   }).catch(()=>{});
 }
+
+// ═══════════════════════════════════════════
+// MOBILE SIDEBAR
+// ═══════════════════════════════════════════
+function toggleMobileSidebar() {
+  document.querySelector('.sidebar').classList.toggle('mobile-open');
+}
+document.addEventListener('click', (e) => {
+  const sidebar = document.querySelector('.sidebar');
+  const btn = document.getElementById('mobile-menu-btn');
+  if (sidebar && sidebar.classList.contains('mobile-open') && !sidebar.contains(e.target) && e.target !== btn && !(btn && btn.contains(e.target))) {
+    sidebar.classList.remove('mobile-open');
+  }
+});
 
 // ═══════════════════════════════════════════
 // INIT
