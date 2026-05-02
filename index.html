@@ -1964,7 +1964,7 @@ function renderOrcForm(o = null) {
         <div style="display:flex;gap:8px;align-items:center">
           <select class="form-select" id="orc-cliente" style="flex:1"><option value="">Selecionar cliente...</option>${cliOptions}</select>
           <button type="button" class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0;height:40px"
-            onclick="openQuickCliente()" title="Cadastrar novo cliente">
+            id="btn-orc-quick-cliente" title="Cadastrar novo cliente">
             + Cliente
           </button>
         </div>
@@ -1990,11 +1990,11 @@ function renderOrcForm(o = null) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <strong style="font-size:14px">Itens do Orçamento</strong>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-ghost btn-sm" onclick="openPricingConfig()" title="Configurar preços" style="font-size:11px;padding:6px 10px">⚙️ <strong id="markup-label">${state.pricing?.markup||3}×</strong></button>
-        <button class="btn btn-outline btn-sm" onclick="applyMarkupToAll()" style="font-size:11px;padding:6px 10px" id="btn-apply-markup">💰 Markup</button>
-        <button class="btn btn-outline btn-sm" onclick="openServicos()" style="border-color:var(--blue);color:var(--blue);font-size:11px;padding:6px 10px">🔧 Serviço</button>
-        <button class="btn btn-outline btn-sm" onclick="openDesenhos()" style="border-color:var(--gold);color:var(--gold);font-size:11px;padding:6px 10px">📐 Desenho</button>
-        <button class="btn btn-outline btn-sm" onclick="addItem()" style="font-size:11px;padding:6px 10px">+ Manual</button>
+        <button class="btn btn-ghost btn-sm" id="btn-orc-pricing" title="Configurar preços" style="font-size:11px;padding:6px 10px">⚙️ <strong id="markup-label">${state.pricing?.markup||3}×</strong></button>
+        <button class="btn btn-outline btn-sm" id="btn-orc-markup" style="font-size:11px;padding:6px 10px">💰 Markup</button>
+        <button class="btn btn-outline btn-sm" id="btn-orc-servico" style="border-color:var(--blue);color:var(--blue);font-size:11px;padding:6px 10px">🔧 Serviço</button>
+        <button class="btn btn-outline btn-sm" id="btn-orc-desenho" style="border-color:var(--gold);color:var(--gold);font-size:11px;padding:6px 10px">📐 Desenho</button>
+        <button class="btn btn-outline btn-sm" id="btn-orc-item" style="font-size:11px;padding:6px 10px">+ Manual</button>
       </div>
     </div>
     <div class="items-table-wrap"><table class="items-table">
@@ -2019,6 +2019,30 @@ function renderOrcForm(o = null) {
   `;
   renderItemsTable();
   recalcTotal();
+
+  // Bind buttons after innerHTML is set
+  setTimeout(() => {
+    const btnPricing = document.getElementById('btn-orc-pricing');
+    const btnMarkup  = document.getElementById('btn-orc-markup');
+    const btnServico = document.getElementById('btn-orc-servico');
+    const btnDesenho = document.getElementById('btn-orc-desenho');
+    const btnItem    = document.getElementById('btn-orc-item');
+    const btnQC      = document.getElementById('btn-orc-quick-cliente');
+    if(btnPricing) btnPricing.onclick = () => openPricingConfig();
+    if(btnMarkup)  btnMarkup.onclick  = () => applyMarkupToAll();
+    if(btnServico) btnServico.onclick = () => openServicos();
+    if(btnDesenho) btnDesenho.onclick = () => openDesenhos();
+    if(btnItem)    btnItem.onclick    = () => addItem();
+    if(btnQC)      btnQC.onclick      = () => openQuickCliente();
+
+    // Delegação de eventos para a tabela de itens (sobrevive aos re-renders do tbody)
+    const tbody = document.getElementById('items-tbody');
+    if (tbody && !tbody._delegated) {
+      tbody.addEventListener('click',  _orcItemsTableHandler);
+      tbody.addEventListener('change', _orcItemsTableHandler);
+      tbody._delegated = true;
+    }
+  }, 0);
 }
 
 function renderItemsTable() {
@@ -2026,27 +2050,51 @@ function renderItemsTable() {
   if (!tb) return;
   tb.innerHTML = state.orcItems.map((item, i) => `
     <tr id="item-row-${i}">
-      <td><input value="${item.desc}" onchange="updateItem(${i},'desc',this.value)" placeholder="Descrição do item"></td>
+      <td><input value="${item.desc}" data-idx="${i}" data-field="desc" data-type="str" placeholder="Descrição do item"></td>
       <td>
-        <select onchange="updateItem(${i},'mat',this.value)">
+        <select data-idx="${i}" data-field="mat" data-type="str">
           <option value="-">—</option>
           ${state.materiais.map(m => `<option value="${m.nome}" ${item.mat===m.nome?'selected':''}>${m.nome}</option>`).join('')}
           <option value="Outro" ${item.mat==='Outro'?'selected':''}>Outro</option>
         </select>
       </td>
-      <td><input type="number" value="${item.largura}" step="0.01" onchange="updateItem(${i},'largura',parseFloat(this.value)||0)" style="width:70px"></td>
-      <td><input type="number" value="${item.altura}" step="0.01" onchange="updateItem(${i},'altura',parseFloat(this.value)||0)" style="width:70px"></td>
-      <td><input type="number" value="${item.qtd||1}" min="1" onchange="updateItem(${i},'qtd',parseInt(this.value)||1)" style="width:55px"></td>
+      <td><input type="number" value="${item.largura}" step="0.01" data-idx="${i}" data-field="largura" data-type="float" style="width:70px"></td>
+      <td><input type="number" value="${item.altura}" step="0.01" data-idx="${i}" data-field="altura" data-type="float" style="width:70px"></td>
+      <td><input type="number" value="${item.qtd||1}" min="1" data-idx="${i}" data-field="qtd" data-type="int" style="width:55px"></td>
       <td style="white-space:nowrap">
         <div style="display:flex;align-items:center;gap:4px">
-          <input type="number" value="${item.vlrm2}" step="0.01" onchange="updateItem(${i},'vlrm2',parseFloat(this.value)||0)" style="width:75px">
-          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button onclick="applyAutoPrice(${i})" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
+          <input type="number" value="${item.vlrm2}" step="0.01" data-idx="${i}" data-field="vlrm2" data-type="float" style="width:75px">
+          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button data-action="auto" data-idx="${i}" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
         </div>
       </td>
       <td class="item-total">${fmt(item.total||0)}</td>
-      <td><button class="btn-remove" onclick="removeItem(${i})">×</button></td>
+      <td><button class="btn-remove" data-action="remove" data-idx="${i}">×</button></td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--gray);padding:20px;font-size:13px">Nenhum item. Clique em "+ Adicionar Item"</td></tr>';
+}
+
+// Handler global para delegação na tbody dos itens
+function _orcItemsTableHandler(e) {
+  const t = e.target;
+  if (e.type === 'click') {
+    const btn = t.closest('[data-action]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx, 10);
+    const action = btn.dataset.action;
+    if (action === 'remove') return removeItem(idx);
+    if (action === 'auto') return applyAutoPrice(idx);
+    return;
+  }
+  // change/input em inputs/selects com data-idx + data-field
+  const el = t.closest('[data-idx][data-field]');
+  if (!el) return;
+  const idx = parseInt(el.dataset.idx, 10);
+  const field = el.dataset.field;
+  const type = el.dataset.type || 'str';
+  let val = el.value;
+  if (type === 'float') val = parseFloat(val) || 0;
+  else if (type === 'int') val = parseInt(val) || (field === 'qtd' ? 1 : 0);
+  updateItem(idx, field, val);
 }
 
 function addItem() {
