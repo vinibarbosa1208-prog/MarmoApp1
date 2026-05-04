@@ -406,6 +406,71 @@ let currentMarmoraria = null;
   .stock-bar { height: 6px; border-radius: 3px; background: var(--marble2); overflow: hidden; margin-top: 4px; }
   .stock-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
 
+  /* ── WIZARD DE ORÇAMENTO ── */
+  .wizard-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1500;
+    display:none;align-items:flex-start;justify-content:center;
+    padding:20px;overflow-y:auto;
+  }
+  .wizard-overlay.open { display:flex; }
+  .wizard {
+    background:#fff;border-radius:16px;width:100%;max-width:680px;
+    box-shadow:0 32px 80px rgba(0,0,0,0.2);margin:auto;overflow:hidden;
+  }
+  .wizard-header { background:#1A1A2E;padding:20px 24px; }
+  .wizard-title { color:#fff;font-family:'Playfair Display',serif;font-size:18px;font-weight:600;margin-bottom:12px; }
+  .wizard-steps { display:flex;gap:0; }
+  .wizard-step-dot { flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;transition:background 0.3s; }
+  .wizard-step-dot.active { background:#C9A84C; }
+  .wizard-step-dot.done { background:#27AE60; }
+  .wizard-step-label { color:rgba(255,255,255,0.5);font-size:11px;margin-top:8px;letter-spacing:0.5px; }
+  .wizard-body { padding:24px;max-height:60vh;overflow-y:auto; }
+  .wizard-footer { padding:16px 24px;border-top:1px solid #EDE9E2;display:flex;justify-content:space-between;align-items:center;background:#fafafa; }
+  .wizard-section-title { font-size:13px;font-weight:700;color:#888;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px; }
+  .wizard-section-title::after { content:'';flex:1;height:1px;background:#EDE9E2; }
+  .mat-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px; }
+  .mat-card { border:2px solid #EDE9E2;border-radius:10px;padding:14px 12px;cursor:pointer;text-align:center;transition:all 0.15s;background:#F4F1EB; }
+  .mat-card:hover { border-color:#C9A84C;background:#fffbf0; }
+  .mat-card.selected { border-color:#C9A84C;background:rgba(201,168,76,0.1); }
+  .mat-card-icon { font-size:26px;margin-bottom:6px; }
+  .mat-card-name { font-size:12px;font-weight:600;color:#1A1A2E; }
+  .mat-card-price { font-size:11px;color:#8B8B9A;margin-top:2px; }
+  .acabamento-list { display:flex;flex-direction:column;gap:10px; }
+  .acabamento-item { display:flex;align-items:center;justify-content:space-between;background:#F4F1EB;border-radius:8px;padding:12px 14px;border:1.5px solid transparent;transition:border 0.15s; }
+  .acabamento-item.active { border-color:#C9A84C;background:#fffbf0; }
+  .acabamento-left { display:flex;align-items:center;gap:10px; }
+  .acabamento-toggle { width:40px;height:22px;border-radius:11px;background:#D5D0C8;border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0; }
+  .acabamento-toggle::after { content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s; }
+  .acabamento-toggle.on { background:#C9A84C; }
+  .acabamento-toggle.on::after { transform:translateX(18px); }
+  .acabamento-name { font-size:13.5px;font-weight:500;color:#1A1A2E; }
+  .acabamento-unit { font-size:11px;color:#8B8B9A; }
+  .acabamento-qty { display:flex;align-items:center;gap:6px;opacity:0;pointer-events:none;transition:opacity 0.2s; }
+  .acabamento-item.active .acabamento-qty { opacity:1;pointer-events:all; }
+  .acabamento-qty input { width:70px;padding:6px 8px;border:1.5px solid #EDE9E2;border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;text-align:center;outline:none; }
+  .acabamento-qty input:focus { border-color:#C9A84C; }
+  .servico-toggle-row { display:flex;align-items:center;justify-content:space-between;padding:14px;background:#F4F1EB;border-radius:10px;margin-bottom:10px;border:1.5px solid transparent; }
+  .servico-toggle-row.active { border-color:#C9A84C;background:#fffbf0; }
+  .servico-toggle-info h4 { font-size:14px;font-weight:600;color:#1A1A2E; }
+  .servico-toggle-info p { font-size:12px;color:#8B8B9A;margin-top:2px; }
+  .servico-extra { display:none;padding:10px 14px 14px;background:#fffbf0;border-radius:0 0 10px 10px;margin-top:-10px;border:1.5px solid #C9A84C;border-top:none; }
+  .servico-extra.show { display:block; }
+  .adicional-row { display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #EDE9E2;gap:12px; }
+  .adicional-row:last-child { border-bottom:none; }
+  .adicional-name { font-size:13.5px;color:#1A1A2E;flex:1; }
+  .adicional-price { font-size:12px;color:#8B8B9A;margin-right:8px; }
+  .qty-control { display:flex;align-items:center;gap:6px; }
+  .qty-btn { width:28px;height:28px;border-radius:6px;border:1.5px solid #EDE9E2;background:#fff;cursor:pointer;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;color:#1A1A2E;transition:all 0.15s; }
+  .qty-btn:hover { border-color:#C9A84C;color:#C9A84C; }
+  .qty-display { width:32px;text-align:center;font-size:14px;font-weight:600;color:#1A1A2E; }
+  .resumo-linha { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #EDE9E2;font-size:13.5px; }
+  .resumo-linha:last-child { border-bottom:none; }
+  .resumo-label { color:#8B8B9A; }
+  .resumo-valor { font-weight:600;color:#1A1A2E; }
+  .resumo-total { background:#1A1A2E;border-radius:10px;padding:16px 18px;margin-top:14px; }
+  .resumo-total-label { color:#C9A84C;font-size:13px;font-weight:600; }
+  .resumo-total-valor { color:#C9A84C;font-size:22px;font-weight:700;font-family:'Playfair Display',serif; }
+
   /* ── AGENTE IA ── */
   .agent-panel {
     position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--white);
@@ -1314,6 +1379,33 @@ let currentMarmoraria = null;
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 </button>
 
+<!-- WIZARD DE ORÇAMENTO -->
+<div class="wizard-overlay" id="modal-wizard">
+  <div class="wizard">
+    <div class="wizard-header">
+      <div class="wizard-title">Assistente de Orçamento</div>
+      <div class="wizard-steps">
+        <div class="wizard-step-dot active" id="wdot-1"></div>
+        <div style="width:6px"></div>
+        <div class="wizard-step-dot" id="wdot-2"></div>
+        <div style="width:6px"></div>
+        <div class="wizard-step-dot" id="wdot-3"></div>
+        <div style="width:6px"></div>
+        <div class="wizard-step-dot" id="wdot-4"></div>
+        <div style="width:6px"></div>
+        <div class="wizard-step-dot" id="wdot-5"></div>
+      </div>
+      <div class="wizard-step-label" id="wizard-step-label">Etapa 1 de 5 — Material</div>
+    </div>
+    <div class="wizard-body" id="wizard-body"></div>
+    <div class="wizard-footer">
+      <button class="btn btn-outline" id="wizard-btn-back" onclick="wizardBack()" style="display:none">← Voltar</button>
+      <div id="wizard-resumo-mini" style="font-size:13px;color:#8B8B9A"></div>
+      <button class="btn btn-gold" id="wizard-btn-next" onclick="wizardNext()">Continuar →</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1939,7 +2031,10 @@ function renderDashboard() {
 // ═══════════════════════════════════════════
 function renderOrcamentos() {
   setPage('Orçamentos',
-    `<button class="btn btn-gold" onclick="openNovoOrcamento()">+ Novo Orçamento</button>`,
+    `<div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="openNovoOrcamento()" style="font-size:13px">+ Manual</button>
+      <button class="btn btn-gold" onclick="openWizard()">✨ Novo Orçamento</button>
+    </div>`,
     `
     <div class="card" style="width:100%">
       <div class="card-header">
@@ -2077,12 +2172,12 @@ function renderOrcForm(o = null) {
     <hr class="divider">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <strong style="font-size:14px">Itens do Orçamento</strong>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-ghost btn-sm" id="btn-orc-pricing" title="Configurar preços" style="font-size:11px;padding:6px 10px">⚙️ <strong id="markup-label">${state.pricing?.markup||3}×</strong></button>
-        <button class="btn btn-outline btn-sm" id="btn-orc-markup" style="font-size:11px;padding:6px 10px">💰 Markup</button>
-        <button class="btn btn-outline btn-sm" id="btn-orc-servico" style="border-color:var(--blue);color:var(--blue);font-size:11px;padding:6px 10px">🔧 Serviço</button>
-        <button class="btn btn-outline btn-sm" id="btn-orc-desenho" style="border-color:var(--gold);color:var(--gold);font-size:11px;padding:6px 10px">📐 Desenho</button>
-        <button class="btn btn-outline btn-sm" id="btn-orc-item" style="font-size:11px;padding:6px 10px">+ Manual</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button type="button" id="btn-orc-pricing" onclick="window.openPricingConfig && window.openPricingConfig()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">⚙️ <strong id="markup-label">${state.pricing?.markup||3}</strong>×</button>
+        <button type="button" id="btn-orc-markup" onclick="window.applyMarkupToAll && window.applyMarkupToAll()" style="background:none;border:1px solid #ddd;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer">💰 Markup</button>
+        <button type="button" id="btn-orc-servico" onclick="window.openServicos && window.openServicos()" style="background:#fff;border:1px solid rgba(41,128,185,0.4);color:#2980B9;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:500">🔧 Serviço</button>
+        <button type="button" id="btn-orc-desenho" onclick="window.openDesenhos && window.openDesenhos()" style="background:#fff;border:1px solid rgba(201,168,76,0.4);color:#a07820;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:500">📐 Desenho</button>
+        <button type="button" id="btn-orc-item" onclick="window.addItem && window.addItem()" style="background:#1A1A2E;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600">+ Item</button>
       </div>
     </div>
     <div class="items-table-wrap"><table class="items-table">
@@ -2108,15 +2203,32 @@ function renderOrcForm(o = null) {
   renderItemsTable();
   recalcTotal();
 
-  setTimeout(() => {
-    const b = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
-    b('btn-orc-pricing',   () => openPricingConfig());
-    b('btn-orc-markup',    () => applyMarkupToAll());
-    b('btn-orc-servico',   () => openServicos());
-    b('btn-orc-desenho',   () => openDesenhos());
-    b('btn-orc-item',      () => addItem());
-    b('btn-orc-quick-cli', () => openQuickCliente());
-  }, 0);
+  // Expor funções no window IMEDIATAMENTE (antes do setTimeout) para o onclick inline
+  window.openPricingConfig = openPricingConfig;
+  window.applyMarkupToAll  = applyMarkupToAll;
+  window.openServicos      = openServicos;
+  window.openDesenhos      = openDesenhos;
+  window.addItem           = addItem;
+  window.openQuickCliente  = openQuickCliente;
+  window.removeItem        = removeItem;
+  window.updateItem        = updateItem;
+  window.applyAutoPrice    = applyAutoPrice;
+
+  setTimeout(function() {
+    var pairs = [
+      ['btn-orc-pricing',   function() { try { openPricingConfig(); } catch(e) { console.error('[btn-orc-pricing]', e); } }],
+      ['btn-orc-markup',    function() { try { applyMarkupToAll();  } catch(e) { console.error('[btn-orc-markup]',  e); } }],
+      ['btn-orc-servico',   function() { try { openServicos();      } catch(e) { console.error('[btn-orc-servico]', e); } }],
+      ['btn-orc-desenho',   function() { try { openDesenhos();      } catch(e) { console.error('[btn-orc-desenho]', e); } }],
+      ['btn-orc-item',      function() { try { addItem();           } catch(e) { console.error('[btn-orc-item]',    e); } }],
+      ['btn-orc-quick-cli', function() { try { openQuickCliente();  } catch(e) { console.error('[btn-orc-quick-cli]',e); } }],
+    ];
+    pairs.forEach(function(p) {
+      var el = document.getElementById(p[0]);
+      if (el) { el.onclick = p[1]; console.log('[orc-form] bound', p[0]); }
+      else    { console.warn('[orc-form] missing', p[0]); }
+    });
+  }, 50);
 }
 
 function renderItemsTable() {
@@ -2138,30 +2250,38 @@ function renderItemsTable() {
       <td style="white-space:nowrap">
         <div style="display:flex;align-items:center;gap:4px">
           <input type="number" value="${item.vlrm2}" step="0.01" data-field="vlrm2" style="width:75px">
-          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button data-auto="true" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
+          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button data-auto="1" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
         </div>
       </td>
       <td class="item-total">${fmt(item.total||0)}</td>
-      <td><button class="btn-remove" data-remove="true">×</button></td>
+      <td><button class="btn-remove" data-remove="1">×</button></td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--gray);padding:20px;font-size:13px">Nenhum item. Clique em "+ Adicionar Item"</td></tr>';
 
-  tb.querySelectorAll('input[data-field], select[data-field]').forEach(el => {
-    const row = el.closest('tr[data-idx]');
-    if (!row) return;
-    const i = parseInt(row.dataset.idx);
-    const fld = el.dataset.field;
-    el.addEventListener('input',  () => { let v = el.type==='number'?(parseFloat(el.value)||0):el.value; updateItem(i,fld,v); });
-    el.addEventListener('change', () => { let v = el.type==='number'?(parseFloat(el.value)||0):el.value; updateItem(i,fld,v); });
-  });
-  tb.querySelectorAll('[data-remove]').forEach(btn => {
-    const row = btn.closest('tr[data-idx]');
-    if (row) btn.addEventListener('click', () => removeItem(parseInt(row.dataset.idx)));
-  });
-  tb.querySelectorAll('[data-auto]').forEach(btn => {
-    const row = btn.closest('tr[data-idx]');
-    if (row) btn.addEventListener('click', () => applyAutoPrice(parseInt(row.dataset.idx)));
-  });
+  setTimeout(function() {
+    var rows = tb.querySelectorAll('tr[data-idx]');
+    rows.forEach(function(row) {
+      var idx = parseInt(row.getAttribute('data-idx'));
+      var inputs = row.querySelectorAll('input, select');
+      inputs.forEach(function(inp) {
+        var field = inp.getAttribute('data-field');
+        if (field) {
+          inp.oninput = inp.onchange = function() {
+            var val = inp.type === 'number' ? (parseFloat(inp.value) || 0) : inp.value;
+            updateItem(idx, field, val);
+          };
+        }
+      });
+      var removeBtn = row.querySelector('[data-remove]');
+      if (removeBtn) {
+        removeBtn.onclick = function() { removeItem(idx); };
+      }
+      var autoBtn = row.querySelector('[data-auto]');
+      if (autoBtn) {
+        autoBtn.onclick = function() { applyAutoPrice(idx); };
+      }
+    });
+  }, 0);
 }
 
 function addItem() {
@@ -3548,6 +3668,378 @@ function inserirDesenho() {
 
 
 // ═══════════════════════════════════════════
+// WIZARD DE ORÇAMENTO GUIADO
+// ═══════════════════════════════════════════
+let wiz = { step:1 };
+
+const ADICIONAIS_PADRAO = [
+  { id:'cuba_inox',  nome:'Cuba Inox 50x40cm',     preco:280, qtd:0 },
+  { id:'cuba_louca', nome:'Cuba de Louça',          preco:320, qtd:0 },
+  { id:'torneira',   nome:'Torneira Cromada',       preco:180, qtd:0 },
+  { id:'valvula',    nome:'Válvula de Escoamento',  preco:45,  qtd:0 },
+  { id:'sifao',      nome:'Sifão Flexível',         preco:55,  qtd:0 },
+  { id:'perfil_alu', nome:'Perfil Alumínio (3m)',   preco:90,  qtd:0 },
+  { id:'cola_pedra', nome:'Cola para Pedra (5kg)',  preco:85,  qtd:0 },
+  { id:'rejunte',    nome:'Rejunte (kg)',            preco:25,  qtd:0 },
+];
+
+function openWizard() {
+  wiz = {
+    step:1, totalSteps:5,
+    materialTipo:null, materialItem:null, materialNome:'', materialCusto:0,
+    customNome:'', customCusto:0,
+    largura:0, altura:0, qtdPecas:1,
+    acabamentos:{
+      meiaEsquadria:{ ativo:false, ml:0, preco:55 },
+      bordaReta:    { ativo:false, ml:0, preco:35 },
+      polimento:    { ativo:false, m2:0, preco:80 },
+      corteEspecial:{ ativo:false, ml:0, preco:65 },
+    },
+    colocacao:{ ativo:false, preco:120 },
+    frete:{ ativo:false, km:0 },
+    adicionais: ADICIONAIS_PADRAO.map(a => ({...a})),
+    clienteId:null, titulo:'', pagamento:'À vista',
+  };
+  wizRender();
+  document.getElementById('modal-wizard').classList.add('open');
+}
+
+function closeWizard() {
+  document.getElementById('modal-wizard').classList.remove('open');
+}
+
+function wizUpdateDots() {
+  for(let i=1;i<=5;i++) {
+    const d = document.getElementById('wdot-'+i);
+    if(d) d.className = 'wizard-step-dot'+(i<wiz.step?' done':i===wiz.step?' active':'');
+  }
+  const labels = ['Material','Acabamentos','Serviços','Adicionais','Resumo'];
+  document.getElementById('wizard-step-label').textContent = `Etapa ${wiz.step} de 5 - ${labels[wiz.step-1]}`;
+  document.getElementById('wizard-btn-back').style.display = wiz.step>1?'inline-flex':'none';
+  const nb = document.getElementById('wizard-btn-next');
+  nb.textContent = wiz.step===5?'Gerar Orçamento':'Continuar';
+  const total = calcWizTotal();
+  const mini = document.getElementById('wizard-resumo-mini');
+  if(mini) mini.textContent = total>0?'Total: '+fmt(total):'';
+}
+
+function wizRender() {
+  wizUpdateDots();
+  const body = document.getElementById('wizard-body');
+  if(!body) return;
+  switch(wiz.step) {
+    case 1: body.innerHTML = wizStep1(); wizBindStep1(); break;
+    case 2: body.innerHTML = wizStep2(); wizBindStep2(); break;
+    case 3: body.innerHTML = wizStep3(); wizBindStep3(); break;
+    case 4: body.innerHTML = wizStep4(); wizBindStep4(); break;
+    case 5: body.innerHTML = wizStep5(); wizBindStep5(); break;
+  }
+}
+
+function wizardNext() {
+  if(wiz.step===1) {
+    if(!wiz.materialItem){ showToast('Selecione um material','err'); return; }
+    if(!wiz.largura||!wiz.altura){ showToast('Informe as dimensões','err'); return; }
+  }
+  if(wiz.step===5){ wizGerarOrcamento(); return; }
+  wiz.step++;
+  wizRender();
+}
+
+function wizardBack() {
+  if(wiz.step>1){ wiz.step--; wizRender(); }
+}
+
+function calcFrete(km) {
+  if(km<=10) return 120;
+  if(km<=30) return 200;
+  if(km<=60) return 350;
+  return 500+(km-60)*3;
+}
+
+function calcWizTotal() {
+  const markup = state.pricing?.markup||3;
+  const area = wiz.largura*wiz.altura*wiz.qtdPecas;
+  const totalMat = area*(wiz.materialCusto||0)*markup;
+  let totalAcab=0;
+  Object.values(wiz.acabamentos).forEach(a=>{ if(a.ativo) totalAcab+=(a.ml||a.m2||0)*a.preco; });
+  const totalColoc = wiz.colocacao.ativo?area*wiz.colocacao.preco:0;
+  const totalFrete = wiz.frete.ativo?calcFrete(wiz.frete.km):0;
+  const totalAdic  = wiz.adicionais.reduce((s,a)=>s+a.qtd*a.preco,0);
+  return totalMat+totalAcab+totalColoc+totalFrete+totalAdic;
+}
+
+function wizStep1() {
+  const tipos=[
+    {id:'granito',icon:'G',nome:'Granito'},
+    {id:'marmore',icon:'M',nome:'Mármore'},
+    {id:'porcelanato',icon:'P',nome:'Porcelanato'},
+    {id:'quartzito',icon:'Q',nome:'Quartzito'},
+    {id:'outro',icon:'O',nome:'Outro'},
+  ];
+  const mats = state.materiais.filter(m=>m.cat==='chapa');
+  return `
+    <div class="wizard-section-title">Tipo de Material</div>
+    <div class="mat-grid" id="wiz-tipos">
+      ${tipos.map(t=>`<div class="mat-card ${wiz.materialTipo===t.id?'selected':''}" data-tipo="${t.id}"><div class="mat-card-icon">${t.icon}</div><div class="mat-card-name">${t.nome}</div></div>`).join('')}
+    </div>
+    <div class="wizard-section-title">Material do Estoque</div>
+    <select id="wiz-mat-sel" class="form-select" style="margin-bottom:16px">
+      <option value="">Selecionar material...</option>
+      ${mats.map(m=>`<option value="${m.id}" data-custo="${m.custo}" data-nome="${m.nome}" ${wiz.materialItem===m.id?'selected':''}>${m.nome} - R$${m.custo}/m2</option>`).join('')}
+      <option value="custom">+ Outro (digitar preço)</option>
+    </select>
+    <div id="wiz-custom-wrap" style="display:${wiz.materialItem==='custom'?'block':'none'};margin-bottom:16px">
+      <label class="form-label">DESCRIÇÃO</label>
+      <input class="form-input" id="wiz-custom-nome" placeholder="Ex: Granito Especial" style="margin-bottom:8px" value="${wiz.customNome||''}">
+      <label class="form-label">CUSTO POR M2 (R$)</label>
+      <input class="form-input" type="number" id="wiz-custom-custo" placeholder="0,00" value="${wiz.customCusto||''}">
+    </div>
+    <div class="wizard-section-title">Dimensões</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">LARGURA (m)</label>
+        <input class="form-input" type="number" id="wiz-larg" step="0.01" min="0" placeholder="0,00" value="${wiz.largura||''}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">COMPRIMENTO (m)</label>
+        <input class="form-input" type="number" id="wiz-alt" step="0.01" min="0" placeholder="0,00" value="${wiz.altura||''}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">QTD. PEÇAS</label>
+        <input class="form-input" type="number" id="wiz-qtd" step="1" min="1" placeholder="1" value="${wiz.qtdPecas||1}">
+      </div>
+    </div>
+    <div id="wiz-area-prev" style="margin-top:12px;background:#F4F1EB;border-radius:8px;padding:10px 14px;font-size:13px;color:#8B8B9A">Preencha as dimensões para ver a área</div>
+  `;
+}
+
+function wizBindStep1() {
+  document.querySelectorAll('#wiz-tipos .mat-card').forEach(c=>{
+    c.onclick=()=>{ wiz.materialTipo=c.dataset.tipo; document.querySelectorAll('#wiz-tipos .mat-card').forEach(x=>x.classList.remove('selected')); c.classList.add('selected'); };
+  });
+  const sel=document.getElementById('wiz-mat-sel');
+  if(sel) sel.onchange=()=>{
+    if(sel.value==='custom'){ document.getElementById('wiz-custom-wrap').style.display='block'; wiz.materialItem='custom'; wiz.materialCusto=0; }
+    else { document.getElementById('wiz-custom-wrap').style.display='none'; wiz.materialItem=sel.value; const o=sel.options[sel.selectedIndex]; wiz.materialCusto=parseFloat(o.dataset.custo)||0; wiz.materialNome=o.dataset.nome||''; }
+  };
+  const cc=document.getElementById('wiz-custom-custo');
+  const cn=document.getElementById('wiz-custom-nome');
+  if(cc) cc.oninput=()=>{ wiz.customCusto=parseFloat(cc.value)||0; wiz.materialCusto=wiz.customCusto; };
+  if(cn) cn.oninput=()=>{ wiz.customNome=cn.value; wiz.materialNome=cn.value; };
+  const upd=()=>{
+    wiz.largura=parseFloat(document.getElementById('wiz-larg').value)||0;
+    wiz.altura=parseFloat(document.getElementById('wiz-alt').value)||0;
+    wiz.qtdPecas=parseInt(document.getElementById('wiz-qtd').value)||1;
+    const area=wiz.largura*wiz.altura*wiz.qtdPecas;
+    const mk=state.pricing?.markup||3;
+    const pv=(wiz.materialCusto||0)*mk;
+    const prev=document.getElementById('wiz-area-prev');
+    if(prev&&area>0) prev.innerHTML=`<div style="display:flex;gap:24px;flex-wrap:wrap"><span>Área: <strong>${area.toFixed(3)} m2</strong></span><span>Preço venda: <strong>R$ ${pv.toFixed(2)}/m2</strong></span><span style="color:#1A1A2E;font-weight:700">Subtotal: <strong>R$ ${(area*pv).toFixed(2)}</strong></span></div>`;
+    else if(prev) prev.textContent='Preencha as dimensões para ver a área';
+    wizUpdateDots();
+  };
+  ['wiz-larg','wiz-alt','wiz-qtd'].forEach(id=>{ const el=document.getElementById(id); if(el) el.oninput=upd; });
+  if(wiz.largura>0) upd();
+}
+
+function wizStep2() {
+  const acs=[
+    {key:'meiaEsquadria',nome:'Meia Esquadria',unid:'ml',preco:wiz.acabamentos.meiaEsquadria.preco},
+    {key:'bordaReta',nome:'Borda Reta Polida',unid:'ml',preco:wiz.acabamentos.bordaReta.preco},
+    {key:'polimento',nome:'Polimento',unid:'m2',preco:wiz.acabamentos.polimento.preco},
+    {key:'corteEspecial',nome:'Corte Especial',unid:'ml',preco:wiz.acabamentos.corteEspecial.preco},
+  ];
+  return `
+    <div class="wizard-section-title">Acabamentos</div>
+    <p style="font-size:13px;color:#8B8B9A;margin-bottom:16px">Ative os acabamentos e informe a quantidade.</p>
+    <div class="acabamento-list">
+      ${acs.map(a=>{ const ac=wiz.acabamentos[a.key]; const qf=a.unid==='m2'?'m2':'ml'; return `
+        <div class="acabamento-item ${ac.ativo?'active':''}" id="ac-row-${a.key}">
+          <div class="acabamento-left">
+            <button class="acabamento-toggle ${ac.ativo?'on':''}" id="ac-tog-${a.key}"></button>
+            <div><div class="acabamento-name">${a.nome}</div><div class="acabamento-unit">R$ ${a.preco}/${a.unid}</div></div>
+          </div>
+          <div class="acabamento-qty">
+            <input type="number" min="0" step="0.1" placeholder="0" value="${ac[qf]||''}" id="ac-qty-${a.key}" data-key="${a.key}" data-field="${qf}" style="width:80px;padding:6px 8px;border:1.5px solid #EDE9E2;border-radius:6px;font-size:13px;text-align:center;outline:none">
+            <span style="font-size:12px;color:#8B8B9A">${a.unid}</span>
+          </div>
+        </div>`; }).join('')}
+    </div>`;
+}
+
+function wizBindStep2() {
+  ['meiaEsquadria','bordaReta','polimento','corteEspecial'].forEach(key=>{
+    const tog=document.getElementById('ac-tog-'+key);
+    if(tog) tog.onclick=()=>{ wiz.acabamentos[key].ativo=!wiz.acabamentos[key].ativo; tog.classList.toggle('on',wiz.acabamentos[key].ativo); document.getElementById('ac-row-'+key).classList.toggle('active',wiz.acabamentos[key].ativo); };
+    const inp=document.getElementById('ac-qty-'+key);
+    if(inp) inp.oninput=()=>{ const f=inp.dataset.field; wiz.acabamentos[key][f]=parseFloat(inp.value)||0; wizUpdateDots(); };
+  });
+}
+
+function wizStep3() {
+  const area=wiz.largura*wiz.altura*wiz.qtdPecas;
+  return `
+    <div class="wizard-section-title">Serviços</div>
+    <div class="servico-toggle-row ${wiz.colocacao.ativo?'active':''}" id="srv-col-row">
+      <div class="servico-toggle-info"><h4>Colocação / Instalação</h4><p>R$ ${wiz.colocacao.preco}/m2 - ${area.toFixed(2)}m2 - Subtotal: R$ ${(wiz.colocacao.preco*area).toFixed(2)}</p></div>
+      <button class="acabamento-toggle ${wiz.colocacao.ativo?'on':''}" id="srv-col-tog"></button>
+    </div>
+    <div class="servico-extra ${wiz.colocacao.ativo?'show':''}" id="srv-col-extra">
+      <label class="form-label" style="margin-top:8px">PREÇO POR M2 (R$)</label>
+      <input class="form-input" type="number" id="srv-col-preco" value="${wiz.colocacao.preco}" style="max-width:160px">
+    </div>
+    <div class="servico-toggle-row ${wiz.frete.ativo?'active':''}" id="srv-frt-row" style="margin-top:10px">
+      <div class="servico-toggle-info"><h4>Frete / Entrega</h4><p>Calculado por distância em km</p></div>
+      <button class="acabamento-toggle ${wiz.frete.ativo?'on':''}" id="srv-frt-tog"></button>
+    </div>
+    <div class="servico-extra ${wiz.frete.ativo?'show':''}" id="srv-frt-extra">
+      <label class="form-label" style="margin-top:8px">DISTÂNCIA (km)</label>
+      <input class="form-input" type="number" id="srv-frt-km" value="${wiz.frete.km||''}" placeholder="0" style="max-width:160px">
+      <div id="srv-frt-prev" style="margin-top:8px;font-size:13px;color:#8B8B9A">${wiz.frete.km>0?'Frete estimado: R$ '+calcFrete(wiz.frete.km).toFixed(2):''}</div>
+    </div>`;
+}
+
+function wizBindStep3() {
+  const togCol=document.getElementById('srv-col-tog');
+  if(togCol) togCol.onclick=()=>{ wiz.colocacao.ativo=!wiz.colocacao.ativo; togCol.classList.toggle('on',wiz.colocacao.ativo); document.getElementById('srv-col-row').classList.toggle('active',wiz.colocacao.ativo); document.getElementById('srv-col-extra').classList.toggle('show',wiz.colocacao.ativo); };
+  const pc=document.getElementById('srv-col-preco');
+  if(pc) pc.oninput=()=>{ wiz.colocacao.preco=parseFloat(pc.value)||120; wizUpdateDots(); };
+  const togFrt=document.getElementById('srv-frt-tog');
+  if(togFrt) togFrt.onclick=()=>{ wiz.frete.ativo=!wiz.frete.ativo; togFrt.classList.toggle('on',wiz.frete.ativo); document.getElementById('srv-frt-row').classList.toggle('active',wiz.frete.ativo); document.getElementById('srv-frt-extra').classList.toggle('show',wiz.frete.ativo); };
+  const km=document.getElementById('srv-frt-km');
+  if(km) km.oninput=()=>{ wiz.frete.km=parseFloat(km.value)||0; const p=document.getElementById('srv-frt-prev'); if(p) p.textContent=wiz.frete.km>0?'Frete estimado: R$ '+calcFrete(wiz.frete.km).toFixed(2):''; wizUpdateDots(); };
+}
+
+function wizStep4() {
+  return `
+    <div class="wizard-section-title">Produtos Adicionais</div>
+    <p style="font-size:13px;color:#8B8B9A;margin-bottom:16px">Cubas, torneiras e acessórios. Use +/- para definir a quantidade.</p>
+    <div id="wiz-adicionais">
+      ${wiz.adicionais.map((a,i)=>`
+        <div class="adicional-row">
+          <div class="adicional-name">${a.nome}</div>
+          <div class="adicional-price">R$ ${a.preco.toFixed(2)}</div>
+          <div class="qty-control">
+            <button class="qty-btn" id="wiz-qm-${i}">-</button>
+            <div class="qty-display" id="wiz-qd-${i}">${a.qtd}</div>
+            <button class="qty-btn" id="wiz-qp-${i}">+</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function wizBindStep4() {
+  wiz.adicionais.forEach((a,i)=>{
+    const bm=document.getElementById('wiz-qm-'+i);
+    const bp=document.getElementById('wiz-qp-'+i);
+    const updateQty=(dir)=>{ wiz.adicionais[i].qtd=Math.max(0,(wiz.adicionais[i].qtd||0)+dir); const d=document.getElementById('wiz-qd-'+i); if(d) d.textContent=wiz.adicionais[i].qtd; wizUpdateDots(); };
+    if(bm) bm.onclick=()=>updateQty(-1);
+    if(bp) bp.onclick=()=>updateQty(1);
+  });
+}
+
+function wizStep5() {
+  const mk=state.pricing?.markup||3;
+  const area=wiz.largura*wiz.altura*wiz.qtdPecas;
+  const pv=(wiz.materialCusto||0)*mk;
+  const totalMat=area*pv;
+  const custoMat=area*(wiz.materialCusto||0);
+  let totalAcab=0,custoAcab=0;
+  const acabLines=[];
+  const acNomes={meiaEsquadria:'Meia Esquadria',bordaReta:'Borda Reta',polimento:'Polimento',corteEspecial:'Corte Especial'};
+  Object.entries(wiz.acabamentos).forEach(([k,a])=>{ if(a.ativo){ const q=a.ml||a.m2||0; const t=q*a.preco; totalAcab+=t; custoAcab+=t*0.5; acabLines.push({nome:acNomes[k],q,t,unid:a.ml?'ml':'m2'}); } });
+  const totalColoc=wiz.colocacao.ativo?area*wiz.colocacao.preco:0;
+  const totalFrete=wiz.frete.ativo?calcFrete(wiz.frete.km):0;
+  const totalAdic=wiz.adicionais.reduce((s,a)=>s+a.qtd*a.preco,0);
+  const custoAdic=totalAdic*0.6;
+  const totalVenda=totalMat+totalAcab+totalColoc+totalFrete+totalAdic;
+  const custoTotal=custoMat+custoAcab+(totalColoc*0.6)+totalFrete+custoAdic;
+  const margem=totalVenda>0?Math.round((totalVenda-custoTotal)/totalVenda*100):0;
+  const mc=margem>=30?'#27AE60':margem>=15?'#C9A84C':'#C0392B';
+  const cliOpts=state.clientes.map(c=>`<option value="${c.id}" ${wiz.clienteId===c.id?'selected':''}>${c.nome}</option>`).join('');
+  return `
+    <div class="wizard-section-title">Informações</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">TÍTULO DO ORÇAMENTO</label>
+        <input class="form-input" id="wiz-titulo" placeholder="Ex: Cozinha João Silva" value="${wiz.titulo||''}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">CLIENTE</label>
+        <select class="form-select" id="wiz-cliente"><option value="">Selecionar...</option>${cliOpts}</select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">PAGAMENTO</label>
+      <select class="form-select" id="wiz-pagamento">
+        ${['À vista','50% entrada + 50% entrega','30/60 dias','A combinar'].map(p=>`<option ${wiz.pagamento===p?'selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    <div class="wizard-section-title">Resumo</div>
+    <div style="background:#F4F1EB;border-radius:10px;padding:16px">
+      <div class="resumo-linha"><span class="resumo-label">${wiz.materialNome||'Material'} (${area.toFixed(3)} m2)</span><span class="resumo-valor">R$ ${totalMat.toFixed(2)}</span></div>
+      ${acabLines.map(a=>`<div class="resumo-linha"><span class="resumo-label">${a.nome} (${a.q} ${a.unid})</span><span class="resumo-valor">R$ ${a.t.toFixed(2)}</span></div>`).join('')}
+      ${wiz.colocacao.ativo?`<div class="resumo-linha"><span class="resumo-label">Colocação (${area.toFixed(2)} m2)</span><span class="resumo-valor">R$ ${totalColoc.toFixed(2)}</span></div>`:''}
+      ${wiz.frete.ativo?`<div class="resumo-linha"><span class="resumo-label">Frete (~${wiz.frete.km}km)</span><span class="resumo-valor">R$ ${totalFrete.toFixed(2)}</span></div>`:''}
+      ${wiz.adicionais.filter(a=>a.qtd>0).map(a=>`<div class="resumo-linha"><span class="resumo-label">${a.nome} x ${a.qtd}</span><span class="resumo-valor">R$ ${(a.qtd*a.preco).toFixed(2)}</span></div>`).join('')}
+    </div>
+    <div class="resumo-total">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="color:#C9A84C;font-size:13px;font-weight:600">TOTAL DE VENDA</span>
+        <span style="color:#C9A84C;font-size:22px;font-weight:700;font-family:'Playfair Display',serif">R$ ${totalVenda.toFixed(2)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <span style="color:rgba(255,255,255,0.5);font-size:12px">Custo total estimado</span>
+        <span style="color:rgba(255,255,255,0.6);font-size:12px">R$ ${custoTotal.toFixed(2)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="color:rgba(255,255,255,0.5);font-size:12px">Margem de lucro</span>
+        <span style="color:${mc};font-size:14px;font-weight:700">${margem}% - R$ ${(totalVenda-custoTotal).toFixed(2)}</span>
+      </div>
+    </div>`;
+}
+
+function wizBindStep5() {
+  const t=document.getElementById('wiz-titulo'); if(t) t.oninput=()=>wiz.titulo=t.value;
+  const c=document.getElementById('wiz-cliente'); if(c) c.onchange=()=>wiz.clienteId=c.value;
+  const p=document.getElementById('wiz-pagamento'); if(p) p.onchange=()=>wiz.pagamento=p.value;
+}
+
+async function wizGerarOrcamento() {
+  const titulo = document.getElementById('wiz-titulo')?.value?.trim();
+  const clienteId = document.getElementById('wiz-cliente')?.value;
+  const pagamento = document.getElementById('wiz-pagamento')?.value||'À vista';
+  if(!titulo){ showToast('Informe o título','err'); return; }
+  if(!clienteId){ showToast('Selecione um cliente','err'); return; }
+  const mk=state.pricing?.markup||3;
+  const area=wiz.largura*wiz.altura*wiz.qtdPecas;
+  const pv=(wiz.materialCusto||0)*mk;
+  const itens=[];
+  itens.push({ desc:`${wiz.materialNome||'Material'} (${area.toFixed(3)} m2)`, mat:wiz.materialNome||'-', largura:wiz.largura, altura:wiz.altura, qtd:wiz.qtdPecas, vlrm2:parseFloat(pv.toFixed(2)), total:parseFloat((area*pv).toFixed(2)) });
+  const acNomes={meiaEsquadria:'Meia Esquadria',bordaReta:'Borda Reta Polida',polimento:'Polimento',corteEspecial:'Corte Especial'};
+  Object.entries(wiz.acabamentos).forEach(([k,a])=>{ if(a.ativo){ const q=a.ml||a.m2||0; itens.push({desc:acNomes[k],mat:'-',largura:q,altura:1,qtd:1,vlrm2:a.preco,total:parseFloat((q*a.preco).toFixed(2))}); } });
+  if(wiz.colocacao.ativo){ const t=area*wiz.colocacao.preco; itens.push({desc:`Colocação (${area.toFixed(2)}m2)`,mat:'-',largura:area,altura:1,qtd:1,vlrm2:wiz.colocacao.preco,total:parseFloat(t.toFixed(2))}); }
+  if(wiz.frete.ativo){ const t=calcFrete(wiz.frete.km); itens.push({desc:`Frete (~${wiz.frete.km}km)`,mat:'-',largura:0,altura:0,qtd:1,vlrm2:t,total:t}); }
+  wiz.adicionais.filter(a=>a.qtd>0).forEach(a=>{ itens.push({desc:a.nome,mat:'-',largura:0,altura:0,qtd:a.qtd,vlrm2:a.preco,total:a.qtd*a.preco}); });
+  const btn=document.getElementById('wizard-btn-next');
+  btn.textContent='Salvando...'; btn.disabled=true;
+  try {
+    state.editingOrcId=null;
+    state.orcItems=itens;
+    await sbSaveOrcamento({titulo,clienteId,pagamento,data:new Date().toISOString().split('T')[0],validade:'',obs:'Gerado pelo Assistente de Orçamento',maoObra:0,desconto:0,status:'rascunho'},itens);
+    await loadOrcamentos();
+    closeWizard();
+    showToast('Orçamento gerado com sucesso!','ok2');
+    showPage('orcamentos');
+  } catch(e){
+    showToast('Erro: '+e.message,'err');
+    btn.textContent='Gerar Orçamento'; btn.disabled=false;
+  }
+}
+
+
+// ═══════════════════════════════════════════
 // AGENTE IA — MARMO IA
 // ═══════════════════════════════════════════
 let agentOpen = false;
@@ -3569,17 +4061,17 @@ FLUXO DE COLETA:
 8. Prazo desejado
 
 TABELA DE PREÇOS BASE (use estes valores de custo de mercado brasileiro):
-- Granito Preto São Gabriel: R$280/m²
-- Granito Branco Itaúnas: R$320/m²
-- Granito Amarelo Real: R$180/m²
-- Mármore Branco Carrara: R$620/m²
-- Mármore Travertino: R$420/m²
-- Porcelanato (genérico): R$75/m²
-- Quartzito Taj Mahal: R$850/m²
+- Granito Preto São Gabriel: R$280/m2
+- Granito Branco Itaúnas: R$320/m2
+- Granito Amarelo Real: R$180/m2
+- Mármore Branco Carrara: R$620/m2
+- Mármore Travertino: R$420/m2
+- Porcelanato (genérico): R$75/m2
+- Quartzito Taj Mahal: R$850/m2
 
 SERVIÇOS (custo):
-- Instalação: R$80/m² (cobrar R$120/m²)
-- Polimento: R$50/m² (cobrar R$80/m²)
+- Instalação: R$80/m2 (cobrar R$120/m2)
+- Polimento: R$50/m2 (cobrar R$80/m2)
 - Furo cuba: R$45/und (cobrar R$90/und)
 - Furo torneira/fogão: R$25/und (cobrar R$45/und)
 - Meia esquadria: R$30/ml (cobrar R$55/ml)
@@ -3587,15 +4079,15 @@ SERVIÇOS (custo):
 
 CÁLCULO DE FRETE:
 - Até 10km: R$120 fixo
-- 11–30km: R$200
-- 31–60km: R$350
+- 11-30km: R$200
+- 31-60km: R$350
 - Acima 60km: R$500 + R$3/km adicional
 
-MARKUP PADRÃO: 3× o custo do material
+MARKUP PADRÃO: 3x o custo do material
 
 FORMATO DO ORÇAMENTO FINAL:
 Quando tiver TODAS as informações, responda com um JSON no seguinte formato exato (sem markdown, só o JSON puro):
-{"tipo":"orcamento","titulo":"[título descritivo]","itens":[{"desc":"[descrição]","area":[numero],"vlrm2":[preco_venda],"total":[total],"custo_unit":[custo_m2]}],"servicos":[{"desc":"[serviço]","qtd":[numero],"unid":"[m²/ml/und]","preco":[preco],"total":[total]}],"frete":{"distancia_km":[km_estimado],"valor":[valor_frete]},"resumo":{"subtotal_material":[valor],"subtotal_servicos":[valor],"frete":[valor],"total_venda":[valor],"custo_total":[valor],"margem_lucro_pct":[percentual],"margem_lucro_rs":[valor_rs]}}
+{"tipo":"orcamento","titulo":"[título descritivo]","itens":[{"desc":"[descrição]","area":[numero],"vlrm2":[preco_venda],"total":[total],"custo_unit":[custo_m2]}],"servicos":[{"desc":"[serviço]","qtd":[numero],"unid":"[m2/ml/und]","preco":[preco],"total":[total]}],"frete":{"distancia_km":[km_estimado],"valor":[valor_frete]},"resumo":{"subtotal_material":[valor],"subtotal_servicos":[valor],"frete":[valor],"total_venda":[valor],"custo_total":[valor],"margem_lucro_pct":[percentual],"margem_lucro_rs":[valor_rs]}}
 
 Seja direto e profissional. Use linguagem do setor. Pergunte uma etapa de cada vez. Quando o cliente mencionar o endereço, estime a distância com base no CEP informado. Se o CEP da marmoraria for informado, use-o como origem.`;
 
@@ -3617,7 +4109,7 @@ function toggleAgent() {
 function agentGreet() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-  const msg = `${greeting}! 👋 Sou o **MarmoIA**, seu assistente de orçamentos.\n\nPosso te ajudar a:\n• 📐 Gerar orçamentos completos e detalhados\n• 💰 Calcular margem de lucro real por projeto\n• 🚚 Estimar frete por distância\n• ✅ Importar o orçamento direto para o sistema\n\nPor onde vamos começar? Me descreva o projeto ou clique em **"Novo orçamento"**.`;
+  const msg = `${greeting}! Sou o **MarmoIA**, seu assistente de orçamentos.\n\nPosso te ajudar a:\n- Gerar orçamentos completos e detalhados\n- Calcular margem de lucro real por projeto\n- Estimar frete por distância\n- Importar o orçamento direto para o sistema\n\nPor onde vamos começar? Me descreva o projeto ou clique em **"Novo orçamento"**.`;
   addAgentMessage('agent', msg);
 }
 
@@ -3628,7 +4120,6 @@ function addAgentMessage(role, text, extra = null) {
   const div = document.createElement('div');
   div.className = `msg msg-${role}`;
 
-  // Parse JSON orçamento
   let orcCard = '';
   let cleanText = text;
   try {
@@ -3641,7 +4132,6 @@ function addAgentMessage(role, text, extra = null) {
     }
   } catch(e) {}
 
-  // Format markdown-ish
   const formatted = cleanText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');
@@ -3666,19 +4156,19 @@ function buildOrcamentoCard(orc) {
   const margemColor = r.margem_lucro_pct >= 30 ? '#27AE60' : r.margem_lucro_pct >= 15 ? '#C9A84C' : '#C0392B';
   return `
     <div class="orcamento-card">
-      <div class="orcamento-card-title">📋 ${orc.titulo}</div>
+      <div class="orcamento-card-title">${orc.titulo}</div>
       ${orc.itens.map(i => `
         <div class="orcamento-card-item">
-          <span>${i.desc} (${i.area}m²)</span>
+          <span>${i.desc} (${i.area}m2)</span>
           <span>${fmt(i.total)}</span>
         </div>`).join('')}
       ${orc.servicos.map(s => `
         <div class="orcamento-card-item">
-          <span>🔧 ${s.desc} — ${s.qtd}${s.unid}</span>
+          <span>${s.desc} - ${s.qtd}${s.unid}</span>
           <span>${fmt(s.total)}</span>
         </div>`).join('')}
       <div class="orcamento-card-item">
-        <span>🚚 Frete (~${orc.frete.distancia_km}km)</span>
+        <span>Frete (~${orc.frete.distancia_km}km)</span>
         <span>${fmt(orc.frete.valor)}</span>
       </div>
       <div class="orcamento-card-total">
@@ -3692,10 +4182,10 @@ function buildOrcamentoCard(orc) {
         </div>
         <div style="display:flex;justify-content:space-between;font-size:13px">
           <span style="color:rgba(255,255,255,0.6)">Margem de lucro</span>
-          <span style="color:${margemColor};font-weight:700">${r.margem_lucro_pct}% — ${fmt(r.margem_lucro_rs)}</span>
+          <span style="color:${margemColor};font-weight:700">${r.margem_lucro_pct}% - ${fmt(r.margem_lucro_rs)}</span>
         </div>
       </div>
-      <button class="btn-import-orc" onclick="importarOrcamentoIA()">✅ Importar para o sistema</button>
+      <button class="btn-import-orc" onclick="importarOrcamentoIA()">Importar para o sistema</button>
     </div>
   `;
 }
@@ -3721,7 +4211,6 @@ async function sendAgentMsg() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Special commands
   if (text.toLowerCase().includes('limpar conversa')) {
     agentHistory = [];
     agentPendingOrcamento = null;
@@ -3745,12 +4234,11 @@ async function sendAgentMsg() {
     const apiKey = state.pricing?.apiKey || '';
     if (!apiKey) {
       hideTyping();
-      addAgentMessage('agent', '⚠️ **API key não configurada.**\n\nVá em **Preços e Serviços** no menu lateral e insira sua API key da Anthropic para ativar o agente.\n\nSe quiser testar sem API, posso simular um orçamento com dados de exemplo — é só pedir!');
+      addAgentMessage('agent', 'API key não configurada. Vá em Preços e Serviços no menu lateral e insira sua API key da Anthropic para ativar o agente.');
       btn.disabled = false;
       return;
     }
 
-    // Build context with current stock prices
     const estoqueCtx = state.materiais.length
       ? '\n\nESTOQUE ATUAL DA MARMORARIA:\n' + state.materiais.map(m => `- ${m.nome}: custo R$${m.custo}/${m.unid}, estoque ${m.estoque}${m.unid}`).join('\n')
       : '';
@@ -3780,7 +4268,7 @@ async function sendAgentMsg() {
 
     if (!response.ok) {
       const errMsg = data.error?.message || 'Erro na API';
-      addAgentMessage('agent', `❌ Erro: ${errMsg}`);
+      addAgentMessage('agent', `Erro: ${errMsg}`);
     } else {
       const reply = data.content[0]?.text || '';
       agentHistory.push({ role: 'assistant', content: reply });
@@ -3788,7 +4276,7 @@ async function sendAgentMsg() {
     }
   } catch(err) {
     hideTyping();
-    addAgentMessage('agent', `❌ Erro de conexão: ${err.message}`);
+    addAgentMessage('agent', `Erro de conexão: ${err.message}`);
   }
 
   btn.disabled = false;
@@ -3804,7 +4292,6 @@ function importarOrcamentoIA() {
   if (!agentPendingOrcamento) return;
   const orc = agentPendingOrcamento;
 
-  // Build items array
   const itens = [
     ...orc.itens.map(i => ({
       desc: i.desc,
@@ -3818,7 +4305,7 @@ function importarOrcamentoIA() {
     ...orc.servicos.map(s => ({
       desc: s.desc,
       mat: '-',
-      largura: s.unid === 'ml' ? s.qtd : s.unid === 'm²' ? s.qtd : 0,
+      largura: s.unid === 'ml' ? s.qtd : s.unid === 'm2' ? s.qtd : 0,
       altura: 1,
       qtd: s.unid === 'und' ? s.qtd : 1,
       vlrm2: s.preco,
@@ -3833,16 +4320,14 @@ function importarOrcamentoIA() {
     }
   ];
 
-  // Pre-fill new orcamento form
   state.editingOrcId = null;
   state.orcItems = itens;
   document.getElementById('modal-orc-title').textContent = 'Orçamento via MarmoIA';
   renderOrcForm({ titulo: orc.titulo, pagamento: 'A combinar', obs: `Gerado pelo MarmoIA. Margem: ${orc.resumo.margem_lucro_pct}%`, status:'rascunho' });
 
-  // Open orcamento modal
   openModal('modal-orcamento');
 
-  addAgentMessage('agent', `✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado no formulário. Revise os dados, vincule a um cliente e salve.`);
+  addAgentMessage('agent', `Orçamento importado! O orçamento "${orc.titulo}" foi carregado no formulário. Revise os dados, vincule a um cliente e salve.`);
 }
 
 
@@ -3873,7 +4358,6 @@ async function fetchCEPQuick() {
 }
 
 function openQuickCliente() {
-  // Clear fields
   ['qc-nome','qc-tel','qc-email','qc-doc','qc-cep','qc-endereco','qc-cidade','qc-estado','qc-obs'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
@@ -3905,7 +4389,6 @@ async function saveQuickCliente() {
   };
 
   try {
-    // Save to Supabase
     const payload = {
       marmoraria_id: currentMarmoraria.id,
       nome: data.nome, tipo: data.tipo, cpf_cnpj: data.doc,
@@ -3916,12 +4399,10 @@ async function saveQuickCliente() {
     const { data: res, error } = await sb.from('clientes').insert(payload).select().single();
     if(error) throw error;
 
-    // Add to local state
     const newCli = { id: res.id, nome: res.nome, tipo: res.tipo, doc: res.cpf_cnpj,
       tel: res.telefone, email: res.email, origem: res.origem, obs: res.observacoes };
     state.clientes.push(newCli);
 
-    // Update select in orcamento form
     const sel = document.getElementById('orc-cliente');
     if(sel) {
       const opt = document.createElement('option');
@@ -3972,18 +4453,14 @@ document.addEventListener('click', (e) => {
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
-// Verificar sessão ao carregar
 checkSession();
 
-// Handle return from Stripe Checkout
 (function() {
   const params = new URLSearchParams(window.location.search);
   if(params.get('cadastro') === 'sucesso') {
     const email = params.get('email');
-    // Clean URL
     window.history.replaceState({}, '', window.location.pathname);
     showToast('Cadastro concluído! Faça login para acessar.', 'ok2');
-    // Pre-fill email
     if(email) setTimeout(() => {
       const el = document.getElementById('login-email');
       if(el) el.value = decodeURIComponent(email);
@@ -3993,24 +4470,10 @@ checkSession();
     window.history.replaceState({}, '', window.location.pathname);
     showToast('Pagamento cancelado. Tente novamente quando quiser.', 'err');
   }
-  // Ler plano da URL
   const planoParam = params.get('plano');
   if(planoParam && ['basic','pro','enterprise'].includes(planoParam)) {
     state._planoSelecionado = planoParam;
     setTimeout(() => showRegister(planoParam), 300);
-  }
-})();
-
-// Ler plano da URL e pré-selecionar no cadastro
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const planoParam = params.get('plano');
-  if (planoParam && ['basic','pro','enterprise'].includes(planoParam)) {
-    state._planoSelecionado = planoParam;
-    // Auto-abrir tela de cadastro com plano pré-selecionado
-    setTimeout(() => {
-      showRegister(planoParam);
-    }, 300);
   }
 })();
 
