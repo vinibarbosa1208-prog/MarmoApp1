@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -14,10 +14,6 @@
 const SUPABASE_URL = 'https://pptkgbhmnvhsrffqyfmn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwdGtnYmhtbnZoc3JmZnF5Zm1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjU0MTEsImV4cCI6MjA5MzA0MTQxMX0.Fmi-wzhZJ267boc3vMsrgh_ZkqbcUHOqFFBLZzTxnLA';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ── ANTHROPIC ──
-const ANTHROPIC_API_KEY = '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';
-const ANTHROPIC_MODEL   = 'claude-sonnet-4-20250514';
 
 // ── STRIPE ──
 const STRIPE_PK = 'pk_test_51TRoNC1opvb2dbnS7qI2cxmQdGkB3Ta2GToCNEcTPbyTIyPxBBFEmiTnYOdneupRglJyWYbBPoqBLhtkjQ1yAZS400m7wNWwJb';
@@ -333,162 +329,6 @@ let currentMarmoraria = null;
   .stock-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
 
 
-  /* ── WIZARD DE ORÇAMENTO ── */
-  .wizard-overlay {
-    position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1500;
-    display:none;align-items:flex-start;justify-content:center;
-    padding:20px;overflow-y:auto;
-  }
-  .wizard-overlay.open { display:flex; }
-  .wizard {
-    background:#fff;border-radius:16px;width:100%;max-width:680px;
-    box-shadow:0 32px 80px rgba(0,0,0,0.2);margin:auto;
-    overflow:hidden;
-  }
-  .wizard-header {
-    background:var(--dark);padding:20px 24px;
-  }
-  .wizard-title {
-    color:#fff;font-family:'Playfair Display',serif;font-size:18px;
-    font-weight:600;margin-bottom:12px;
-  }
-  .wizard-steps {
-    display:flex;gap:0;
-  }
-  .wizard-step-dot {
-    flex:1;height:4px;background:rgba(255,255,255,0.15);
-    border-radius:2px;transition:background 0.3s;
-  }
-  .wizard-step-dot.active { background:var(--gold); }
-  .wizard-step-dot.done { background:var(--green); }
-  .wizard-step-label {
-    color:rgba(255,255,255,0.5);font-size:11px;margin-top:8px;
-    letter-spacing:0.5px;
-  }
-  .wizard-body {
-    padding:24px;max-height:60vh;overflow-y:auto;
-  }
-  .wizard-footer {
-    padding:16px 24px;border-top:1px solid var(--marble2);
-    display:flex;justify-content:space-between;align-items:center;
-    background:#fafafa;
-  }
-  .wizard-section-title {
-    font-size:13px;font-weight:700;color:var(--gray);
-    letter-spacing:0.5px;text-transform:uppercase;
-    margin-bottom:14px;display:flex;align-items:center;gap:8px;
-  }
-  .wizard-section-title::after {
-    content:'';flex:1;height:1px;background:var(--marble2);
-  }
-
-  /* Material cards */
-  .mat-grid {
-    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
-    margin-bottom:16px;
-  }
-  .mat-card {
-    border:2px solid var(--marble2);border-radius:10px;
-    padding:14px 12px;cursor:pointer;text-align:center;
-    transition:all 0.15s;background:var(--marble);
-  }
-  .mat-card:hover { border-color:var(--gold);background:#fffbf0; }
-  .mat-card.selected {
-    border-color:var(--gold);background:rgba(201,168,76,0.1);
-  }
-  .mat-card-icon { font-size:26px;margin-bottom:6px; }
-  .mat-card-name { font-size:12px;font-weight:600;color:var(--dark); }
-  .mat-card-price { font-size:11px;color:var(--gray);margin-top:2px; }
-
-  /* Acabamento toggle */
-  .acabamento-list { display:flex;flex-direction:column;gap:10px; }
-  .acabamento-item {
-    display:flex;align-items:center;justify-content:space-between;
-    background:var(--marble);border-radius:8px;padding:12px 14px;
-    border:1.5px solid transparent;transition:border 0.15s;
-  }
-  .acabamento-item.active { border-color:var(--gold);background:#fffbf0; }
-  .acabamento-left { display:flex;align-items:center;gap:10px; }
-  .acabamento-toggle {
-    width:40px;height:22px;border-radius:11px;
-    background:var(--marble2);border:none;cursor:pointer;
-    position:relative;transition:background 0.2s;flex-shrink:0;
-  }
-  .acabamento-toggle::after {
-    content:'';position:absolute;top:3px;left:3px;
-    width:16px;height:16px;border-radius:50%;background:#fff;
-    transition:transform 0.2s;
-  }
-  .acabamento-toggle.on { background:var(--gold); }
-  .acabamento-toggle.on::after { transform:translateX(18px); }
-  .acabamento-name { font-size:13.5px;font-weight:500;color:var(--dark); }
-  .acabamento-unit { font-size:11px;color:var(--gray); }
-  .acabamento-qty {
-    display:flex;align-items:center;gap:6px;opacity:0;
-    pointer-events:none;transition:opacity 0.2s;
-  }
-  .acabamento-item.active .acabamento-qty { opacity:1;pointer-events:all; }
-  .acabamento-qty input {
-    width:70px;padding:6px 8px;border:1.5px solid var(--marble2);
-    border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;
-    text-align:center;outline:none;
-  }
-  .acabamento-qty input:focus { border-color:var(--gold); }
-
-  /* Serviço toggle */
-  .servico-toggle-row {
-    display:flex;align-items:center;justify-content:space-between;
-    padding:14px;background:var(--marble);border-radius:10px;
-    margin-bottom:10px;border:1.5px solid transparent;
-  }
-  .servico-toggle-row.active { border-color:var(--gold);background:#fffbf0; }
-  .servico-toggle-info h4 { font-size:14px;font-weight:600;color:var(--dark); }
-  .servico-toggle-info p { font-size:12px;color:var(--gray);margin-top:2px; }
-  .servico-extra {
-    display:none;padding:10px 14px 14px;background:#fffbf0;
-    border-radius:0 0 10px 10px;margin-top:-10px;
-    border:1.5px solid var(--gold);border-top:none;
-  }
-  .servico-extra.show { display:block; }
-
-  /* Adicionais */
-  .adicional-row {
-    display:flex;align-items:center;justify-content:space-between;
-    padding:10px 0;border-bottom:1px solid var(--marble2);gap:12px;
-  }
-  .adicional-row:last-child { border-bottom:none; }
-  .adicional-name { font-size:13.5px;color:var(--dark);flex:1; }
-  .adicional-price { font-size:12px;color:var(--gray);margin-right:8px; }
-  .qty-control {
-    display:flex;align-items:center;gap:6px;
-  }
-  .qty-btn {
-    width:28px;height:28px;border-radius:6px;border:1.5px solid var(--marble2);
-    background:#fff;cursor:pointer;font-size:16px;font-weight:600;
-    display:flex;align-items:center;justify-content:center;
-    color:var(--dark);transition:all 0.15s;
-  }
-  .qty-btn:hover { border-color:var(--gold);color:var(--gold); }
-  .qty-display {
-    width:32px;text-align:center;font-size:14px;font-weight:600;
-    color:var(--dark);
-  }
-
-  /* Resumo */
-  .resumo-linha {
-    display:flex;justify-content:space-between;align-items:center;
-    padding:8px 0;border-bottom:1px solid var(--marble2);font-size:13.5px;
-  }
-  .resumo-linha:last-child { border-bottom:none; }
-  .resumo-label { color:var(--gray); }
-  .resumo-valor { font-weight:600;color:var(--dark); }
-  .resumo-total {
-    background:var(--dark);border-radius:10px;padding:16px 18px;
-    margin-top:14px;
-  }
-  .resumo-total-label { color:var(--gold);font-size:13px;font-weight:600; }
-  .resumo-total-valor { color:var(--gold);font-size:22px;font-weight:700;font-family:'Playfair Display',serif; }
-  .resumo-margem { color:var(--green);font-size:12px;margin-top:4px; }
   /* ── AGENTE IA ── */
   .agent-panel {
     position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--white);
@@ -527,7 +367,6 @@ let currentMarmoraria = null;
   .agent-typing span:nth-child(2){animation-delay:.2s}
   .agent-typing span:nth-child(3){animation-delay:.4s}
   @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
   .agent-input-area { padding:14px 16px;border-top:1px solid var(--marble2);background:var(--white);flex-shrink:0; }
   .agent-input-row { display:flex;gap:8px;align-items:flex-end; }
   .agent-input {
@@ -854,6 +693,143 @@ let currentMarmoraria = null;
   .text-gray { color: var(--gray); }
   .text-sm { font-size: 12px; }
   hr.divider { border: none; border-top: 1px solid var(--marble2); margin: 16px 0; }
+
+  /* ── WIZARD DE ORÇAMENTO ── */
+  .wizard-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1500;
+    display:none;align-items:flex-start;justify-content:center;
+    padding:20px;overflow-y:auto;
+  }
+  .wizard-overlay.open { display:flex; }
+  .wizard {
+    background:#fff;border-radius:16px;width:100%;max-width:700px;
+    box-shadow:0 32px 80px rgba(0,0,0,0.25);margin:auto;overflow:hidden;
+    min-height:200px;
+  }
+  .wizard-header { background:#1A1A2E;padding:20px 24px; }
+  .wizard-title {
+    color:#fff;font-size:18px;font-weight:600;margin-bottom:12px;
+    font-family:'Playfair Display',serif;
+  }
+  .wizard-steps { display:flex;gap:6px;margin-bottom:8px; }
+  .wizard-step-dot {
+    flex:1;height:4px;background:rgba(255,255,255,0.15);
+    border-radius:2px;transition:background 0.3s;
+  }
+  .wizard-step-dot.active { background:#C9A84C; }
+  .wizard-step-dot.done { background:#27AE60; }
+  .wizard-step-label {
+    color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:0.5px;
+  }
+  .wizard-body {
+    padding:24px;max-height:62vh;overflow-y:auto;
+  }
+  .wizard-footer {
+    padding:16px 24px;border-top:1px solid #EDE9E2;
+    display:flex;justify-content:space-between;align-items:center;
+    background:#fafafa;
+  }
+  .wizard-section-title {
+    font-size:12px;font-weight:700;color:#888;letter-spacing:1px;
+    text-transform:uppercase;margin-bottom:14px;margin-top:20px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .wizard-section-title:first-child { margin-top:0; }
+  .wizard-section-title::after {
+    content:'';flex:1;height:1px;background:#EDE9E2;
+  }
+  .mat-grid {
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;
+  }
+  .mat-card {
+    border:2px solid #EDE9E2;border-radius:10px;padding:14px 10px;
+    cursor:pointer;text-align:center;transition:all 0.15s;background:#F7F5F1;
+  }
+  .mat-card:hover { border-color:#C9A84C;background:#fffbf0; }
+  .mat-card.selected { border-color:#C9A84C;background:rgba(201,168,76,0.1); }
+  .mat-card-icon { font-size:24px;margin-bottom:6px; }
+  .mat-card-name { font-size:12px;font-weight:600;color:#1A1A2E; }
+  .acabamento-list { display:flex;flex-direction:column;gap:8px; }
+  .acabamento-item {
+    display:flex;align-items:center;justify-content:space-between;
+    background:#F7F5F1;border-radius:8px;padding:12px 14px;
+    border:1.5px solid transparent;transition:border 0.15s;
+  }
+  .acabamento-item.active { border-color:#C9A84C;background:#fffbf0; }
+  .acabamento-left { display:flex;align-items:center;gap:10px; }
+  .acabamento-toggle {
+    width:40px;height:22px;border-radius:11px;background:#D5D0C8;
+    border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;
+  }
+  .acabamento-toggle::after {
+    content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;
+    border-radius:50%;background:#fff;transition:transform 0.2s;
+  }
+  .acabamento-toggle.on { background:#C9A84C; }
+  .acabamento-toggle.on::after { transform:translateX(18px); }
+  .acabamento-name { font-size:13px;font-weight:500;color:#1A1A2E; }
+  .acabamento-unit { font-size:11px;color:#888; }
+  .acabamento-qty {
+    display:flex;align-items:center;gap:6px;
+    opacity:0;pointer-events:none;transition:opacity 0.2s;
+  }
+  .acabamento-item.active .acabamento-qty { opacity:1;pointer-events:all; }
+  .acabamento-qty input {
+    width:72px;padding:6px 8px;border:1.5px solid #EDE9E2;border-radius:6px;
+    font-size:13px;text-align:center;outline:none;font-family:'DM Sans',sans-serif;
+  }
+  .acabamento-qty input:focus { border-color:#C9A84C; }
+  .servico-row {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px;background:#F7F5F1;border-radius:10px;margin-bottom:10px;
+    border:1.5px solid transparent;transition:border 0.15s;
+  }
+  .servico-row.active { border-color:#C9A84C;background:#fffbf0; }
+  .servico-info h4 { font-size:14px;font-weight:600;color:#1A1A2E; }
+  .servico-info p { font-size:12px;color:#888;margin-top:2px; }
+  .servico-extra {
+    display:none;padding:10px 14px 14px;background:#fffbf0;
+    border-radius:0 0 10px 10px;margin-top:-10px;
+    border:1.5px solid #C9A84C;border-top:none;margin-bottom:10px;
+  }
+  .servico-extra.show { display:block; }
+  .adicional-row {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;border-bottom:1px solid #EDE9E2;gap:12px;
+  }
+  .adicional-row:last-child { border-bottom:none; }
+  .adicional-name { font-size:13px;color:#1A1A2E;flex:1; }
+  .adicional-price { font-size:12px;color:#888; }
+  .qty-control { display:flex;align-items:center;gap:6px; }
+  .qty-btn {
+    width:28px;height:28px;border-radius:6px;border:1.5px solid #EDE9E2;
+    background:#fff;cursor:pointer;font-size:15px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    color:#1A1A2E;transition:all 0.15s;
+  }
+  .qty-btn:hover { border-color:#C9A84C;color:#C9A84C; }
+  .qty-display { width:30px;text-align:center;font-size:14px;font-weight:600; }
+  .resumo-linha {
+    display:flex;justify-content:space-between;padding:8px 0;
+    border-bottom:1px solid #EDE9E2;font-size:13.5px;
+  }
+  .resumo-linha:last-child { border-bottom:none; }
+  .resumo-label { color:#888; }
+  .resumo-valor { font-weight:600;color:#1A1A2E; }
+  .resumo-total-box {
+    background:#1A1A2E;border-radius:10px;padding:16px 18px;margin-top:12px;
+  }
+  .area-preview {
+    background:#F7F5F1;border-radius:8px;padding:10px 14px;
+    font-size:13px;color:#888;margin-top:10px;
+  }
+  @media(max-width:600px) {
+    .wizard { border-radius:10px; }
+    .wizard-body { padding:16px;max-height:55vh; }
+    .mat-grid { grid-template-columns:repeat(3,1fr);gap:6px; }
+    .wizard-footer { padding:12px 16px; }
+  }
+
 </style>
 </head>
 <body>
@@ -1358,35 +1334,342 @@ let currentMarmoraria = null;
 </div>
 
 <!-- AGENTE IA -->
-<div id="agent-panel" class="agent-panel">
+<div class="agent-panel" id="agent-panel">
   <div class="agent-header">
-    <div style="display:flex;align-items:center;gap:10px">
-      <div style="width:8px;height:8px;border-radius:50%;background:#27AE60;animation:blink 2s infinite"></div>
-      <span style="color:#fff;font-weight:600;font-size:14px">MarmoIA</span>
-      <span style="color:rgba(255,255,255,0.4);font-size:11px">Assistente de Orçamento</span>
+    <div class="agent-avatar">🤖</div>
+    <div class="agent-info">
+      <div class="agent-name">MarmoIA — Assistente de Orçamento</div>
+      <div class="agent-status"><div class="agent-dot"></div> Online</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <label for="agent-img-upload" title="Analisar desenho/croqui" style="cursor:pointer;color:rgba(255,255,255,0.6);font-size:18px;line-height:1">📷</label>
-      <input type="file" id="agent-img-upload" accept="image/*" style="display:none">
-      <button onclick="toggleAgent()" style="background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;font-size:18px;line-height:1">✕</button>
-    </div>
+    <button class="btn-close" onclick="toggleAgent()" style="color:rgba(255,255,255,0.5)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
-  <div id="agent-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:4px"></div>
-  <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:8px">
+  <div class="agent-messages" id="agent-messages"></div>
+  <div class="agent-input-area">
+    <div class="agent-input-row">
+      <textarea class="agent-input" id="agent-input" placeholder="Descreva o projeto ou responda o agente..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgentMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+      <button class="agent-send" id="agent-send-btn" onclick="sendAgentMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
     <div class="agent-actions">
       <button class="agent-action-btn" onclick="agentQuickSend('Novo orçamento')">🆕 Novo orçamento</button>
-      <button class="agent-action-btn" onclick="agentQuickSend('Ver margem')">📊 Margem</button>
+      <button class="agent-action-btn" onclick="agentQuickSend('Calcular margem do orçamento atual')">📊 Ver margem</button>
       <button class="agent-action-btn" onclick="agentQuickSend('Limpar conversa')">🗑️ Limpar</button>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input id="agent-input" type="text"
-        placeholder="Descreva o projeto ou use o microfone..."
-        style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;outline:none"
-        onkeydown="if(event.key==='Enter'){sendAgentMessage(this.value)}">
-      <button id="btn-voice" onclick="toggleVoice()"
-        style="width:38px;height:38px;border-radius:8px;border:none;background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center">🎤</button>
-      <button onclick="sendAgentMessage(document.getElementById('agent-input').value)"
-        style="width:38px;height:38px;border-radius:8px;border:none;background:#C9A84C;color:#1A1A2E;cursor:pointer;font-size:16px;font-weight:700;flex-shrink:0">→</button>
+  </div>
+</div>
+
+<!-- TOGGLE BUTTON -->
+<button class="agent-toggle" id="agent-toggle" onclick="toggleAgent()" title="Assistente IA">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+
+
+<!-- QUICK CLIENT MODAL -->
+<div class="modal-overlay" id="modal-quick-cliente" style="z-index:1100">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-quick-cliente')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title">Cadastrar Novo Cliente</div>
+      </div>
+      <button class="btn-close" onclick="closeModal('modal-quick-cliente')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">NOME COMPLETO *</label>
+          <input class="form-input" id="qc-nome" placeholder="Nome do cliente">
+        </div>
+        <div class="form-group">
+          <label class="form-label">TIPO</label>
+          <select class="form-select" id="qc-tipo">
+            <option value="pf">Pessoa Física</option>
+            <option value="pj">Pessoa Jurídica</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">TELEFONE / WHATSAPP *</label>
+          <input class="form-input" id="qc-tel" placeholder="(00) 00000-0000" maxlength="15" oninput="maskPhoneInput(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-MAIL</label>
+          <input class="form-input" type="email" id="qc-email" placeholder="email@cliente.com">
+        </div>
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">CPF / CNPJ</label>
+          <input class="form-input" id="qc-doc" placeholder="000.000.000-00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">CEP</label>
+          <input class="form-input" id="qc-cep" placeholder="00000-000" maxlength="9"
+            oninput="maskCEPInput(this)" onblur="fetchCEPQuick()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ENDEREÇO COMPLETO</label>
+        <input class="form-input" id="qc-endereco" placeholder="Rua, número, bairro">
+      </div>
+      <div class="form-row form-row-2">
+        <div class="form-group">
+          <label class="form-label">CIDADE</label>
+          <input class="form-input" id="qc-cidade" placeholder="Cidade">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ESTADO</label>
+          <input class="form-input" id="qc-estado" placeholder="SP" maxlength="2">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ORIGEM</label>
+        <select class="form-select" id="qc-origem">
+          <option value="indicação">Indicação</option>
+          <option value="google">Google</option>
+          <option value="instagram">Instagram</option>
+          <option value="presencial">Presencial</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">OBSERVAÇÕES</label>
+        <textarea class="form-textarea" id="qc-obs" placeholder="Anotações sobre o cliente..." style="min-height:60px"></textarea>
+      </div>
+      <div id="qc-error" style="color:var(--red);font-size:12px;display:none;margin-top:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-quick-cliente')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveQuickCliente()">💾 Salvar e Selecionar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-orcamento">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-orcamento')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-orcamento')" title="Fechar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-orc-title">Novo Orçamento</div>
+      </div>
+      <button class="btn-close" onclick="closeModal('modal-orcamento')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-orc-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-orcamento')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveOrcamento()">💾 Salvar Orçamento</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-cliente')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-cli-title">Novo Cliente</div>
+      <button class="btn-close" onclick="closeModal('modal-cliente')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-cli-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveCliente()">💾 Salvar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pdf">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Visualizar Orçamento</div>
+      <button class="btn-close" onclick="closeModal('modal-pdf')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-pdf-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-pdf')">Fechar</button>
+      <button class="btn btn-gold" onclick="printPDF()">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-estoque">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-estoque')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-est-title">Novo Material</div>
+      <button class="btn-close" onclick="closeModal('modal-estoque')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-est-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-estoque')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveEstoque()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-os">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-os')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title" id="modal-os-title">Nova Ordem de Serviço</div>
+      <button class="btn-close" onclick="closeModal('modal-os')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-os-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-os')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveOS()">💾 Salvar OS</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING CONFIG MODAL -->
+<div class="pricing-modal-overlay" id="modal-pricing">
+  <div class="pricing-modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Configurar Preços e Serviços</div>
+      <button class="btn-close" onclick="closePricingModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="pricing-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePricingModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="savePricingConfig()">💾 Salvar Configurações</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICOS MODAL -->
+<div class="pricing-modal-overlay" id="modal-servicos">
+  <div class="pricing-modal" style="max-width:620px">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById('modal-servicos').classList.remove('open')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title">Adicionar Serviço / Acabamento</div>
+      </div>
+      <button class="btn-close" onclick="document.getElementById('modal-servicos').classList.remove('open')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="servicos-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-servicos').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-gold" onclick="inserirServico()">✅ Inserir no Orçamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div class="upgrade-modal-overlay" id="modal-upgrade">
+  <div class="upgrade-modal">
+    <div class="upgrade-header">
+      <div style="font-size:32px;margin-bottom:10px" id="upgrade-icon">⭐</div>
+      <h3 id="upgrade-title">Recurso disponível no plano Pro</h3>
+      <p id="upgrade-subtitle">Faça upgrade para desbloquear este e outros recursos</p>
+    </div>
+    <div class="upgrade-body" id="upgrade-features"></div>
+    <div class="upgrade-footer">
+      <button class="btn-upgrade" onclick="window.open('https://marmoapp.com/#planos','_blank')">
+        Ver planos e fazer upgrade →
+      </button>
+      <span class="upgrade-cancel" onclick="closeModal('modal-upgrade')">Agora não</span>
+    </div>
+  </div>
+</div>
+
+<!-- DESENHOS PADRÃO MODAL -->
+<div class="desenhos-modal-overlay" id="modal-desenhos">
+  <div class="desenhos-modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="closeModal('modal-desenhos')" title="Voltar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="modal-title">Inserir Desenho Padrão</div>
+      </div>
+      <button class="btn-close" onclick="closeModal('modal-desenhos')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="desenho-grid" id="desenho-grid"></div>
+      <div class="desenho-config" id="desenho-config" style="display:none">
+        <div class="desenho-preview-wrap">
+          <div class="desenho-preview-svg"><canvas id="desenho-canvas" width="220" height="180"></canvas></div>
+          <div class="desenho-fields" id="desenho-fields"></div>
+        </div>
+        <div class="area-result" id="area-result"></div>
+      </div>
+    </div>
+    <div class="desenho-btn-bar">
+      <button class="btn btn-outline" onclick="closeModal('modal-desenhos')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-inserir-desenho" onclick="inserirDesenho()">✅ Inserir no Orçamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- AGENTE IA -->
+<div class="agent-panel" id="agent-panel">
+  <div class="agent-header">
+    <div class="agent-avatar">🤖</div>
+    <div class="agent-info">
+      <div class="agent-name">MarmoIA — Assistente de Orçamento</div>
+      <div class="agent-status"><div class="agent-dot"></div> Online</div>
+    </div>
+    <button class="btn-close" onclick="toggleAgent()" style="color:rgba(255,255,255,0.5)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="agent-messages" id="agent-messages"></div>
+  <div class="agent-input-area">
+    <div class="agent-input-row">
+      <textarea class="agent-input" id="agent-input" placeholder="Descreva o projeto ou responda o agente..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgentMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+      <button class="agent-send" id="agent-send-btn" onclick="sendAgentMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <div class="agent-actions">
+      <button class="agent-action-btn" onclick="agentQuickSend('Novo orçamento')">🆕 Novo orçamento</button>
+      <button class="agent-action-btn" onclick="agentQuickSend('Calcular margem do orçamento atual')">📊 Ver margem</button>
+      <button class="agent-action-btn" onclick="agentQuickSend('Limpar conversa')">🗑️ Limpar</button>
     </div>
   </div>
 </div>
@@ -1399,26 +1682,27 @@ let currentMarmoraria = null;
 
 <!-- WIZARD DE ORÇAMENTO -->
 <div class="wizard-overlay" id="modal-wizard">
-  <div class="wizard" style="max-width:780px">
+  <div class="wizard">
     <div class="wizard-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="wizard-title" id="wizard-title">Novo Orçamento</div>
-        <button onclick="closeWizard()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;line-height:1">×</button>
-      </div>
+      <div class="wizard-title" id="wizard-title">Novo Orçamento</div>
       <div class="wizard-steps">
         <div class="wizard-step-dot active" id="wdot-1"></div>
-        <div style="flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 4px"></div>
+        <div style="width:6px"></div>
         <div class="wizard-step-dot" id="wdot-2"></div>
-        <div style="flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 4px"></div>
+        <div style="width:6px"></div>
         <div class="wizard-step-dot" id="wdot-3"></div>
+        <div style="width:6px"></div>
+        <div class="wizard-step-dot" id="wdot-4"></div>
+        <div style="width:6px"></div>
+        <div class="wizard-step-dot" id="wdot-5"></div>
       </div>
-      <div class="wizard-step-label" id="wizard-step-label">Etapa 1 de 3 — Dados Gerais</div>
+      <div class="wizard-step-label" id="wizard-step-label">Etapa 1 de 5 — Material</div>
     </div>
-    <div class="wizard-body" id="wizard-body" style="max-height:70vh"></div>
+    <div class="wizard-body" id="wizard-body"></div>
     <div class="wizard-footer">
-      <button class="btn btn-outline" id="wizard-btn-back" style="display:none">← Voltar</button>
+      <button class="btn btn-outline" id="wizard-btn-back" onclick="wizBack()" style="display:none">← Voltar</button>
       <div id="wizard-resumo-mini" style="font-size:13px;color:var(--gray)"></div>
-      <button class="btn btn-gold" id="wizard-btn-next">Continuar →</button>
+      <button class="btn btn-gold" id="wizard-btn-next" onclick="wizNext()">Continuar →</button>
     </div>
   </div>
 </div>
@@ -1848,7 +2132,6 @@ async function sbSaveOrcamento(orc, itens) {
     titulo: orc.titulo,
     data_emissao: orc.data,
     data_validade: orc.validade || null,
-    data_entrega: orc.dataEntrega || null,
     condicao_pagamento: orc.pagamento,
     observacoes: orc.obs,
     mao_obra: orc.maoObra || 0,
@@ -3667,25 +3950,30 @@ function inserirDesenho() {
 // WIZARD DE ORÇAMENTO
 // ═══════════════════════════════════════════
 let wiz = {
-  step: 1, totalSteps: 3,
-  // Etapa 1 - Dados Gerais
-  titulo: '', clienteId: null, data: '', validade: '', pagamento: 'À vista', dataEntrega: '',
-  // Etapa 2 - Materiais e Itens
-  itens: [],
-  curMatId: null, curMatNome: '', curMatCusto: 0,
-  curLarg: 0, curAlt: 0, curQtd: 1, curForma: 'retangular',
+  step: 1,
+  totalSteps: 5,
+  // Etapa 1 - Material
+  materialTipo: null,
+  materialItem: null,
+  largura: 0,
+  altura: 0,
+  qtdPecas: 1,
+  // Etapa 2 - Acabamentos
   acabamentos: {
     meiaEsquadria: { ativo: false, ml: 0, preco: 55 },
     bordaReta:     { ativo: false, ml: 0, preco: 35 },
     polimento:     { ativo: false, m2: 0, preco: 80 },
     corteEspecial: { ativo: false, ml: 0, preco: 65 },
-    furos:         { ativo: false, qtd: 0, preco: 35 },
   },
-  // Etapa 3 - Serviços + Adicionais + Resumo
+  // Etapa 3 - Serviços
   colocacao: { ativo: false, preco: 120 },
-  frete: { ativo: false, km: 0 },
+  frete:     { ativo: false, km: 0 },
+  // Etapa 4 - Adicionais
   adicionais: [],
-  maoObra: 0, desconto: 0, obs: '',
+  // Etapa 5 - Info
+  clienteId: null,
+  titulo: '',
+  pagamento: 'À vista',
 };
 
 const ADICIONAIS_PADRAO = [
@@ -3697,40 +3985,27 @@ const ADICIONAIS_PADRAO = [
   { id:'perfil_alu',  nome:'Perfil Alumínio (3m)',    preco:90,   qtd:0 },
   { id:'sifao',       nome:'Sifão Flexível',          preco:55,   qtd:0 },
   { id:'cola_pedra',  nome:'Cola para Pedra (5kg)',   preco:85,   qtd:0 },
-  { id:'rejunte',     nome:'Rejunte (kg)',             preco:25,   qtd:0 },
 ];
 
 function openWizard() {
-  const hoje = new Date().toISOString().split('T')[0];
-  const valDefault = new Date(Date.now() + 15*24*60*60*1000).toISOString().split('T')[0];
+  // Reset
   wiz = {
-    step: 1, totalSteps: 3,
-    titulo: '', clienteId: null, data: hoje, validade: valDefault,
-    pagamento: 'À vista', dataEntrega: '',
-    itens: [],
-    curMatId: null, curMatNome: '', curMatCusto: 0,
-    curLarg: 0, curAlt: 0, curQtd: 1, curForma: 'retangular',
-    acabamentos: {
-      meiaEsquadria: { ativo: false, ml: 0, preco: 55 },
-      bordaReta:     { ativo: false, ml: 0, preco: 35 },
-      polimento:     { ativo: false, m2: 0, preco: 80 },
-      corteEspecial: { ativo: false, ml: 0, preco: 65 },
-      furos:         { ativo: false, qtd: 0, preco: 35 },
+    step:1, totalSteps:5,
+    materialTipo:null, materialItem:null,
+    largura:0, altura:0, qtdPecas:1,
+    acabamentos:{
+      meiaEsquadria:{ ativo:false, ml:0, preco:55 },
+      bordaReta:    { ativo:false, ml:0, preco:35 },
+      polimento:    { ativo:false, m2:0, preco:80 },
+      corteEspecial:{ ativo:false, ml:0, preco:65 },
     },
-    colocacao: { ativo: false, preco: 120 },
-    frete: { ativo: false, km: 0 },
-    adicionais: ADICIONAIS_PADRAO.map(a => ({...a, qtd: 0})),
-    maoObra: 0, desconto: 0, obs: '',
+    colocacao:{ ativo:false, preco:120 },
+    frete:{ ativo:false, km:0 },
+    adicionais: ADICIONAIS_PADRAO.map(a => ({...a, qtd:0})),
+    clienteId:null, titulo:'', pagamento:'À vista',
   };
   wizRender();
   document.getElementById('modal-wizard').classList.add('open');
-  // Bind footer buttons (safe, outside innerHTML)
-  setTimeout(() => {
-    const btnBack = document.getElementById('wizard-btn-back');
-    const btnNext = document.getElementById('wizard-btn-next');
-    if(btnBack) btnBack.onclick = wizBack;
-    if(btnNext) btnNext.onclick = wizNext;
-  }, 0);
 }
 
 function closeWizard() {
@@ -3738,46 +4013,42 @@ function closeWizard() {
 }
 
 function wizUpdateDots() {
-  for(let i = 1; i <= 3; i++) {
-    const dot = document.getElementById('wdot-' + i);
+  for(let i=1; i<=5; i++) {
+    const dot = document.getElementById('wdot-'+i);
     if(!dot) continue;
     dot.className = 'wizard-step-dot' + (i < wiz.step ? ' done' : i === wiz.step ? ' active' : '');
   }
-  const labels = ['Dados Gerais', 'Materiais e Itens', 'Serviços e Resumo'];
-  document.getElementById('wizard-step-label').textContent = `Etapa ${wiz.step} de 3 — ${labels[wiz.step-1]}`;
-  const btnBack = document.getElementById('wizard-btn-back');
-  if(btnBack) btnBack.style.display = wiz.step > 1 ? 'inline-flex' : 'none';
+  const labels = ['Material','Acabamentos','Serviços','Adicionais','Resumo'];
+  document.getElementById('wizard-step-label').textContent = `Etapa ${wiz.step} de 5 — ${labels[wiz.step-1]}`;
+  document.getElementById('wizard-btn-back').style.display = wiz.step > 1 ? 'inline-flex' : 'none';
   const nextBtn = document.getElementById('wizard-btn-next');
-  if(nextBtn) nextBtn.textContent = wiz.step === 3 ? '✅ Gerar Orçamento' : 'Próximo →';
+  nextBtn.textContent = wiz.step === 5 ? '✅ Gerar Orçamento' : 'Continuar →';
+
+  // Mini resumo
   const total = calcWizTotal();
   const mini = document.getElementById('wizard-resumo-mini');
-  if(mini) mini.textContent = total > 0 ? 'Total: ' + fmt(total) : '';
+  if(mini && total > 0) mini.textContent = 'Total: ' + fmt(total);
+  else if(mini) mini.textContent = '';
 }
 
 function wizRender() {
   wizUpdateDots();
   const body = document.getElementById('wizard-body');
-  if(!body) return;
   switch(wiz.step) {
-    case 1: body.innerHTML = wizStep1(); setTimeout(wizBindStep1, 0); break;
-    case 2: body.innerHTML = wizStep2(); setTimeout(wizBindStep2, 0); break;
-    case 3: body.innerHTML = wizStep3(); setTimeout(wizBindStep3, 0); break;
+    case 1: body.innerHTML = wizStep1(); wizBindStep1(); break;
+    case 2: body.innerHTML = wizStep2(); wizBindStep2(); break;
+    case 3: body.innerHTML = wizStep3(); wizBindStep3(); break;
+    case 4: body.innerHTML = wizStep4(); wizBindStep4(); break;
+    case 5: body.innerHTML = wizStep5(); break;
   }
 }
 
 function wizNext() {
   if(wiz.step === 1) {
-    // Persistir todos os campos do DOM antes de avançar
-    const readVal = id => { const el = document.getElementById(id); return el ? el.value : ''; };
-    wiz.titulo      = readVal('wiz-titulo').trim();
-    wiz.clienteId   = readVal('wiz-cliente') || null;
-    wiz.pagamento   = readVal('wiz-pagamento');
-    wiz.data        = readVal('wiz-data');
-    wiz.validade    = readVal('wiz-validade');
-    wiz.dataEntrega = readVal('wiz-entrega') || null;
-    if(!wiz.titulo) { showToast('Informe o título do orçamento', 'err'); return; }
+    if(!wiz.materialItem) { showToast('Selecione um material', 'err'); return; }
+    if(!wiz.largura || !wiz.altura) { showToast('Informe as dimensões', 'err'); return; }
   }
-  if(wiz.step === 3) { wizGerarOrcamento(); return; }
+  if(wiz.step === 5) { wizGerarOrcamento(); return; }
   wiz.step++;
   wizRender();
 }
@@ -3786,295 +4057,163 @@ function wizBack() {
   if(wiz.step > 1) { wiz.step--; wizRender(); }
 }
 
-// ══════════════════════════════════════════════════════════════
-// WIZARD — 3 ETAPAS
-// ══════════════════════════════════════════════════════════════
-
-// ── ETAPA 1: DADOS GERAIS ─────────────────────────────────────
+// ── ETAPA 1: MATERIAL ─────────────────────────────────────────
 function wizStep1() {
-  const cliOpts = (state.clientes || []).map(c =>
-    `<option value="${c.id}" ${wiz.clienteId == c.id ? 'selected' : ''}>${c.nome}</option>`
-  ).join('');
+  const tipos = [
+    { id:'granito',    icon:'🪨', nome:'Granito'    },
+    { id:'marmore',    icon:'⬜', nome:'Mármore'    },
+    { id:'porcelanato',icon:'🟫', nome:'Porcelanato'},
+    { id:'quartzito',  icon:'💎', nome:'Quartzito'  },
+    { id:'outro',      icon:'📦', nome:'Outro'      },
+  ];
+
+  // Filter materiais by tipo
+  const mats = state.materiais.filter(m => m.cat === 'chapa');
+
   return `
-    <div class="wizard-section-title">Informações do Orçamento</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-      <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
-        <label class="form-label">TÍTULO DO ORÇAMENTO *</label>
-        <input class="form-input" id="wiz-titulo" placeholder="Ex: Bancada Cozinha — João Silva" value="${wiz.titulo}">
+    <div class="wizard-section-title">Tipo de Material</div>
+    <div class="mat-grid" id="wiz-tipos">
+      ${tipos.map(t => `
+        <div class="mat-card ${wiz.materialTipo===t.id?'selected':''}" data-tipo="${t.id}">
+          <div class="mat-card-icon">${t.icon}</div>
+          <div class="mat-card-name">${t.nome}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="wizard-section-title" style="margin-top:16px">Material do Estoque</div>
+    <select id="wiz-material-select" class="form-select" style="margin-bottom:16px">
+      <option value="">Selecionar material...</option>
+      ${mats.map(m => `<option value="${m.id}" data-custo="${m.custo}" data-nome="${m.nome}" ${wiz.materialItem===m.id?'selected':''}>${m.nome} — Custo R$${m.custo}/m²</option>`).join('')}
+      <option value="custom">+ Outro (digitar preço)</option>
+    </select>
+    <div id="wiz-custom-price" style="display:none;margin-bottom:16px">
+      <label class="form-label">DESCRIÇÃO DO MATERIAL</label>
+      <input class="form-input" id="wiz-custom-nome" placeholder="Ex: Granito Especial" style="margin-bottom:8px" value="${wiz.customNome||''}">
+      <label class="form-label">CUSTO POR M² (R$)</label>
+      <input class="form-input" type="number" id="wiz-custom-custo" placeholder="0,00" value="${wiz.customCusto||''}">
+    </div>
+
+    <div class="wizard-section-title" style="margin-top:4px">Dimensões</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">LARGURA (m)</label>
+        <input class="form-input" type="number" id="wiz-larg" step="0.01" min="0" placeholder="0,00" value="${wiz.largura||''}">
       </div>
       <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">CLIENTE</label>
-        <select class="form-select" id="wiz-cliente">
-          <option value="">Selecionar cliente...</option>${cliOpts}
-        </select>
+        <label class="form-label">ALTURA / COMP. (m)</label>
+        <input class="form-input" type="number" id="wiz-alt" step="0.01" min="0" placeholder="0,00" value="${wiz.altura||''}">
       </div>
       <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">FORMA DE PAGAMENTO</label>
-        <select class="form-select" id="wiz-pagamento">
-          ${['À vista','50% entrada + 50% entrega','30/60 dias','A combinar'].map(p =>
-            `<option ${wiz.pagamento===p?'selected':''}>${p}</option>`).join('')}
-        </select>
+        <label class="form-label">QTD. PEÇAS</label>
+        <input class="form-input" type="number" id="wiz-qtd" step="1" min="1" placeholder="1" value="${wiz.qtdPecas||1}">
       </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">DATA DE EMISSÃO</label>
-        <input class="form-input" type="date" id="wiz-data" value="${wiz.data}">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">VALIDADE DO ORÇAMENTO</label>
-        <input class="form-input" type="date" id="wiz-validade" value="${wiz.validade}">
-      </div>
-      <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
-        <label class="form-label">DATA PREVISTA DE ENTREGA</label>
-        <input class="form-input" type="date" id="wiz-entrega" value="${wiz.dataEntrega}">
-      </div>
+    </div>
+    <div id="wiz-area-preview" style="margin-top:10px;background:var(--marble);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--gray)">
+      Preencha as dimensões para ver a área
     </div>
   `;
 }
 
 function wizBindStep1() {
-  const bind = (id, prop, type) => {
-    const el = document.getElementById(id);
-    if(el) el.oninput = () => { wiz[prop] = type === 'num' ? parseFloat(el.value)||0 : el.value; };
-    if(el && el.tagName === 'SELECT') el.onchange = () => { wiz[prop] = el.value; };
+  // Tipo cards
+  document.querySelectorAll('#wiz-tipos .mat-card').forEach(card => {
+    card.onclick = () => {
+      wiz.materialTipo = card.dataset.tipo;
+      document.querySelectorAll('#wiz-tipos .mat-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+    };
+  });
+
+  // Material select
+  const sel = document.getElementById('wiz-material-select');
+  if(sel) sel.onchange = () => {
+    if(sel.value === 'custom') {
+      document.getElementById('wiz-custom-price').style.display = 'block';
+      wiz.materialItem = 'custom';
+      wiz.materialCusto = 0;
+    } else {
+      document.getElementById('wiz-custom-price').style.display = 'none';
+      wiz.materialItem = sel.value;
+      const opt = sel.options[sel.selectedIndex];
+      wiz.materialCusto = parseFloat(opt.dataset.custo)||0;
+      wiz.materialNome = opt.dataset.nome||'';
+    }
   };
-  bind('wiz-titulo','titulo','str');
-  bind('wiz-cliente','clienteId','str');
-  bind('wiz-pagamento','pagamento','str');
-  bind('wiz-data','data','str');
-  bind('wiz-validade','validade','str');
-  bind('wiz-entrega','dataEntrega','str');
+
+  // Custom inputs
+  const custoCmp = document.getElementById('wiz-custom-custo');
+  const nomeCmp  = document.getElementById('wiz-custom-nome');
+  if(custoCmp) custoCmp.oninput = () => { wiz.customCusto = parseFloat(custoCmp.value)||0; wiz.materialCusto = wiz.customCusto; };
+  if(nomeCmp)  nomeCmp.oninput  = () => { wiz.customNome = nomeCmp.value; wiz.materialNome = wiz.customNome; };
+
+  // Dimensions
+  const updateArea = () => {
+    wiz.largura   = parseFloat(document.getElementById('wiz-larg').value)||0;
+    wiz.altura    = parseFloat(document.getElementById('wiz-alt').value)||0;
+    wiz.qtdPecas  = parseInt(document.getElementById('wiz-qtd').value)||1;
+    const area    = wiz.largura * wiz.altura * wiz.qtdPecas;
+    const markup  = state.pricing?.markup || 3;
+    const precoVenda = wiz.materialCusto * markup;
+    const totalMat   = area * precoVenda;
+    const prev = document.getElementById('wiz-area-preview');
+    if(prev && area > 0) {
+      prev.innerHTML = `
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          <span>Área total: <strong>${area.toFixed(3)} m²</strong></span>
+          <span>Preço venda: <strong>${fmt(precoVenda)}/m²</strong> (${markup}× custo)</span>
+          <span style="color:var(--dark);font-weight:600">Subtotal material: <strong>${fmt(totalMat)}</strong></span>
+        </div>`;
+    } else if(prev) {
+      prev.innerHTML = 'Preencha as dimensões para ver a área';
+    }
+  };
+  ['wiz-larg','wiz-alt','wiz-qtd'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.oninput = updateArea;
+  });
+  if(wiz.largura > 0) updateArea();
 }
 
-// ── DESENHO SVG AO VIVO ────────────────────────────────────────
-function renderDesenhoOrc(larg, alt, forma) {
-  forma = forma || 'retangular';
-  larg = parseFloat(larg) || 0;
-  alt  = parseFloat(alt)  || 0;
-  if(larg <= 0 || alt <= 0) return '<div style="display:flex;align-items:center;justify-content:center;height:120px;color:var(--gray);font-size:13px">Preencha largura e comprimento</div>';
-  const escala = 160;
-  const maxDim = Math.max(larg, alt, 0.1);
-  const w = Math.round((larg/maxDim)*escala);
-  const h = Math.round((alt/maxDim)*escala);
-  const area = (larg*alt).toFixed(3);
-  if(forma === 'retangular') {
-    return `<svg viewBox="0 0 ${w+60} ${h+60}" style="max-width:100%;border:1px solid #eee;border-radius:8px;background:#f9f9f9;display:block">
-      <rect x="30" y="30" width="${w}" height="${h}" fill="rgba(201,168,76,0.15)" stroke="#C9A84C" stroke-width="2" rx="2"/>
-      <text x="${30+w/2}" y="${30+h/2}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#C9A84C" font-weight="bold">${area} m²</text>
-      <text x="${30+w/2}" y="${30+h+18}" text-anchor="middle" font-size="10" fill="#888">${larg}m</text>
-      <text x="14" y="${30+h/2}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#888" transform="rotate(-90,14,${30+h/2})">${alt}m</text>
-    </svg>`;
-  }
-  if(forma === 'L') {
-    const w2=Math.round(w*0.5); const h2=Math.round(h*0.5);
-    return `<svg viewBox="0 0 ${w+60} ${h+60}" style="max-width:100%;border:1px solid #eee;border-radius:8px;background:#f9f9f9;display:block">
-      <polygon points="30,30 ${30+w},30 ${30+w},${30+h2} ${30+w2},${30+h2} ${30+w2},${30+h} 30,${30+h}" fill="rgba(201,168,76,0.15)" stroke="#C9A84C" stroke-width="2"/>
-      <text x="${30+w*0.65}" y="${30+h2/2}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#C9A84C" font-weight="bold">${area} m²</text>
-    </svg>`;
-  }
-  if(forma === 'U') {
-    const wc=Math.round(w*0.35); const hc=Math.round(h*0.5);
-    return `<svg viewBox="0 0 ${w+60} ${h+60}" style="max-width:100%;border:1px solid #eee;border-radius:8px;background:#f9f9f9;display:block">
-      <polygon points="30,30 ${30+w},30 ${30+w},${30+h} ${30+w-wc},${30+h} ${30+w-wc},${30+hc} ${30+wc},${30+hc} ${30+wc},${30+h} 30,${30+h}" fill="rgba(201,168,76,0.15)" stroke="#C9A84C" stroke-width="2"/>
-      <text x="${30+w/2}" y="${30+h*0.25}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#C9A84C" font-weight="bold">${area} m²</text>
-    </svg>`;
-  }
-  return '';
-}
-
-// ── ETAPA 2: MATERIAIS E ITENS ────────────────────────────────
+// ── ETAPA 2: ACABAMENTOS ──────────────────────────────────────
 function wizStep2() {
-  const mats = (state.materiais || []).filter(m => m.cat === 'chapa' || !m.cat);
-  const markup = state.pricing?.markup || 3;
-  const area = wiz.curLarg * wiz.curAlt * wiz.curQtd;
-  const precoVenda = wiz.curMatCusto * markup;
-  const subtotal = area * precoVenda;
-
-  const acsData = [
-    { key:'meiaEsquadria', nome:'Meia Esquadria',   unid:'ml',  preco: wiz.acabamentos.meiaEsquadria.preco },
-    { key:'bordaReta',     nome:'Borda Reta Polida', unid:'ml',  preco: wiz.acabamentos.bordaReta.preco },
-    { key:'polimento',     nome:'Polimento',         unid:'m²',  preco: wiz.acabamentos.polimento.preco },
-    { key:'corteEspecial', nome:'Corte Especial',    unid:'ml',  preco: wiz.acabamentos.corteEspecial.preco },
-    { key:'furos',         nome:'Furos',             unid:'un',  preco: wiz.acabamentos.furos.preco },
+  const acs = [
+    { key:'meiaEsquadria', nome:'Meia Esquadria',  unid:'ml',  preco:wiz.acabamentos.meiaEsquadria.preco },
+    { key:'bordaReta',     nome:'Borda Reta Polida',unid:'ml',  preco:wiz.acabamentos.bordaReta.preco     },
+    { key:'polimento',     nome:'Polimento',        unid:'m²',  preco:wiz.acabamentos.polimento.preco     },
+    { key:'corteEspecial', nome:'Corte Especial',   unid:'ml',  preco:wiz.acabamentos.corteEspecial.preco },
   ];
-
-  const itensRows = wiz.itens.length ? wiz.itens.map((it, i) => `
-    <tr>
-      <td style="font-size:13px">${it.desc}</td>
-      <td style="font-size:12px;color:var(--gray)">${it.largura>0?it.largura+'×'+it.altura:'—'}</td>
-      <td style="font-size:12px;text-align:center">${it.qtd}</td>
-      <td style="font-size:12px;color:var(--gray)">${it.vlrm2 > 0 ? fmt(it.vlrm2)+'/m²' : '—'}</td>
-      <td style="font-weight:600;font-size:13px">${fmt(it.total)}</td>
-      <td><button class="btn btn-ghost btn-sm" data-remove="${i}" style="color:var(--red);padding:2px 8px;font-size:16px">×</button></td>
-    </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--gray);font-size:13px;padding:12px">Nenhum item adicionado</td></tr>`;
-
-  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
-
   return `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-
-      <!-- Coluna Esquerda: Configurar material -->
-      <div>
-        <div class="wizard-section-title">A — Selecionar Material</div>
-        <div class="form-group">
-          <label class="form-label">MATERIAL DO ESTOQUE</label>
-          <select id="wiz-mat-sel" class="form-select">
-            <option value="">Selecionar...</option>
-            ${mats.map(m => `<option value="${m.id}" data-custo="${m.custo}" data-nome="${m.nome}" ${wiz.curMatId==m.id?'selected':''}>${m.nome} — R$${m.custo}/m²</option>`).join('')}
-            <option value="custom">+ Digitar manualmente</option>
-          </select>
-        </div>
-        <div id="wiz-custom-mat" style="display:${wiz.curMatId==='custom'?'block':'none'}">
-          <div class="form-group">
-            <label class="form-label">DESCRIÇÃO</label>
-            <input class="form-input" id="wiz-custom-nome" placeholder="Ex: Granito Especial" value="${wiz.curMatNome||''}">
+    <div class="wizard-section-title">Acabamentos necessários</div>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:16px">
+      Ative os acabamentos que serão aplicados e informe a quantidade.
+    </p>
+    <div class="acabamento-list" id="wiz-acabamentos">
+      ${acs.map(a => {
+        const ac = wiz.acabamentos[a.key];
+        const qField = a.unid === 'm²' ? 'm2' : 'ml';
+        return `
+        <div class="acabamento-item ${ac.ativo?'active':''}" data-key="${a.key}">
+          <div class="acabamento-left">
+            <button class="acabamento-toggle ${ac.ativo?'on':''}" data-key="${a.key}"></button>
+            <div>
+              <div class="acabamento-name">${a.nome}</div>
+              <div class="acabamento-unit">${fmt(a.preco)} por ${a.unid}</div>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">CUSTO/M² (R$)</label>
-            <input class="form-input" type="number" id="wiz-custom-custo" placeholder="0,00" value="${wiz.curMatCusto||''}">
+          <div class="acabamento-qty">
+            <input type="number" class="form-input" min="0" step="0.1"
+              placeholder="0" value="${ac[qField]||''}"
+              data-key="${a.key}" data-field="${qField}"
+              style="width:80px;text-align:center">
+            <span style="font-size:12px;color:var(--gray)">${a.unid}</span>
           </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <div class="form-group" style="margin-bottom:8px">
-            <label class="form-label">LARGURA (m)</label>
-            <input class="form-input" type="number" id="wiz-larg" step="0.01" min="0" placeholder="0,00" value="${wiz.curLarg||''}">
-          </div>
-          <div class="form-group" style="margin-bottom:8px">
-            <label class="form-label">COMP. (m)</label>
-            <input class="form-input" type="number" id="wiz-alt" step="0.01" min="0" placeholder="0,00" value="${wiz.curAlt||''}">
-          </div>
-          <div class="form-group" style="margin-bottom:8px">
-            <label class="form-label">PEÇAS</label>
-            <input class="form-input" type="number" id="wiz-qtd" step="1" min="1" placeholder="1" value="${wiz.curQtd||1}">
-          </div>
-        </div>
-        <div id="wiz-area-prev" style="background:var(--marble);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--gray);margin-bottom:10px">
-          ${area > 0 ? `Área: <strong>${area.toFixed(3)} m²</strong> · Preço: <strong>${fmt(precoVenda)}/m²</strong> · Subtotal: <strong style="color:var(--dark)">${fmt(subtotal)}</strong>` : 'Selecione material e dimensões'}
-        </div>
-        <!-- Forma -->
-        <div style="display:flex;gap:6px;margin-bottom:10px">
-          ${['retangular','L','U'].map(f => `<button class="btn btn-sm ${wiz.curForma===f?'btn-gold':'btn-outline'}" data-forma="${f}" style="flex:1;font-size:11px">${f==='retangular'?'⬜ Ret.':f==='L'?'📐 L':'🔲 U'}</button>`).join('')}
-        </div>
-        <!-- Desenho SVG -->
-        <div id="orc-desenho-preview">${renderDesenhoOrc(wiz.curLarg, wiz.curAlt, wiz.curForma)}</div>
-        <button id="wiz-add-item" class="btn btn-gold" style="width:100%;margin-top:10px">+ Adicionar à lista</button>
-
-        <div class="wizard-section-title" style="margin-top:16px">B — Acabamentos</div>
-        <div class="acabamento-list" id="wiz-acabamentos">
-          ${acsData.map(a => {
-            const ac = wiz.acabamentos[a.key];
-            const qField = a.unid === 'm²' ? 'm2' : a.unid === 'un' ? 'qtd' : 'ml';
-            return `
-            <div class="acabamento-item ${ac.ativo?'active':''}" data-key="${a.key}">
-              <div class="acabamento-left">
-                <button class="acabamento-toggle ${ac.ativo?'on':''}" data-key="${a.key}"></button>
-                <div>
-                  <div class="acabamento-name">${a.nome}</div>
-                  <div class="acabamento-unit">${fmt(a.preco)} por ${a.unid}</div>
-                </div>
-              </div>
-              <div class="acabamento-qty">
-                <input type="number" class="form-input" min="0" step="0.1"
-                  placeholder="0" value="${ac[qField]||''}"
-                  data-key="${a.key}" data-field="${qField}"
-                  style="width:70px;text-align:center">
-                <span style="font-size:12px;color:var(--gray)">${a.unid}</span>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-
-      <!-- Coluna Direita: Lista de itens -->
-      <div>
-        <div class="wizard-section-title">C — Itens Adicionados</div>
-        <div style="overflow-x:auto">
-          <table style="width:100%;font-size:13px;border-collapse:collapse">
-            <thead><tr style="background:var(--marble);font-size:11px;color:var(--gray)">
-              <th style="padding:6px 8px;text-align:left;font-weight:600">Descrição</th>
-              <th style="padding:6px;text-align:left;font-weight:600">Dim.</th>
-              <th style="padding:6px;text-align:center;font-weight:600">Qtd</th>
-              <th style="padding:6px;text-align:left;font-weight:600">Preço</th>
-              <th style="padding:6px;text-align:left;font-weight:600">Total</th>
-              <th></th>
-            </tr></thead>
-            <tbody id="wiz-itens-tbody">${itensRows}</tbody>
-            ${totalItens > 0 ? `<tfoot><tr style="background:var(--marble)">
-              <td colspan="4" style="padding:8px;font-weight:700;font-size:12px;color:var(--gray)">SUBTOTAL MATERIAIS</td>
-              <td style="padding:8px;font-weight:700;color:var(--dark)">${fmt(totalItens)}</td>
-              <td></td>
-            </tr></tfoot>` : ''}
-          </table>
-        </div>
-      </div>
+        </div>`;
+      }).join('')}
     </div>
   `;
 }
 
 function wizBindStep2() {
-  // Material select
-  const matSel = document.getElementById('wiz-mat-sel');
-  if(matSel) matSel.onchange = () => {
-    const v = matSel.value;
-    const customDiv = document.getElementById('wiz-custom-mat');
-    if(v === 'custom') {
-      wiz.curMatId = 'custom';
-      if(customDiv) customDiv.style.display = 'block';
-    } else {
-      wiz.curMatId = v;
-      const opt = matSel.options[matSel.selectedIndex];
-      wiz.curMatCusto = parseFloat(opt.dataset.custo) || 0;
-      wiz.curMatNome  = opt.dataset.nome || '';
-      if(customDiv) customDiv.style.display = 'none';
-    }
-    wizUpdatePreview();
-  };
-
-  // Custom inputs
-  const customNome  = document.getElementById('wiz-custom-nome');
-  const customCusto = document.getElementById('wiz-custom-custo');
-  if(customNome)  customNome.oninput  = () => { wiz.curMatNome  = customNome.value; };
-  if(customCusto) customCusto.oninput = () => { wiz.curMatCusto = parseFloat(customCusto.value)||0; wizUpdatePreview(); };
-
-  // Dimensões
-  ['wiz-larg','wiz-alt','wiz-qtd'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.oninput = () => {
-      wiz.curLarg = parseFloat(document.getElementById('wiz-larg').value)||0;
-      wiz.curAlt  = parseFloat(document.getElementById('wiz-alt').value)||0;
-      wiz.curQtd  = parseInt(document.getElementById('wiz-qtd').value)||1;
-      wizUpdatePreview();
-    };
-  });
-
-  // Forma buttons
-  document.querySelectorAll('[data-forma]').forEach(btn => {
-    btn.onclick = () => {
-      wiz.curForma = btn.dataset.forma;
-      document.querySelectorAll('[data-forma]').forEach(b => {
-        b.className = b.className.replace('btn-gold','btn-outline');
-      });
-      btn.className = btn.className.replace('btn-outline','btn-gold');
-      const prev = document.getElementById('orc-desenho-preview');
-      if(prev) prev.innerHTML = renderDesenhoOrc(wiz.curLarg, wiz.curAlt, wiz.curForma);
-    };
-  });
-
-  // Botão adicionar item
-  const addBtn = document.getElementById('wiz-add-item');
-  if(addBtn) addBtn.onclick = wizAdicionarItem;
-
-  // Remover itens
-  document.querySelectorAll('[data-remove]').forEach(btn => {
-    btn.onclick = () => {
-      const idx = parseInt(btn.dataset.remove);
-      wiz.itens.splice(idx, 1);
-      const body = document.getElementById('wizard-body');
-      if(body) { body.innerHTML = wizStep2(); setTimeout(wizBindStep2, 0); }
-      wizUpdateDots();
-    };
-  });
-
-  // Acabamentos toggles
   document.querySelectorAll('.acabamento-toggle').forEach(btn => {
     btn.onclick = () => {
       const key = btn.dataset.key;
@@ -4088,284 +4227,45 @@ function wizBindStep2() {
       const key   = inp.dataset.key;
       const field = inp.dataset.field;
       wiz.acabamentos[key][field] = parseFloat(inp.value)||0;
-      wizUpdateDots();
     };
   });
 }
 
-function wizUpdatePreview() {
-  const markup = state.pricing?.markup || 3;
-  const area   = wiz.curLarg * wiz.curAlt * wiz.curQtd;
-  const precoV = wiz.curMatCusto * markup;
-  const sub    = area * precoV;
-  const prev   = document.getElementById('wiz-area-prev');
-  if(prev) {
-    prev.innerHTML = area > 0
-      ? `Área: <strong>${area.toFixed(3)} m²</strong> · Preço: <strong>${fmt(precoV)}/m²</strong> · Subtotal: <strong style="color:var(--dark)">${fmt(sub)}</strong>`
-      : 'Selecione material e dimensões';
-  }
-  const svgPrev = document.getElementById('orc-desenho-preview');
-  if(svgPrev) svgPrev.innerHTML = renderDesenhoOrc(wiz.curLarg, wiz.curAlt, wiz.curForma);
-  wizUpdateDots();
-}
-
-function wizAdicionarItem() {
-  if(!wiz.curMatId) { showToast('Selecione um material', 'err'); return; }
-  if(wiz.curLarg <= 0 || wiz.curAlt <= 0) { showToast('Informe as dimensões', 'err'); return; }
-  const markup   = state.pricing?.markup || 3;
-  const area     = wiz.curLarg * wiz.curAlt * wiz.curQtd;
-  const precoV   = wiz.curMatCusto * markup;
-  const nome     = wiz.curMatNome || 'Material';
-  wiz.itens.push({
-    desc:    `${nome} (${area.toFixed(3)} m²)`,
-    mat:     nome,
-    largura: wiz.curLarg,
-    altura:  wiz.curAlt,
-    qtd:     wiz.curQtd,
-    vlrm2:   parseFloat(precoV.toFixed(2)),
-    total:   parseFloat((area * precoV).toFixed(2)),
-    _custo:  wiz.curMatCusto,
-    _area:   area,
-    _forma:  wiz.curForma,
-  });
-  showToast('Item adicionado!', 'ok2');
-  // Resetar campos de material/dimensão mas manter acabamentos
-  wiz.curMatId = null; wiz.curMatNome = ''; wiz.curMatCusto = 0;
-  wiz.curLarg = 0; wiz.curAlt = 0; wiz.curQtd = 1;
-  const body = document.getElementById('wizard-body');
-  if(body) { body.innerHTML = wizStep2(); setTimeout(wizBindStep2, 0); }
-  wizUpdateDots();
-}
-
-// ── ETAPA 3: SERVIÇOS + ADICIONAIS + RESUMO ───────────────────
+// ── ETAPA 3: SERVIÇOS ─────────────────────────────────────────
 function wizStep3() {
-  const markup     = state.pricing?.markup || 3;
-  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
-  const totalCusto = wiz.itens.reduce((s,it) => s + ((it._custo||0) * (it._area||0)), 0);
-  const areaTotal  = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
-
-  // Acabamentos
-  let totalAcab = 0, custoAcab = 0;
-  const acabLines = [];
-  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial', furos:'Furos' };
-  Object.entries(wiz.acabamentos).forEach(([key, a]) => {
-    if(a.ativo) {
-      const qty   = a.ml || a.m2 || a.qtd || 0;
-      const total = qty * a.preco;
-      totalAcab += total;
-      custoAcab += total * 0.5;
-      acabLines.push({ nome: acabNames[key], qty, unid: a.m2 !== undefined ? 'm²' : a.qtd !== undefined && !a.ml ? 'un' : 'ml', total });
-    }
-  });
-
-  const totalColoc = wiz.colocacao.ativo ? areaTotal * wiz.colocacao.preco : 0;
-  const totalFrete = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
-  const totalAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
-  const custoAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco * 0.6, 0);
-
-  const subMat   = totalItens;
-  const subServ  = totalColoc + totalFrete;
-  const subAdic  = totalAdic;
-  const subAcab  = totalAcab;
-
-  const totalVenda = subMat + subAcab + subServ + subAdic + (wiz.maoObra||0) - (wiz.desconto||0);
-  const custoTot   = totalCusto + custoAcab + (totalColoc*0.6) + totalFrete + custoAdic;
-  const lucro      = totalVenda - custoTot;
-  const margem     = totalVenda > 0 ? Math.round(lucro / totalVenda * 100) : 0;
-  const margemColor= margem >= 30 ? 'var(--green)' : margem >= 15 ? 'var(--gold)' : 'var(--red)';
-
+  const area = wiz.largura * wiz.altura * wiz.qtdPecas;
   return `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="wizard-section-title">Serviços</div>
 
-      <!-- Esquerda: Serviços + Adicionais -->
-      <div>
-        <div class="wizard-section-title">A — Serviços</div>
-
-        <div class="servico-toggle-row ${wiz.colocacao.ativo?'active':''}" id="srv-coloc-row">
-          <div class="servico-toggle-info">
-            <h4>Colocação / Instalação</h4>
-            <p>${fmt(wiz.colocacao.preco)}/m² · Área total: ${areaTotal.toFixed(2)}m²</p>
-          </div>
-          <button class="acabamento-toggle ${wiz.colocacao.ativo?'on':''}" id="tog-coloc"></button>
-        </div>
-        <div class="servico-extra ${wiz.colocacao.ativo?'show':''}" id="srv-coloc-extra">
-          <label class="form-label" style="margin-top:8px">PREÇO/M² (R$)</label>
-          <input class="form-input" type="number" id="srv-coloc-preco" value="${wiz.colocacao.preco}" style="max-width:140px">
-        </div>
-
-        <div class="servico-toggle-row ${wiz.frete.ativo?'active':''}" id="srv-frete-row" style="margin-top:8px">
-          <div class="servico-toggle-info">
-            <h4>Frete / Entrega</h4>
-            <p>Calculado por km</p>
-          </div>
-          <button class="acabamento-toggle ${wiz.frete.ativo?'on':''}" id="tog-frete"></button>
-        </div>
-        <div class="servico-extra ${wiz.frete.ativo?'show':''}" id="srv-frete-extra">
-          <label class="form-label" style="margin-top:8px">DISTÂNCIA (km)</label>
-          <input class="form-input" type="number" id="srv-frete-km" value="${wiz.frete.km}" placeholder="0" style="max-width:140px">
-          <div id="srv-frete-prev" style="margin-top:6px;font-size:12px;color:var(--gray)">${wiz.frete.km>0?'Frete: '+fmt(calcFrete(wiz.frete.km)):''}</div>
-        </div>
-
-        <div class="wizard-section-title" style="margin-top:16px">B — Adicionais</div>
-        <div id="wiz-adicionais-list">
-          ${wiz.adicionais.map((a,i) => `
-          <div class="adicional-row">
-            <div class="adicional-name" style="font-size:13px">${a.nome}</div>
-            <div class="adicional-price">${fmt(a.preco)}</div>
-            <div class="qty-control">
-              <button class="qty-btn" data-idx="${i}" data-dir="-1">−</button>
-              <div class="qty-display" id="wiz-qty-${i}">${a.qtd}</div>
-              <button class="qty-btn" data-idx="${i}" data-dir="1">+</button>
-            </div>
-          </div>`).join('')}
-        </div>
-
-        <div class="wizard-section-title" style="margin-top:16px">C — Ajustes</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">MÃO DE OBRA ADICIONAL (R$)</label>
-            <input class="form-input" type="number" id="wiz-mao-obra" value="${wiz.maoObra||0}" min="0" step="0.01">
-          </div>
-          <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">DESCONTO (R$)</label>
-            <input class="form-input" type="number" id="wiz-desconto" value="${wiz.desconto||0}" min="0" step="0.01">
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:10px;margin-bottom:0">
-          <label class="form-label">OBSERVAÇÕES PARA O CLIENTE</label>
-          <textarea class="form-input" id="wiz-obs" rows="3" placeholder="Prazo de entrega, condições especiais...">${wiz.obs||''}</textarea>
-        </div>
+    <div class="servico-toggle-row ${wiz.colocacao.ativo?'active':''}" id="srv-colocacao-row">
+      <div class="servico-toggle-info">
+        <h4>Colocação / Instalação</h4>
+        <p>${fmt(wiz.colocacao.preco)}/m² · Área: ${area.toFixed(2)}m² · Subtotal: ${fmt(wiz.colocacao.preco * area)}</p>
       </div>
+      <button class="acabamento-toggle ${wiz.colocacao.ativo?'on':''}" id="toggle-colocacao"></button>
+    </div>
+    <div class="servico-extra ${wiz.colocacao.ativo?'show':''}" id="srv-colocacao-extra">
+      <label class="form-label" style="margin-top:8px">PREÇO POR M² (R$)</label>
+      <input class="form-input" type="number" id="srv-colocacao-preco"
+        value="${wiz.colocacao.preco}" style="max-width:160px">
+    </div>
 
-      <!-- Direita: Resumo financeiro -->
-      <div>
-        <div class="wizard-section-title">D — Resumo Financeiro</div>
-        <div style="background:var(--marble);border-radius:10px;padding:14px" id="wiz-resumo-box">
-
-          ${totalItens > 0 ? `<div class="resumo-linha"><span class="resumo-label">Materiais (${wiz.itens.length} item${wiz.itens.length>1?'s':''})</span><span class="resumo-valor">${fmt(subMat)}</span></div>` : ''}
-          ${acabLines.map(a => `<div class="resumo-linha"><span class="resumo-label">${a.nome} (${a.qty} ${a.unid})</span><span class="resumo-valor">${fmt(a.total)}</span></div>`).join('')}
-          ${wiz.colocacao.ativo ? `<div class="resumo-linha"><span class="resumo-label">Colocação (${areaTotal.toFixed(2)}m²)</span><span class="resumo-valor">${fmt(totalColoc)}</span></div>` : ''}
-          ${wiz.frete.ativo ? `<div class="resumo-linha"><span class="resumo-label">Frete (~${wiz.frete.km}km)</span><span class="resumo-valor">${fmt(totalFrete)}</span></div>` : ''}
-          ${wiz.adicionais.filter(a=>a.qtd>0).map(a=>`<div class="resumo-linha"><span class="resumo-label">${a.nome} ×${a.qtd}</span><span class="resumo-valor">${fmt(a.qtd*a.preco)}</span></div>`).join('')}
-          ${(wiz.maoObra||0) > 0 ? `<div class="resumo-linha"><span class="resumo-label">Mão de obra adicional</span><span class="resumo-valor">${fmt(wiz.maoObra)}</span></div>` : ''}
-          ${(wiz.desconto||0) > 0 ? `<div class="resumo-linha"><span class="resumo-label" style="color:var(--red)">Desconto</span><span class="resumo-valor" style="color:var(--red)">−${fmt(wiz.desconto)}</span></div>` : ''}
-
-          <div style="margin-top:8px;padding-top:8px;border-top:2px solid var(--marble2)">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:3px">
-              <span>Subtotal materiais</span><span>${fmt(subMat)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:3px">
-              <span>Subtotal serviços</span><span>${fmt(subServ)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:3px">
-              <span>Subtotal acabamentos</span><span>${fmt(subAcab)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray)">
-              <span>Subtotal adicionais</span><span>${fmt(subAdic)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="resumo-total" style="margin-top:10px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <span class="resumo-total-label">TOTAL DE VENDA</span>
-            <span class="resumo-total-valor" id="wiz-total-valor">${fmt(totalVenda)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:8px">
-            <span style="color:rgba(255,255,255,0.5);font-size:12px">Custo estimado</span>
-            <span style="color:rgba(255,255,255,0.6);font-size:12px">${fmt(custoTot)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:4px">
-            <span style="color:rgba(255,255,255,0.5);font-size:12px">Margem de lucro</span>
-            <span style="color:${margemColor};font-size:14px;font-weight:700" id="wiz-margem-val">${margem}% — ${fmt(lucro)}</span>
-          </div>
-        </div>
+    <div class="servico-toggle-row ${wiz.frete.ativo?'active':''}" id="srv-frete-row" style="margin-top:10px">
+      <div class="servico-toggle-info">
+        <h4>Frete / Entrega</h4>
+        <p>Calculado por distância em km</p>
+      </div>
+      <button class="acabamento-toggle ${wiz.frete.ativo?'on':''}" id="toggle-frete"></button>
+    </div>
+    <div class="servico-extra ${wiz.frete.ativo?'show':''}" id="srv-frete-extra">
+      <label class="form-label" style="margin-top:8px">DISTÂNCIA (km)</label>
+      <input class="form-input" type="number" id="srv-frete-km"
+        value="${wiz.frete.km}" placeholder="0" style="max-width:160px">
+      <div id="srv-frete-preview" style="margin-top:8px;font-size:13px;color:var(--gray)">
+        ${wiz.frete.km > 0 ? 'Frete estimado: ' + fmt(calcFrete(wiz.frete.km)) : ''}
       </div>
     </div>
   `;
-}
-
-function wizBindStep3() {
-  // Colocação toggle
-  const togColoc = document.getElementById('tog-coloc');
-  if(togColoc) togColoc.onclick = () => {
-    wiz.colocacao.ativo = !wiz.colocacao.ativo;
-    togColoc.classList.toggle('on', wiz.colocacao.ativo);
-    document.getElementById('srv-coloc-row').classList.toggle('active', wiz.colocacao.ativo);
-    document.getElementById('srv-coloc-extra').classList.toggle('show', wiz.colocacao.ativo);
-    wizRefreshResumo3();
-  };
-  const precoColoc = document.getElementById('srv-coloc-preco');
-  if(precoColoc) precoColoc.oninput = () => { wiz.colocacao.preco = parseFloat(precoColoc.value)||120; wizRefreshResumo3(); };
-
-  // Frete toggle
-  const togFrete = document.getElementById('tog-frete');
-  if(togFrete) togFrete.onclick = () => {
-    wiz.frete.ativo = !wiz.frete.ativo;
-    togFrete.classList.toggle('on', wiz.frete.ativo);
-    document.getElementById('srv-frete-row').classList.toggle('active', wiz.frete.ativo);
-    document.getElementById('srv-frete-extra').classList.toggle('show', wiz.frete.ativo);
-    wizRefreshResumo3();
-  };
-  const kmInp = document.getElementById('srv-frete-km');
-  if(kmInp) kmInp.oninput = () => {
-    wiz.frete.km = parseFloat(kmInp.value)||0;
-    const p = document.getElementById('srv-frete-prev');
-    if(p) p.textContent = wiz.frete.km > 0 ? 'Frete: ' + fmt(calcFrete(wiz.frete.km)) : '';
-    wizRefreshResumo3();
-  };
-
-  // Adicionais
-  document.querySelectorAll('.qty-btn').forEach(btn => {
-    btn.onclick = () => {
-      const i   = parseInt(btn.dataset.idx);
-      const dir = parseInt(btn.dataset.dir);
-      wiz.adicionais[i].qtd = Math.max(0, (wiz.adicionais[i].qtd||0) + dir);
-      const disp = document.getElementById('wiz-qty-'+i);
-      if(disp) disp.textContent = wiz.adicionais[i].qtd;
-      wizRefreshResumo3();
-    };
-  });
-
-  // Mão de obra / desconto / obs
-  const moInp = document.getElementById('wiz-mao-obra');
-  if(moInp) moInp.oninput = () => { wiz.maoObra = parseFloat(moInp.value)||0; wizRefreshResumo3(); };
-  const desInp = document.getElementById('wiz-desconto');
-  if(desInp) desInp.oninput = () => { wiz.desconto = parseFloat(desInp.value)||0; wizRefreshResumo3(); };
-  const obsInp = document.getElementById('wiz-obs');
-  if(obsInp) obsInp.oninput = () => { wiz.obs = obsInp.value; };
-}
-
-function wizRefreshResumo3() {
-  // Re-render just the resumo (avoid full re-render)
-  const areaTotal  = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
-  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
-  const totalCusto = wiz.itens.reduce((s,it) => s + ((it._custo||0) * (it._area||0)), 0);
-  let totalAcab = 0, custoAcab = 0;
-  const acabLines = [];
-  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial', furos:'Furos' };
-  Object.entries(wiz.acabamentos).forEach(([key, a]) => {
-    if(a.ativo) {
-      const qty = a.ml || a.m2 || a.qtd || 0;
-      const tot = qty * a.preco;
-      totalAcab += tot; custoAcab += tot * 0.5;
-      acabLines.push({ nome: acabNames[key], qty, unid: a.m2 !== undefined ? 'm²' : a.qtd !== undefined && !a.ml ? 'un' : 'ml', total: tot });
-    }
-  });
-  const totalColoc = wiz.colocacao.ativo ? areaTotal * wiz.colocacao.preco : 0;
-  const totalFrete = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
-  const totalAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
-  const custoAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco * 0.6, 0);
-  const totalVenda = totalItens + totalAcab + totalColoc + totalFrete + totalAdic + (wiz.maoObra||0) - (wiz.desconto||0);
-  const custoTot   = totalCusto + custoAcab + (totalColoc*0.6) + totalFrete + custoAdic;
-  const lucro      = totalVenda - custoTot;
-  const margem     = totalVenda > 0 ? Math.round(lucro / totalVenda * 100) : 0;
-  const margemColor= margem >= 30 ? 'var(--green)' : margem >= 15 ? 'var(--gold)' : 'var(--red)';
-  const tv = document.getElementById('wiz-total-valor');
-  if(tv) tv.textContent = fmt(totalVenda);
-  const mv = document.getElementById('wiz-margem-val');
-  if(mv) { mv.textContent = `${margem}% — ${fmt(lucro)}`; mv.style.color = margemColor; }
-  wizUpdateDots();
 }
 
 function calcFrete(km) {
@@ -4375,434 +4275,404 @@ function calcFrete(km) {
   return 500 + (km - 60) * 3;
 }
 
+function wizBindStep3() {
+  const toggleColocacao = document.getElementById('toggle-colocacao');
+  if(toggleColocacao) toggleColocacao.onclick = () => {
+    wiz.colocacao.ativo = !wiz.colocacao.ativo;
+    toggleColocacao.classList.toggle('on', wiz.colocacao.ativo);
+    document.getElementById('srv-colocacao-row').classList.toggle('active', wiz.colocacao.ativo);
+    document.getElementById('srv-colocacao-extra').classList.toggle('show', wiz.colocacao.ativo);
+  };
+  const precoCol = document.getElementById('srv-colocacao-preco');
+  if(precoCol) precoCol.oninput = () => { wiz.colocacao.preco = parseFloat(precoCol.value)||120; };
+
+  const toggleFrete = document.getElementById('toggle-frete');
+  if(toggleFrete) toggleFrete.onclick = () => {
+    wiz.frete.ativo = !wiz.frete.ativo;
+    toggleFrete.classList.toggle('on', wiz.frete.ativo);
+    document.getElementById('srv-frete-row').classList.toggle('active', wiz.frete.ativo);
+    document.getElementById('srv-frete-extra').classList.toggle('show', wiz.frete.ativo);
+  };
+  const kmInput = document.getElementById('srv-frete-km');
+  if(kmInput) kmInput.oninput = () => {
+    wiz.frete.km = parseFloat(kmInput.value)||0;
+    const prev = document.getElementById('srv-frete-preview');
+    if(prev) prev.textContent = wiz.frete.km > 0 ? 'Frete estimado: ' + fmt(calcFrete(wiz.frete.km)) : '';
+  };
+}
+
+// ── ETAPA 4: ADICIONAIS ───────────────────────────────────────
+function wizStep4() {
+  return `
+    <div class="wizard-section-title">Produtos Adicionais</div>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:16px">
+      Cubas, torneiras e acessórios. Use os botões +/− para adicionar.
+    </p>
+    <div id="wiz-adicionais-list">
+      ${wiz.adicionais.map((a,i) => `
+        <div class="adicional-row">
+          <div class="adicional-name">${a.nome}</div>
+          <div class="adicional-price">${fmt(a.preco)}</div>
+          <div class="qty-control">
+            <button class="qty-btn" data-idx="${i}" data-dir="-1">−</button>
+            <div class="qty-display" id="wiz-qty-${i}">${a.qtd}</div>
+            <button class="qty-btn" data-idx="${i}" data-dir="1">+</button>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function wizBindStep4() {
+  document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.onclick = () => {
+      const i   = parseInt(btn.dataset.idx);
+      const dir = parseInt(btn.dataset.dir);
+      wiz.adicionais[i].qtd = Math.max(0, (wiz.adicionais[i].qtd||0) + dir);
+      const display = document.getElementById('wiz-qty-'+i);
+      if(display) display.textContent = wiz.adicionais[i].qtd;
+    };
+  });
+}
+
+// ── ETAPA 5: RESUMO ───────────────────────────────────────────
 function calcWizTotal() {
-  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
+  const markup = state.pricing?.markup || 3;
+  const area   = wiz.largura * wiz.altura * wiz.qtdPecas;
+  const custo  = wiz.materialCusto || 0;
+  const totalMat = area * custo * markup;
+
   let totalAcab = 0;
   Object.values(wiz.acabamentos).forEach(a => {
-    if(a.ativo) totalAcab += (a.ml || a.m2 || a.qtd || 0) * a.preco;
+    if(a.ativo) totalAcab += (a.ml||a.m2||0) * a.preco;
   });
-  const areaTotal  = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
-  const totalColoc = wiz.colocacao.ativo ? areaTotal * wiz.colocacao.preco : 0;
+
+  const totalColoc  = wiz.colocacao.ativo ? area * wiz.colocacao.preco : 0;
+  const totalFrete  = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
+  const totalAdic   = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
+
+  return totalMat + totalAcab + totalColoc + totalFrete + totalAdic;
+}
+
+function wizStep5() {
+  const markup     = state.pricing?.markup || 3;
+  const area       = wiz.largura * wiz.altura * wiz.qtdPecas;
+  const custoUnit  = wiz.materialCusto || 0;
+  const precoVenda = custoUnit * markup;
+  const totalMat   = area * precoVenda;
+  const custoMat   = area * custoUnit;
+
+  let totalAcab = 0, custoAcab = 0;
+  const acabLines = [];
+  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta', polimento:'Polimento', corteEspecial:'Corte Especial' };
+  Object.entries(wiz.acabamentos).forEach(([key,a]) => {
+    if(a.ativo) {
+      const qty   = a.ml || a.m2 || 0;
+      const total = qty * a.preco;
+      const custo = qty * (a.preco * 0.5);
+      totalAcab += total; custoAcab += custo;
+      acabLines.push({ nome: acabNames[key], qty, total });
+    }
+  });
+
+  const totalColoc = wiz.colocacao.ativo ? area * wiz.colocacao.preco : 0;
   const totalFrete = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
   const totalAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
-  return totalItens + totalAcab + totalColoc + totalFrete + totalAdic + (wiz.maoObra||0) - (wiz.desconto||0);
+  const custoAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco * 0.6, 0);
+
+  const totalVenda = totalMat + totalAcab + totalColoc + totalFrete + totalAdic;
+  const custoTotal = custoMat + custoAcab + (totalColoc*0.6) + totalFrete + custoAdic;
+  const margem     = totalVenda > 0 ? Math.round((totalVenda - custoTotal) / totalVenda * 100) : 0;
+  const margemColor= margem >= 30 ? 'var(--green)' : margem >= 15 ? 'var(--gold)' : 'var(--red)';
+
+  const cliOpts = state.clientes.map(c =>
+    `<option value="${c.id}" ${wiz.clienteId===c.id?'selected':''}>${c.nome}</option>`
+  ).join('');
+
+  return `
+    <div class="wizard-section-title">Informações do Orçamento</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">TÍTULO</label>
+        <input class="form-input" id="wiz-titulo" placeholder="Ex: Cozinha - João" value="${wiz.titulo}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">CLIENTE</label>
+        <div style="display:flex;gap:6px">
+          <select class="form-select" id="wiz-cliente" style="flex:1">
+            <option value="">Selecionar...</option>${cliOpts}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label class="form-label">PAGAMENTO</label>
+      <select class="form-select" id="wiz-pagamento">
+        ${['À vista','50% entrada + 50% entrega','30/60 dias','A combinar'].map(p =>
+          `<option ${wiz.pagamento===p?'selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="wizard-section-title">Resumo do Orçamento</div>
+    <div style="background:var(--marble);border-radius:10px;padding:16px">
+      <div class="resumo-linha">
+        <span class="resumo-label">${wiz.materialNome||'Material'} (${area.toFixed(3)} m²)</span>
+        <span class="resumo-valor">${fmt(totalMat)}</span>
+      </div>
+      ${acabLines.map(a => `
+      <div class="resumo-linha">
+        <span class="resumo-label">${a.nome} (${a.qty} ${a.ml?'ml':'m²'})</span>
+        <span class="resumo-valor">${fmt(a.total)}</span>
+      </div>`).join('')}
+      ${wiz.colocacao.ativo ? `
+      <div class="resumo-linha">
+        <span class="resumo-label">Colocação (${area.toFixed(2)} m²)</span>
+        <span class="resumo-valor">${fmt(totalColoc)}</span>
+      </div>` : ''}
+      ${wiz.frete.ativo ? `
+      <div class="resumo-linha">
+        <span class="resumo-label">Frete (~${wiz.frete.km}km)</span>
+        <span class="resumo-valor">${fmt(totalFrete)}</span>
+      </div>` : ''}
+      ${wiz.adicionais.filter(a=>a.qtd>0).map(a => `
+      <div class="resumo-linha">
+        <span class="resumo-label">${a.nome} × ${a.qtd}</span>
+        <span class="resumo-valor">${fmt(a.qtd * a.preco)}</span>
+      </div>`).join('')}
+    </div>
+
+    <div class="resumo-total" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="resumo-total-label">TOTAL DE VENDA</span>
+        <span class="resumo-total-valor">${fmt(totalVenda)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <span style="color:rgba(255,255,255,0.5);font-size:12px">Custo total estimado</span>
+        <span style="color:rgba(255,255,255,0.6);font-size:12px">${fmt(custoTotal)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span style="color:rgba(255,255,255,0.5);font-size:12px">Margem de lucro</span>
+        <span style="color:${margemColor};font-size:14px;font-weight:700">${margem}% — ${fmt(totalVenda - custoTotal)}</span>
+      </div>
+    </div>
+  `;
 }
 
 // ── GERAR ORÇAMENTO ───────────────────────────────────────────
 async function wizGerarOrcamento() {
-  if(!wiz.titulo) { showToast('Título do orçamento não informado', 'err'); return; }
+  const titulo = document.getElementById('wiz-titulo')?.value?.trim();
+  const clienteId = document.getElementById('wiz-cliente')?.value;
+  const pagamento = document.getElementById('wiz-pagamento')?.value || 'À vista';
+
+  if(!titulo)    { showToast('Informe o título do orçamento', 'err'); return; }
+  if(!clienteId) { showToast('Selecione um cliente', 'err'); return; }
+
+  const markup    = state.pricing?.markup || 3;
+  const area      = wiz.largura * wiz.altura * wiz.qtdPecas;
+  const custoUnit = wiz.materialCusto || 0;
+  const precoVenda= custoUnit * markup;
 
   const itens = [];
 
-  // Itens de material
-  wiz.itens.forEach(it => {
-    itens.push({
-      desc: it.desc, mat: it.mat,
-      largura: it.largura, altura: it.altura,
-      qtd: it.qtd, vlrm2: it.vlrm2, total: it.total,
-    });
+  // Material principal
+  itens.push({
+    desc:    `${wiz.materialNome||'Material'} (${area.toFixed(3)} m²)`,
+    mat:     wiz.materialNome || '-',
+    largura: wiz.largura,
+    altura:  wiz.altura,
+    qtd:     wiz.qtdPecas,
+    vlrm2:   parseFloat(precoVenda.toFixed(2)),
+    total:   parseFloat((area * precoVenda).toFixed(2)),
   });
 
   // Acabamentos
-  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial', furos:'Furos' };
-  Object.entries(wiz.acabamentos).forEach(([key, a]) => {
-    if(a.ativo) {
-      const qty = a.ml || a.m2 || a.qtd || 0;
-      if(qty > 0) itens.push({
-        desc: acabNames[key], mat: '-',
-        largura: qty, altura: 1, qtd: 1,
-        vlrm2: a.preco, total: qty * a.preco,
-        _servico: true,
-      });
+  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial' };
+  Object.entries(wiz.acabamentos).forEach(([key,a]) => {
+    if(a.ativo && (a.ml||a.m2)) {
+      const qty = a.ml||a.m2;
+      itens.push({ desc: acabNames[key], mat:'-', largura:qty, altura:1, qtd:1, vlrm2:a.preco, total:qty*a.preco });
     }
   });
 
   // Colocação
-  const areaTotal = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
-  if(wiz.colocacao.ativo && areaTotal > 0) {
-    const t = areaTotal * wiz.colocacao.preco;
-    itens.push({ desc: `Colocação/Instalação (${areaTotal.toFixed(2)}m²)`, mat:'-', largura:areaTotal, altura:1, qtd:1, vlrm2:wiz.colocacao.preco, total:parseFloat(t.toFixed(2)), _servico:true });
+  if(wiz.colocacao.ativo) {
+    const t = area * wiz.colocacao.preco;
+    itens.push({ desc:`Colocação/Instalação (${area.toFixed(2)}m²)`, mat:'-', largura:area, altura:1, qtd:1, vlrm2:wiz.colocacao.preco, total:parseFloat(t.toFixed(2)) });
   }
 
   // Frete
   if(wiz.frete.ativo) {
     const t = calcFrete(wiz.frete.km);
-    itens.push({ desc:`Frete (~${wiz.frete.km}km)`, mat:'-', largura:0, altura:0, qtd:1, vlrm2:t, total:t, _servico:true });
+    itens.push({ desc:`Frete (~${wiz.frete.km}km)`, mat:'-', largura:0, altura:0, qtd:1, vlrm2:t, total:t });
   }
 
   // Adicionais
-  wiz.adicionais.filter(a => a.qtd > 0).forEach(a => {
+  wiz.adicionais.filter(a=>a.qtd>0).forEach(a => {
     itens.push({ desc:a.nome, mat:'-', largura:0, altura:0, qtd:a.qtd, vlrm2:a.preco, total:a.qtd*a.preco });
   });
 
+  // Salvar
   const orcData = {
-    titulo:      wiz.titulo,
-    clienteId:   wiz.clienteId || null,
-    data:        wiz.data || new Date().toISOString().split('T')[0],
-    validade:    wiz.validade || '',
-    dataEntrega: wiz.dataEntrega || null,
-    pagamento:   wiz.pagamento,
-    maoObra:     wiz.maoObra || 0,
-    desconto:    wiz.desconto || 0,
-    obs:         wiz.obs || '',
-    status:      'rascunho',
+    titulo, clienteId, pagamento,
+    data: new Date().toISOString().split('T')[0],
+    validade: '',
+    obs: `Gerado pelo assistente de orçamento. Markup: ${markup}×`,
+    maoObra: 0, desconto: 0, status: 'rascunho',
   };
 
   const btn = document.getElementById('wizard-btn-next');
-  if(btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
+  btn.textContent = '⏳ Salvando...'; btn.disabled = true;
 
   try {
     await sbSaveOrcamento(orcData, itens);
     await loadOrcamentos();
     closeWizard();
-    showToast('Orçamento criado!', 'ok2');
+    showToast('Orçamento gerado com sucesso!', 'ok2');
     showPage('orcamentos');
   } catch(e) {
     showToast('Erro ao salvar: ' + e.message, 'err');
-    if(btn) { btn.textContent = '✅ Gerar Orçamento'; btn.disabled = false; }
+    btn.textContent = '✅ Gerar Orçamento'; btn.disabled = false;
   }
 }
-
 
 // ═══════════════════════════════════════════
 // AGENTE IA — MARMO IA
 // ═══════════════════════════════════════════
-// ═══════════════════════════════════════════
-// AGENTE IA — MARMO IA (com Voz + Imagem)
-// ═══════════════════════════════════════════
-let agentOpen        = false;
-let agentHistory     = [];
+let agentOpen = false;
+let agentHistory = [];
 let agentPendingOrcamento = null;
 
-// ── VOZ ────────────────────────────────────────────────────────
-let recognition  = null;
-let isListening  = false;
+const AGENT_SYSTEM = `Você é o MarmoIA, assistente especializado em orçamentos para marmorarias brasileiras.
 
-function initVoice() {
-  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    showToast('Seu navegador não suporta voz. Use o Chrome.', 'err');
-    return false;
-  }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = 'pt-BR';
-  recognition.continuous = false;
-  recognition.interimResults = true;
+Seu objetivo é guiar o responsável pela marmoraria através de um processo de orçamento estruturado, coletando todas as informações necessárias e ao final gerar um orçamento detalhado com margem de lucro real.
 
-  recognition.onresult = (event) => {
-    let interim = '', final = '';
-    for(let i = event.resultIndex; i < event.results.length; i++) {
-      if(event.results[i].isFinal) final += event.results[i][0].transcript;
-      else interim += event.results[i][0].transcript;
-    }
-    const input = document.getElementById('agent-input');
-    if(input) input.value = final || interim;
-    if(final) { stopListening(); sendAgentMessage(final); }
-  };
+FLUXO DE COLETA:
+1. Tipo de projeto (pia, bancada, soleira, tampo, revestimento, etc)
+2. Material desejado (granito, mármore, porcelanato, quartzito, etc)
+3. Medidas exatas (comprimento, largura, espessura)
+4. Quantidade de peças/ambientes
+5. Acabamentos necessários (polimento, borda, meia esquadria)
+6. Serviços (instalação, furos de cuba/torneira/fogão)
+7. Endereço de entrega/instalação (para calcular frete)
+8. Prazo desejado
 
-  recognition.onerror = (e) => { stopListening(); showToast('Erro de voz: ' + e.error, 'err'); };
-  recognition.onend   = () => stopListening();
-  return true;
-}
+TABELA DE PREÇOS BASE (use estes valores de custo de mercado brasileiro):
+- Granito Preto São Gabriel: R$280/m²
+- Granito Branco Itaúnas: R$320/m²
+- Granito Amarelo Real: R$180/m²
+- Mármore Branco Carrara: R$620/m²
+- Mármore Travertino: R$420/m²
+- Porcelanato (genérico): R$75/m²
+- Quartzito Taj Mahal: R$850/m²
 
-function startListening() {
-  if(!recognition && !initVoice()) return;
-  isListening = true;
-  recognition.start();
-  const btn = document.getElementById('btn-voice');
-  if(btn) { btn.style.background = '#e74c3c'; btn.innerHTML = '⏹'; }
-  const input = document.getElementById('agent-input');
-  if(input) input.placeholder = '🎤 Ouvindo...';
-}
+SERVIÇOS (custo):
+- Instalação: R$80/m² (cobrar R$120/m²)
+- Polimento: R$50/m² (cobrar R$80/m²)
+- Furo cuba: R$45/und (cobrar R$90/und)
+- Furo torneira/fogão: R$25/und (cobrar R$45/und)
+- Meia esquadria: R$30/ml (cobrar R$55/ml)
+- Corte especial: R$40/ml (cobrar R$65/ml)
 
-function stopListening() {
-  isListening = false;
-  if(recognition) try { recognition.stop(); } catch(e) {}
-  const btn = document.getElementById('btn-voice');
-  if(btn) { btn.style.background = ''; btn.innerHTML = '🎤'; }
-  const input = document.getElementById('agent-input');
-  if(input) input.placeholder = 'Descreva o projeto ou use o microfone...';
-}
+CÁLCULO DE FRETE:
+- Até 10km: R$120 fixo
+- 11–30km: R$200
+- 31–60km: R$350
+- Acima 60km: R$500 + R$3/km adicional
 
-function toggleVoice() {
-  if(isListening) stopListening(); else startListening();
-}
+MARKUP PADRÃO: 3× o custo do material
 
-// ── ANÁLISE DE IMAGEM ──────────────────────────────────────────
-async function analyzeDrawing(imageBase64, mimeType) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1024,
-      system: `Você é um especialista em marmoraria. Analise o desenho/croqui enviado e extraia as informações para montar um orçamento. Responda APENAS em JSON válido com esta estrutura:
-{
-  "formato": "retangular|L|U|custom",
-  "largura": número em metros,
-  "comprimento": número em metros,
-  "espessura": "2cm|3cm" ou null,
-  "furos": número de furos (0 se nenhum),
-  "acabamentos": ["meia_esquadria"|"borda_reta"|"polimento"|"corte_especial"],
-  "quantidade_pecas": número,
-  "observacoes": "descrição breve da peça",
-  "complexidade": "simples|media|complexa"
-}
-Se não conseguir identificar uma dimensão, use null.`,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
-          { type: 'text', text: 'Analise este desenho de marmoraria e extraia as informações para o orçamento.' }
-        ]
-      }]
-    })
-  });
+FORMATO DO ORÇAMENTO FINAL:
+Quando tiver TODAS as informações, responda com um JSON no seguinte formato exato (sem markdown, só o JSON puro):
+{"tipo":"orcamento","titulo":"[título descritivo]","itens":[{"desc":"[descrição]","area":[numero],"vlrm2":[preco_venda],"total":[total],"custo_unit":[custo_m2]}],"servicos":[{"desc":"[serviço]","qtd":[numero],"unid":"[m²/ml/und]","preco":[preco],"total":[total]}],"frete":{"distancia_km":[km_estimado],"valor":[valor_frete]},"resumo":{"subtotal_material":[valor],"subtotal_servicos":[valor],"frete":[valor],"total_venda":[valor],"custo_total":[valor],"margem_lucro_pct":[percentual],"margem_lucro_rs":[valor_rs]}}
 
-  if(!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || 'Erro na API de visão');
-  }
+Seja direto e profissional. Use linguagem do setor. Pergunte uma etapa de cada vez. Quando o cliente mencionar o endereço, estime a distância com base no CEP informado. Se o CEP da marmoraria for informado, use-o como origem.`;
 
-  const data = await response.json();
-  const text = data.content[0].text;
-  try {
-    return JSON.parse(text.replace(/```json|```/g, '').trim());
-  } catch(e) {
-    throw new Error('Não consegui interpretar o desenho. Tente uma foto mais clara.');
-  }
-}
-
-async function handleDrawingUpload(file) {
-  if(!file) return;
-  showToast('Analisando desenho...', 'ok2');
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64   = e.target.result.split(',')[1];
-    const mimeType = file.type || 'image/jpeg';
-    try {
-      const result = await analyzeDrawing(base64, mimeType);
-      const msg = `📐 **Desenho analisado!**
-
-**Formato:** ${result.formato || '?'}
-**Dimensões:** ${result.largura || '?'}m × ${result.comprimento || '?'}m
-**Espessura:** ${result.espessura || 'não identificada'}
-**Furos:** ${result.furos || 0}
-**Acabamentos:** ${result.acabamentos?.join(', ') || 'nenhum'}
-**Peças:** ${result.quantidade_pecas || 1}
-**Complexidade:** ${result.complexidade || '?'}
-**Observações:** ${result.observacoes || ''}
-
-Quer que eu monte o orçamento com essas informações?`;
-
-      addAgentMessage(msg, 'assistant');
-      window._drawingData = result;
-
-      setTimeout(() => {
-        const msgs = document.getElementById('agent-messages');
-        if(!msgs) return;
-        const lastMsg = msgs.lastElementChild;
-        if(lastMsg) {
-          const btn = document.createElement('button');
-          btn.className = 'btn btn-gold btn-sm';
-          btn.style.cssText = 'margin-top:10px;font-size:12px;padding:6px 14px';
-          btn.textContent = '✅ Usar no orçamento';
-          btn.onclick = () => applyDrawingToOrcamento(result);
-          lastMsg.appendChild(btn);
-        }
-      }, 100);
-
-    } catch(err) {
-      addAgentMessage('❌ ' + err.message, 'assistant');
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
-function applyDrawingToOrcamento(data) {
-  window._drawingData = data;
-  closeAgent();
-  openWizard();
-  showToast('Dados do desenho carregados no orçamento!', 'ok2');
-}
-
-// ── CONTEXTO DA MARMORARIA ─────────────────────────────────────
-function buildMarmoContext() {
-  const mats = (state.materiais || []).map(m =>
-    `${m.nome}: custo R$${m.custo}/m², estoque ${m.estoque}${m.unid}`
-  ).join('\n');
-  const markup = state.pricing?.markup || 3;
-  return `Você é o MarmoIA, assistente especialista em marmoraria da empresa "${currentMarmoraria?.nome || 'Marmoraria'}".
-
-DADOS DA MARMORARIA:
-- Markup padrão: ${markup}x sobre o custo
-- Materiais em estoque:
-${mats || 'Nenhum material cadastrado ainda'}
-
-SERVIÇOS DISPONÍVEIS:
-- Meia Esquadria: R$55/ml
-- Borda Reta Polida: R$35/ml
-- Polimento: R$80/m²
-- Corte Especial: R$65/ml
-- Colocação/Instalação: R$120/m²
-- Frete até 10km: R$120 | até 30km: R$200 | até 60km: R$350 | acima: R$500+R$3/km extra
-
-INSTRUÇÕES:
-1. Conduza a conversa em etapas para coletar: material, dimensões (L×A em metros), acabamentos, colocação, frete, cliente
-2. Quando tiver todas as informações, calcule o orçamento aplicando o markup
-3. Apresente o resumo com: total de venda, custo estimado e margem de lucro
-4. Pergunte se o marmoreiro quer salvar o orçamento
-5. Responda SEMPRE em português brasileiro, de forma direta e prática
-6. Use linguagem do setor de marmoraria
-7. Quando tiver TODAS as informações necessárias, gere um JSON de orçamento no formato: {"tipo":"orcamento","titulo":"[título]","itens":[{"desc":"[desc]","area":[num],"vlrm2":[num],"total":[num],"custo_unit":[num]}],"servicos":[{"desc":"[desc]","qtd":[num],"unid":"[m²/ml/und]","preco":[num],"total":[num]}],"frete":{"distancia_km":[num],"valor":[num]},"resumo":{"subtotal_material":[num],"subtotal_servicos":[num],"frete":[num],"total_venda":[num],"custo_total":[num],"margem_lucro_pct":[num],"margem_lucro_rs":[num]}}`;
-}
-
-// ── ENVIAR MENSAGEM AO AGENTE ──────────────────────────────────
-async function sendAgentMessage(text) {
-  text = (text || '').trim();
-  if(!text) return;
-
-  const input = document.getElementById('agent-input');
-  if(input) input.value = '';
-
-  // Comandos rápidos
-  if(text.toLowerCase().includes('limpar conversa')) {
-    agentHistory = [];
-    agentPendingOrcamento = null;
-    const c = document.getElementById('agent-messages');
-    if(c) c.innerHTML = '';
-    agentGreet();
+function toggleAgent() {
+  if (!hasFeature('marmoIA')) {
+    showUpgradeModal('marmoIA');
     return;
   }
-
-  addAgentMessage(text, 'user');
-
-  // Indicador de digitação
-  const loadId = 'load-' + Date.now();
-  addAgentMessage('...', 'assistant', loadId);
-
-  try {
-    const context  = buildMarmoContext();
-    const messages = agentHistory
-      .filter(m => m.role !== 'system')
-      .slice(-12)
-      .map(m => ({ role: m.role, content: m.content }));
-    messages.push({ role: 'user', content: text });
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1200,
-        system: context,
-        messages: messages
-      })
-    });
-
-    const data = await response.json();
-
-    // Remove loading
-    const loadEl = document.getElementById(loadId);
-    if(loadEl) loadEl.remove();
-
-    if(data.error) throw new Error(data.error.message);
-
-    const reply = data.content[0].text;
-
-    addAgentMessage(reply, 'assistant');
-    agentHistory.push({ role: 'user',      content: text  });
-    agentHistory.push({ role: 'assistant', content: reply });
-
-    // Persiste conversa no Supabase (non-blocking)
-    if(currentMarmoraria) {
-      sb.from('ia_conversas').insert({
-        marmoraria_id: currentMarmoraria.id,
-        mensagem: text,
-        resposta: reply
-      }).then(() => {});
-    }
-
-  } catch(err) {
-    const loadEl = document.getElementById(loadId);
-    if(loadEl) loadEl.remove();
-    addAgentMessage('❌ Erro ao conectar com a IA: ' + err.message, 'assistant');
+  agentOpen = !agentOpen;
+  const panel = document.getElementById('agent-panel');
+  const main = document.querySelector('.main');
+  panel.classList.toggle('open', agentOpen);
+  if (main) main.classList.toggle('main-shifted', agentOpen);
+  if (agentOpen && agentHistory.length === 0) {
+    agentGreet();
   }
 }
 
-// ── RENDERIZAR MENSAGEM ────────────────────────────────────────
-function addAgentMessage(text, role, id) {
-  const container = document.getElementById('agent-messages');
-  if(!container) return;
+function agentGreet() {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const msg = `${greeting}! 👋 Sou o **MarmoIA**, seu assistente de orçamentos.\n\nPosso te ajudar a:\n• 📐 Gerar orçamentos completos e detalhados\n• 💰 Calcular margem de lucro real por projeto\n• 🚚 Estimar frete por distância\n• ✅ Importar o orçamento direto para o sistema\n\nPor onde vamos começar? Me descreva o projeto ou clique em **"Novo orçamento"**.`;
+  addAgentMessage('agent', msg);
+}
 
-  const isUser = role === 'user';
+function addAgentMessage(role, text, extra = null) {
+  const msgs = document.getElementById('agent-messages');
+  if (!msgs) return;
+  const time = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
   const div = document.createElement('div');
-  div.className = 'agent-message agent-' + role;
-  if(id) div.id = id;
+  div.className = `msg msg-${role}`;
 
-  // Detecta JSON de orçamento
+  // Parse JSON orçamento
+  let orcCard = '';
   let cleanText = text;
-  let orcCard   = '';
   try {
-    const jsonMatch = text.match(/\{"tipo":"orcamento".*\}/s);
-    if(jsonMatch) {
+    const jsonMatch = text.match(/\{\"tipo\":\"orcamento\".*\}/s);
+    if (jsonMatch) {
       const orc = JSON.parse(jsonMatch[0]);
       agentPendingOrcamento = orc;
-      cleanText = text.replace(jsonMatch[0], '').trim() || 'Aqui está o orçamento detalhado:';
+      cleanText = text.replace(jsonMatch[0], '').trim() || 'Aqui está seu orçamento detalhado:';
       orcCard = buildOrcamentoCard(orc);
     }
   } catch(e) {}
 
-  // Formata markdown básico
-  const html = cleanText
+  // Format markdown-ish
+  const formatted = cleanText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');
 
   div.innerHTML = `
-    <div style="
-      padding:10px 14px;
-      border-radius:${isUser ? '10px 10px 2px 10px' : '10px 10px 10px 2px'};
-      max-width:88%;
-      font-size:13.5px;
-      line-height:1.5;
-      white-space:pre-wrap;
-      word-break:break-word;
-      ${isUser
-        ? 'background:#1A1A2E;color:#fff;margin-left:auto;'
-        : 'background:#F4F1EB;color:#1A1A2E;margin-right:auto;'}
-    ">${html}${orcCard}</div>
+    <div class="msg-bubble">${formatted}${orcCard}</div>
+    <div class="msg-time">${time}</div>
   `;
 
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  if (extra) {
+    const extraDiv = document.createElement('div');
+    extraDiv.innerHTML = extra;
+    div.appendChild(extraDiv);
+  }
+
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ── CARD DE ORÇAMENTO ──────────────────────────────────────────
 function buildOrcamentoCard(orc) {
-  const r = orc.resumo || {};
+  const r = orc.resumo;
   const margemColor = r.margem_lucro_pct >= 30 ? '#27AE60' : r.margem_lucro_pct >= 15 ? '#C9A84C' : '#C0392B';
-  const itensHtml = (orc.itens || []).map(i =>
-    `<div class="orcamento-card-item"><span>${i.desc} (${i.area}m²)</span><span>${fmt(i.total)}</span></div>`
-  ).join('');
-  const servsHtml = (orc.servicos || []).map(s =>
-    `<div class="orcamento-card-item"><span>🔧 ${s.desc} — ${s.qtd}${s.unid}</span><span>${fmt(s.total)}</span></div>`
-  ).join('');
   return `
-    <div class="orcamento-card" style="margin-top:10px">
-      <div class="orcamento-card-title">📋 ${orc.titulo || 'Orçamento'}</div>
-      ${itensHtml}${servsHtml}
-      ${orc.frete ? `<div class="orcamento-card-item"><span>🚚 Frete (~${orc.frete.distancia_km}km)</span><span>${fmt(orc.frete.valor)}</span></div>` : ''}
-      <div class="orcamento-card-total"><span>TOTAL DE VENDA</span><span>${fmt(r.total_venda)}</span></div>
+    <div class="orcamento-card">
+      <div class="orcamento-card-title">📋 ${orc.titulo}</div>
+      ${orc.itens.map(i => `
+        <div class="orcamento-card-item">
+          <span>${i.desc} (${i.area}m²)</span>
+          <span>${fmt(i.total)}</span>
+        </div>`).join('')}
+      ${orc.servicos.map(s => `
+        <div class="orcamento-card-item">
+          <span>🔧 ${s.desc} — ${s.qtd}${s.unid}</span>
+          <span>${fmt(s.total)}</span>
+        </div>`).join('')}
+      <div class="orcamento-card-item">
+        <span>🚚 Frete (~${orc.frete.distancia_km}km)</span>
+        <span>${fmt(orc.frete.valor)}</span>
+      </div>
+      <div class="orcamento-card-total">
+        <span>TOTAL DE VENDA</span>
+        <span>${fmt(r.total_venda)}</span>
+      </div>
       <div style="margin-top:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.1)">
         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
           <span style="color:rgba(255,255,255,0.6)">Custo total</span>
@@ -4813,80 +4683,154 @@ function buildOrcamentoCard(orc) {
           <span style="color:${margemColor};font-weight:700">${r.margem_lucro_pct}% — ${fmt(r.margem_lucro_rs)}</span>
         </div>
       </div>
-      <button class="btn-import-orc" onclick="importarOrcamentoIA()" style="margin-top:10px">✅ Importar para o sistema</button>
-    </div>`;
+      <button class="btn-import-orc" onclick="importarOrcamentoIA()">✅ Importar para o sistema</button>
+    </div>
+  `;
 }
 
-// ── TOGGLE / SAUDAÇÃO / FECHAR ─────────────────────────────────
-function toggleAgent() {
-  if(!hasFeature('marmoIA')) { showUpgradeModal('marmoIA'); return; }
-  agentOpen = !agentOpen;
-  const panel = document.getElementById('agent-panel');
-  const main  = document.querySelector('.main');
-  if(panel) panel.classList.toggle('open', agentOpen);
-  if(main)  main.classList.toggle('main-shifted', agentOpen);
-  if(agentOpen && agentHistory.length === 0) agentGreet();
+function showTyping() {
+  const msgs = document.getElementById('agent-messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'msg msg-agent';
+  div.id = 'typing-indicator';
+  div.innerHTML = '<div class="agent-typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
-function closeAgent() {
-  agentOpen = false;
-  const panel = document.getElementById('agent-panel');
-  const main  = document.querySelector('.main');
-  if(panel) panel.classList.remove('open');
-  if(main)  main.classList.remove('main-shifted');
+function hideTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
 }
 
-function agentGreet() {
-  agentHistory = [];
-  const container = document.getElementById('agent-messages');
-  if(container) container.innerHTML = '';
-  const greeting = `Olá! Sou o MarmoIA 👋
-
-Posso te ajudar a montar orçamentos de 3 formas:
-
-🎤 **Por voz** — clique no microfone e descreva o projeto
-📷 **Por desenho** — envie a foto do croqui do cliente
-✍️ **Por texto** — descreva o projeto aqui
-
-Como quer começar?`;
-  addAgentMessage(greeting, 'assistant');
-}
-
-function agentQuickSend(text) {
+async function sendAgentMsg() {
   const input = document.getElementById('agent-input');
-  if(input) input.value = text;
-  sendAgentMessage(text);
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Special commands
+  if (text.toLowerCase().includes('limpar conversa')) {
+    agentHistory = [];
+    agentPendingOrcamento = null;
+    document.getElementById('agent-messages').innerHTML = '';
+    input.value = '';
+    input.style.height = 'auto';
+    agentGreet();
+    return;
+  }
+
+  addAgentMessage('user', text);
+  agentHistory.push({ role: 'user', content: text });
+  input.value = '';
+  input.style.height = 'auto';
+
+  const btn = document.getElementById('agent-send-btn');
+  btn.disabled = true;
+  showTyping();
+
+  try {
+    const apiKey = state.pricing?.apiKey || '';
+    if (!apiKey) {
+      hideTyping();
+      addAgentMessage('agent', '⚠️ **API key não configurada.**\n\nVá em **Preços e Serviços** no menu lateral e insira sua API key da Anthropic para ativar o agente.\n\nSe quiser testar sem API, posso simular um orçamento com dados de exemplo — é só pedir!');
+      btn.disabled = false;
+      return;
+    }
+
+    // Build context with current stock prices
+    const estoqueCtx = state.materiais.length
+      ? '\n\nESTOQUE ATUAL DA MARMORARIA:\n' + state.materiais.map(m => `- ${m.nome}: custo R$${m.custo}/${m.unid}, estoque ${m.estoque}${m.unid}`).join('\n')
+      : '';
+
+    const cepCtx = state.pricing?.cep
+      ? `\n\nCEP DA MARMORARIA: ${state.pricing.cep}`
+      : '';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: AGENT_SYSTEM + estoqueCtx + cepCtx,
+        messages: agentHistory,
+      })
+    });
+
+    const data = await response.json();
+    hideTyping();
+
+    if (!response.ok) {
+      const errMsg = data.error?.message || 'Erro na API';
+      addAgentMessage('agent', `❌ Erro: ${errMsg}`);
+    } else {
+      const reply = data.content[0]?.text || '';
+      agentHistory.push({ role: 'assistant', content: reply });
+      addAgentMessage('agent', reply);
+    }
+  } catch(err) {
+    hideTyping();
+    addAgentMessage('agent', `❌ Erro de conexão: ${err.message}`);
+  }
+
+  btn.disabled = false;
 }
 
-// ── IMPORTAR ORÇAMENTO DA IA ───────────────────────────────────
+function agentQuickSend() {
+  const text = arguments[0];
+  document.getElementById('agent-input').value = text;
+  sendAgentMsg();
+}
+
 function importarOrcamentoIA() {
-  if(!agentPendingOrcamento) return;
+  if (!agentPendingOrcamento) return;
   const orc = agentPendingOrcamento;
+
+  // Build items array
   const itens = [
-    ...(orc.itens || []).map(i => ({
-      desc: i.desc, mat: '-',
-      largura: parseFloat((i.area||0).toFixed(4)), altura: 1, qtd: 1,
-      vlrm2: i.vlrm2, total: i.total,
+    ...orc.itens.map(i => ({
+      desc: i.desc,
+      mat: '-',
+      largura: parseFloat((i.area).toFixed(4)),
+      altura: 1,
+      qtd: 1,
+      vlrm2: i.vlrm2,
+      total: i.total,
     })),
-    ...(orc.servicos || []).map(s => ({
-      desc: s.desc, mat: '-',
+    ...orc.servicos.map(s => ({
+      desc: s.desc,
+      mat: '-',
       largura: s.unid === 'ml' ? s.qtd : s.unid === 'm²' ? s.qtd : 0,
-      altura: 1, qtd: s.unid === 'und' ? s.qtd : 1,
-      vlrm2: s.preco, total: s.total,
+      altura: 1,
+      qtd: s.unid === 'und' ? s.qtd : 1,
+      vlrm2: s.preco,
+      total: s.total,
     })),
-    ...(orc.frete ? [{ desc: `Frete (~${orc.frete.distancia_km}km)`, mat:'-', largura:0, altura:0, qtd:1, vlrm2:orc.frete.valor, total:orc.frete.valor }] : []),
+    {
+      desc: `Frete (~${orc.frete.distancia_km}km)`,
+      mat: '-',
+      largura: 0, altura: 0, qtd: 1,
+      vlrm2: orc.frete.valor,
+      total: orc.frete.valor,
+    }
   ];
+
+  // Pre-fill new orcamento form
   state.editingOrcId = null;
   state.orcItems = itens;
-  const titleEl = document.getElementById('modal-orc-title');
-  if(titleEl) titleEl.textContent = 'Orçamento via MarmoIA';
-  if(typeof renderOrcForm === 'function') {
-    renderOrcForm({ titulo: orc.titulo, pagamento: 'A combinar', obs: `Gerado pelo MarmoIA. Margem: ${orc.resumo?.margem_lucro_pct || 0}%`, status:'rascunho' });
-    if(typeof openModal === 'function') openModal('modal-orcamento');
-  } else {
-    openWizard();
-  }
-  addAgentMessage(`✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado. Revise os dados e salve.`, 'assistant');
+  document.getElementById('modal-orc-title').textContent = 'Orçamento via MarmoIA';
+  renderOrcForm({ titulo: orc.titulo, pagamento: 'A combinar', obs: `Gerado pelo MarmoIA. Margem: ${orc.resumo.margem_lucro_pct}%`, status:'rascunho' });
+
+  // Open orcamento modal
+  openModal('modal-orcamento');
+
+  addAgentMessage('agent', `✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado no formulário. Revise os dados, vincule a um cliente e salve.`);
 }
 
 
@@ -5002,25 +4946,8 @@ function fetchCEPCli() {
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
+// Verificar sessão ao carregar
 checkSession();
-
-// Bind: upload de imagem para o agente
-document.addEventListener('DOMContentLoaded', () => {
-  const imgUpload = document.getElementById('agent-img-upload');
-  if(imgUpload) {
-    imgUpload.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if(file) {
-        if(!agentOpen) toggleAgent();
-        handleDrawingUpload(file);
-        // Reset input para permitir re-upload do mesmo arquivo
-        imgUpload.value = '';
-      }
-    });
-  }
-});
 
 // Handle return from Stripe Checkout
 (function() {
