@@ -1051,7 +1051,7 @@ let currentMarmoraria = null;
   <div class="main">
     <div class="topbar">
       <div class="topbar-title" id="page-title">Dashboard</div>
-      <div class="topbar-actions" id="topbar-actions"><div id="plan-indicator-wrap"></div></div>
+      <div class="topbar-actions" id="topbar-actions"><button class="btn-novo-orc" id="btn-global-novo-orc">+ Novo Orçamento</button><div id="plan-indicator-wrap"></div></div>
     </div>
     <div class="content" id="page-content"></div>
   </div>
@@ -5004,6 +5004,19 @@ document.addEventListener('keydown', e => {
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 });
+
+// Also close wizard-overlay on outside click
+document.querySelectorAll('.wizard-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeWizard(); });
+});
+
+// Bind global novo orçamento button
+const btnGlobalNovoOrc = document.getElementById('btn-global-novo-orc');
+if (btnGlobalNovoOrc) {
+  btnGlobalNovoOrc.addEventListener('click', function() {
+    openWizard();
+  });
+}
 </script>
 </body>
 </html>
