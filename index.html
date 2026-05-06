@@ -2267,8 +2267,8 @@ function renderDashboard() {
 
   setPage('Dashboard',
     `<div style="display:flex;gap:8px">
-      <button class="btn btn-outline" onclick="openWizard()" style="font-size:13px">+ Manual</button>
-      <button class="btn btn-gold" onclick="openWizard()">✨ Novo Orçamento</button>
+      <button class="btn btn-outline" onclick="window.openWizard&&window.openWizard()" style="font-size:13px">+ Manual</button>
+      <button class="btn btn-gold" onclick="window.openWizard&&window.openWizard()">✨ Novo Orçamento</button>
     </div>`,
     `
     <div class="stats-grid">
@@ -2336,7 +2336,7 @@ function renderDashboard() {
 function renderOrcamentos() {
   setPage('Orçamentos',
     `<div style="display:flex;gap:8px">
-      <button class="btn btn-gold" onclick="openWizard()">+ Novo Orçamento</button>
+      <button class="btn btn-gold" onclick="window.openWizard&&window.openWizard()">+ Novo Orçamento</button>
     </div>`,
     `
     <div class="card">
@@ -4947,6 +4947,16 @@ function fetchCEPCli() {
 // INIT
 // ═══════════════════════════════════════════
 // Verificar sessão ao carregar
+
+// Expose functions globally for onclick handlers
+window.openWizard = openWizard;
+window.closeWizard = closeWizard;
+window.wizNext = wizNext;
+window.wizBack = wizBack;
+window.openQuickCliente = openQuickCliente;
+window.toggleVoice = toggleVoice;
+window.sendAgentMessage = sendAgentMessage;
+
 checkSession();
 
 // Handle return from Stripe Checkout
