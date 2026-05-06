@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -14,6 +14,10 @@
 const SUPABASE_URL = 'https://pptkgbhmnvhsrffqyfmn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwdGtnYmhtbnZoc3JmZnF5Zm1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjU0MTEsImV4cCI6MjA5MzA0MTQxMX0.Fmi-wzhZJ267boc3vMsrgh_ZkqbcUHOqFFBLZzTxnLA';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── ANTHROPIC ──
+const ANTHROPIC_API_KEY = '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';
+const ANTHROPIC_MODEL   = 'claude-sonnet-4-20250514';
 
 // ── STRIPE ──
 const STRIPE_PK = 'pk_test_51TRoNC1opvb2dbnS7qI2cxmQdGkB3Ta2GToCNEcTPbyTIyPxBBFEmiTnYOdneupRglJyWYbBPoqBLhtkjQ1yAZS400m7wNWwJb';
@@ -1390,27 +1394,26 @@ let currentMarmoraria = null;
 
 <!-- WIZARD DE ORÇAMENTO -->
 <div class="wizard-overlay" id="modal-wizard">
-  <div class="wizard">
+  <div class="wizard" style="max-width:780px">
     <div class="wizard-header">
-      <div class="wizard-title" id="wizard-title">Novo Orçamento</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="wizard-title" id="wizard-title">Novo Orçamento</div>
+        <button onclick="closeWizard()" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;line-height:1">×</button>
+      </div>
       <div class="wizard-steps">
         <div class="wizard-step-dot active" id="wdot-1"></div>
-        <div style="width:6px"></div>
+        <div style="flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 4px"></div>
         <div class="wizard-step-dot" id="wdot-2"></div>
-        <div style="width:6px"></div>
+        <div style="flex:1;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 4px"></div>
         <div class="wizard-step-dot" id="wdot-3"></div>
-        <div style="width:6px"></div>
-        <div class="wizard-step-dot" id="wdot-4"></div>
-        <div style="width:6px"></div>
-        <div class="wizard-step-dot" id="wdot-5"></div>
       </div>
-      <div class="wizard-step-label" id="wizard-step-label">Etapa 1 de 5 — Material</div>
+      <div class="wizard-step-label" id="wizard-step-label">Etapa 1 de 3 — Dados Gerais</div>
     </div>
-    <div class="wizard-body" id="wizard-body"></div>
+    <div class="wizard-body" id="wizard-body" style="max-height:70vh"></div>
     <div class="wizard-footer">
-      <button class="btn btn-outline" id="wizard-btn-back" onclick="wizBack()" style="display:none">← Voltar</button>
+      <button class="btn btn-outline" id="wizard-btn-back" style="display:none">← Voltar</button>
       <div id="wizard-resumo-mini" style="font-size:13px;color:var(--gray)"></div>
-      <button class="btn btn-gold" id="wizard-btn-next" onclick="wizNext()">Continuar →</button>
+      <button class="btn btn-gold" id="wizard-btn-next">Continuar →</button>
     </div>
   </div>
 </div>
@@ -1840,6 +1843,7 @@ async function sbSaveOrcamento(orc, itens) {
     titulo: orc.titulo,
     data_emissao: orc.data,
     data_validade: orc.validade || null,
+    data_entrega: orc.dataEntrega || null,
     condicao_pagamento: orc.pagamento,
     observacoes: orc.obs,
     mao_obra: orc.maoObra || 0,
@@ -3658,30 +3662,25 @@ function inserirDesenho() {
 // WIZARD DE ORÇAMENTO
 // ═══════════════════════════════════════════
 let wiz = {
-  step: 1,
-  totalSteps: 5,
-  // Etapa 1 - Material
-  materialTipo: null,
-  materialItem: null,
-  largura: 0,
-  altura: 0,
-  qtdPecas: 1,
-  // Etapa 2 - Acabamentos
+  step: 1, totalSteps: 3,
+  // Etapa 1 - Dados Gerais
+  titulo: '', clienteId: null, data: '', validade: '', pagamento: 'À vista', dataEntrega: '',
+  // Etapa 2 - Materiais e Itens
+  itens: [],
+  curMatId: null, curMatNome: '', curMatCusto: 0,
+  curLarg: 0, curAlt: 0, curQtd: 1, curForma: 'retangular',
   acabamentos: {
     meiaEsquadria: { ativo: false, ml: 0, preco: 55 },
     bordaReta:     { ativo: false, ml: 0, preco: 35 },
     polimento:     { ativo: false, m2: 0, preco: 80 },
     corteEspecial: { ativo: false, ml: 0, preco: 65 },
+    furos:         { ativo: false, qtd: 0, preco: 35 },
   },
-  // Etapa 3 - Serviços
+  // Etapa 3 - Serviços + Adicionais + Resumo
   colocacao: { ativo: false, preco: 120 },
-  frete:     { ativo: false, km: 0 },
-  // Etapa 4 - Adicionais
+  frete: { ativo: false, km: 0 },
   adicionais: [],
-  // Etapa 5 - Info
-  clienteId: null,
-  titulo: '',
-  pagamento: 'À vista',
+  maoObra: 0, desconto: 0, obs: '',
 };
 
 const ADICIONAIS_PADRAO = [
@@ -3693,27 +3692,40 @@ const ADICIONAIS_PADRAO = [
   { id:'perfil_alu',  nome:'Perfil Alumínio (3m)',    preco:90,   qtd:0 },
   { id:'sifao',       nome:'Sifão Flexível',          preco:55,   qtd:0 },
   { id:'cola_pedra',  nome:'Cola para Pedra (5kg)',   preco:85,   qtd:0 },
+  { id:'rejunte',     nome:'Rejunte (kg)',             preco:25,   qtd:0 },
 ];
 
 function openWizard() {
-  // Reset
+  const hoje = new Date().toISOString().split('T')[0];
+  const valDefault = new Date(Date.now() + 15*24*60*60*1000).toISOString().split('T')[0];
   wiz = {
-    step:1, totalSteps:5,
-    materialTipo:null, materialItem:null,
-    largura:0, altura:0, qtdPecas:1,
-    acabamentos:{
-      meiaEsquadria:{ ativo:false, ml:0, preco:55 },
-      bordaReta:    { ativo:false, ml:0, preco:35 },
-      polimento:    { ativo:false, m2:0, preco:80 },
-      corteEspecial:{ ativo:false, ml:0, preco:65 },
+    step: 1, totalSteps: 3,
+    titulo: '', clienteId: null, data: hoje, validade: valDefault,
+    pagamento: 'À vista', dataEntrega: '',
+    itens: [],
+    curMatId: null, curMatNome: '', curMatCusto: 0,
+    curLarg: 0, curAlt: 0, curQtd: 1, curForma: 'retangular',
+    acabamentos: {
+      meiaEsquadria: { ativo: false, ml: 0, preco: 55 },
+      bordaReta:     { ativo: false, ml: 0, preco: 35 },
+      polimento:     { ativo: false, m2: 0, preco: 80 },
+      corteEspecial: { ativo: false, ml: 0, preco: 65 },
+      furos:         { ativo: false, qtd: 0, preco: 35 },
     },
-    colocacao:{ ativo:false, preco:120 },
-    frete:{ ativo:false, km:0 },
-    adicionais: ADICIONAIS_PADRAO.map(a => ({...a, qtd:0})),
-    clienteId:null, titulo:'', pagamento:'À vista',
+    colocacao: { ativo: false, preco: 120 },
+    frete: { ativo: false, km: 0 },
+    adicionais: ADICIONAIS_PADRAO.map(a => ({...a, qtd: 0})),
+    maoObra: 0, desconto: 0, obs: '',
   };
   wizRender();
   document.getElementById('modal-wizard').classList.add('open');
+  // Bind footer buttons (safe, outside innerHTML)
+  setTimeout(() => {
+    const btnBack = document.getElementById('wizard-btn-back');
+    const btnNext = document.getElementById('wizard-btn-next');
+    if(btnBack) btnBack.onclick = wizBack;
+    if(btnNext) btnNext.onclick = wizNext;
+  }, 0);
 }
 
 function closeWizard() {
@@ -3721,42 +3733,46 @@ function closeWizard() {
 }
 
 function wizUpdateDots() {
-  for(let i=1; i<=5; i++) {
-    const dot = document.getElementById('wdot-'+i);
+  for(let i = 1; i <= 3; i++) {
+    const dot = document.getElementById('wdot-' + i);
     if(!dot) continue;
     dot.className = 'wizard-step-dot' + (i < wiz.step ? ' done' : i === wiz.step ? ' active' : '');
   }
-  const labels = ['Material','Acabamentos','Serviços','Adicionais','Resumo'];
-  document.getElementById('wizard-step-label').textContent = `Etapa ${wiz.step} de 5 — ${labels[wiz.step-1]}`;
-  document.getElementById('wizard-btn-back').style.display = wiz.step > 1 ? 'inline-flex' : 'none';
+  const labels = ['Dados Gerais', 'Materiais e Itens', 'Serviços e Resumo'];
+  document.getElementById('wizard-step-label').textContent = `Etapa ${wiz.step} de 3 — ${labels[wiz.step-1]}`;
+  const btnBack = document.getElementById('wizard-btn-back');
+  if(btnBack) btnBack.style.display = wiz.step > 1 ? 'inline-flex' : 'none';
   const nextBtn = document.getElementById('wizard-btn-next');
-  nextBtn.textContent = wiz.step === 5 ? '✅ Gerar Orçamento' : 'Continuar →';
-
-  // Mini resumo
+  if(nextBtn) nextBtn.textContent = wiz.step === 3 ? '✅ Gerar Orçamento' : 'Próximo →';
   const total = calcWizTotal();
   const mini = document.getElementById('wizard-resumo-mini');
-  if(mini && total > 0) mini.textContent = 'Total: ' + fmt(total);
-  else if(mini) mini.textContent = '';
+  if(mini) mini.textContent = total > 0 ? 'Total: ' + fmt(total) : '';
 }
 
 function wizRender() {
   wizUpdateDots();
   const body = document.getElementById('wizard-body');
+  if(!body) return;
   switch(wiz.step) {
-    case 1: body.innerHTML = wizStep1(); wizBindStep1(); break;
-    case 2: body.innerHTML = wizStep2(); wizBindStep2(); break;
-    case 3: body.innerHTML = wizStep3(); wizBindStep3(); break;
-    case 4: body.innerHTML = wizStep4(); wizBindStep4(); break;
-    case 5: body.innerHTML = wizStep5(); break;
+    case 1: body.innerHTML = wizStep1(); setTimeout(wizBindStep1, 0); break;
+    case 2: body.innerHTML = wizStep2(); setTimeout(wizBindStep2, 0); break;
+    case 3: body.innerHTML = wizStep3(); setTimeout(wizBindStep3, 0); break;
   }
 }
 
 function wizNext() {
   if(wiz.step === 1) {
-    if(!wiz.materialItem) { showToast('Selecione um material', 'err'); return; }
-    if(!wiz.largura || !wiz.altura) { showToast('Informe as dimensões', 'err'); return; }
+    // Persistir todos os campos do DOM antes de avançar
+    const readVal = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    wiz.titulo      = readVal('wiz-titulo').trim();
+    wiz.clienteId   = readVal('wiz-cliente') || null;
+    wiz.pagamento   = readVal('wiz-pagamento');
+    wiz.data        = readVal('wiz-data');
+    wiz.validade    = readVal('wiz-validade');
+    wiz.dataEntrega = readVal('wiz-entrega') || null;
+    if(!wiz.titulo) { showToast('Informe o título do orçamento', 'err'); return; }
   }
-  if(wiz.step === 5) { wizGerarOrcamento(); return; }
+  if(wiz.step === 3) { wizGerarOrcamento(); return; }
   wiz.step++;
   wizRender();
 }
@@ -3765,163 +3781,295 @@ function wizBack() {
   if(wiz.step > 1) { wiz.step--; wizRender(); }
 }
 
-// ── ETAPA 1: MATERIAL ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// WIZARD — 3 ETAPAS
+// ══════════════════════════════════════════════════════════════
+
+// ── ETAPA 1: DADOS GERAIS ─────────────────────────────────────
 function wizStep1() {
-  const tipos = [
-    { id:'granito',    icon:'🪨', nome:'Granito'    },
-    { id:'marmore',    icon:'⬜', nome:'Mármore'    },
-    { id:'porcelanato',icon:'🟫', nome:'Porcelanato'},
-    { id:'quartzito',  icon:'💎', nome:'Quartzito'  },
-    { id:'outro',      icon:'📦', nome:'Outro'      },
-  ];
-
-  // Filter materiais by tipo
-  const mats = state.materiais.filter(m => m.cat === 'chapa');
-
+  const cliOpts = (state.clientes || []).map(c =>
+    `<option value="${c.id}" ${wiz.clienteId == c.id ? 'selected' : ''}>${c.nome}</option>`
+  ).join('');
   return `
-    <div class="wizard-section-title">Tipo de Material</div>
-    <div class="mat-grid" id="wiz-tipos">
-      ${tipos.map(t => `
-        <div class="mat-card ${wiz.materialTipo===t.id?'selected':''}" data-tipo="${t.id}">
-          <div class="mat-card-icon">${t.icon}</div>
-          <div class="mat-card-name">${t.nome}</div>
-        </div>`).join('')}
-    </div>
-
-    <div class="wizard-section-title" style="margin-top:16px">Material do Estoque</div>
-    <select id="wiz-material-select" class="form-select" style="margin-bottom:16px">
-      <option value="">Selecionar material...</option>
-      ${mats.map(m => `<option value="${m.id}" data-custo="${m.custo}" data-nome="${m.nome}" ${wiz.materialItem===m.id?'selected':''}>${m.nome} — Custo R$${m.custo}/m²</option>`).join('')}
-      <option value="custom">+ Outro (digitar preço)</option>
-    </select>
-    <div id="wiz-custom-price" style="display:none;margin-bottom:16px">
-      <label class="form-label">DESCRIÇÃO DO MATERIAL</label>
-      <input class="form-input" id="wiz-custom-nome" placeholder="Ex: Granito Especial" style="margin-bottom:8px" value="${wiz.customNome||''}">
-      <label class="form-label">CUSTO POR M² (R$)</label>
-      <input class="form-input" type="number" id="wiz-custom-custo" placeholder="0,00" value="${wiz.customCusto||''}">
-    </div>
-
-    <div class="wizard-section-title" style="margin-top:4px">Dimensões</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">LARGURA (m)</label>
-        <input class="form-input" type="number" id="wiz-larg" step="0.01" min="0" placeholder="0,00" value="${wiz.largura||''}">
+    <div class="wizard-section-title">Informações do Orçamento</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
+        <label class="form-label">TÍTULO DO ORÇAMENTO *</label>
+        <input class="form-input" id="wiz-titulo" placeholder="Ex: Bancada Cozinha — João Silva" value="${wiz.titulo}">
       </div>
       <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">ALTURA / COMP. (m)</label>
-        <input class="form-input" type="number" id="wiz-alt" step="0.01" min="0" placeholder="0,00" value="${wiz.altura||''}">
+        <label class="form-label">CLIENTE</label>
+        <select class="form-select" id="wiz-cliente">
+          <option value="">Selecionar cliente...</option>${cliOpts}
+        </select>
       </div>
       <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">QTD. PEÇAS</label>
-        <input class="form-input" type="number" id="wiz-qtd" step="1" min="1" placeholder="1" value="${wiz.qtdPecas||1}">
+        <label class="form-label">FORMA DE PAGAMENTO</label>
+        <select class="form-select" id="wiz-pagamento">
+          ${['À vista','50% entrada + 50% entrega','30/60 dias','A combinar'].map(p =>
+            `<option ${wiz.pagamento===p?'selected':''}>${p}</option>`).join('')}
+        </select>
       </div>
-    </div>
-    <div id="wiz-area-preview" style="margin-top:10px;background:var(--marble);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--gray)">
-      Preencha as dimensões para ver a área
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">DATA DE EMISSÃO</label>
+        <input class="form-input" type="date" id="wiz-data" value="${wiz.data}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">VALIDADE DO ORÇAMENTO</label>
+        <input class="form-input" type="date" id="wiz-validade" value="${wiz.validade}">
+      </div>
+      <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
+        <label class="form-label">DATA PREVISTA DE ENTREGA</label>
+        <input class="form-input" type="date" id="wiz-entrega" value="${wiz.dataEntrega}">
+      </div>
     </div>
   `;
 }
 
 function wizBindStep1() {
-  // Tipo cards
-  document.querySelectorAll('#wiz-tipos .mat-card').forEach(card => {
-    card.onclick = () => {
-      wiz.materialTipo = card.dataset.tipo;
-      document.querySelectorAll('#wiz-tipos .mat-card').forEach(c => c.classList.remove('selected'));
-      card.classList.add('selected');
-    };
-  });
-
-  // Material select
-  const sel = document.getElementById('wiz-material-select');
-  if(sel) sel.onchange = () => {
-    if(sel.value === 'custom') {
-      document.getElementById('wiz-custom-price').style.display = 'block';
-      wiz.materialItem = 'custom';
-      wiz.materialCusto = 0;
-    } else {
-      document.getElementById('wiz-custom-price').style.display = 'none';
-      wiz.materialItem = sel.value;
-      const opt = sel.options[sel.selectedIndex];
-      wiz.materialCusto = parseFloat(opt.dataset.custo)||0;
-      wiz.materialNome = opt.dataset.nome||'';
-    }
-  };
-
-  // Custom inputs
-  const custoCmp = document.getElementById('wiz-custom-custo');
-  const nomeCmp  = document.getElementById('wiz-custom-nome');
-  if(custoCmp) custoCmp.oninput = () => { wiz.customCusto = parseFloat(custoCmp.value)||0; wiz.materialCusto = wiz.customCusto; };
-  if(nomeCmp)  nomeCmp.oninput  = () => { wiz.customNome = nomeCmp.value; wiz.materialNome = wiz.customNome; };
-
-  // Dimensions
-  const updateArea = () => {
-    wiz.largura   = parseFloat(document.getElementById('wiz-larg').value)||0;
-    wiz.altura    = parseFloat(document.getElementById('wiz-alt').value)||0;
-    wiz.qtdPecas  = parseInt(document.getElementById('wiz-qtd').value)||1;
-    const area    = wiz.largura * wiz.altura * wiz.qtdPecas;
-    const markup  = state.pricing?.markup || 3;
-    const precoVenda = wiz.materialCusto * markup;
-    const totalMat   = area * precoVenda;
-    const prev = document.getElementById('wiz-area-preview');
-    if(prev && area > 0) {
-      prev.innerHTML = `
-        <div style="display:flex;gap:24px;flex-wrap:wrap">
-          <span>Área total: <strong>${area.toFixed(3)} m²</strong></span>
-          <span>Preço venda: <strong>${fmt(precoVenda)}/m²</strong> (${markup}× custo)</span>
-          <span style="color:var(--dark);font-weight:600">Subtotal material: <strong>${fmt(totalMat)}</strong></span>
-        </div>`;
-    } else if(prev) {
-      prev.innerHTML = 'Preencha as dimensões para ver a área';
-    }
-  };
-  ['wiz-larg','wiz-alt','wiz-qtd'].forEach(id => {
+  const bind = (id, prop, type) => {
     const el = document.getElementById(id);
-    if(el) el.oninput = updateArea;
-  });
-  if(wiz.largura > 0) updateArea();
+    if(el) el.oninput = () => { wiz[prop] = type === 'num' ? parseFloat(el.value)||0 : el.value; };
+    if(el && el.tagName === 'SELECT') el.onchange = () => { wiz[prop] = el.value; };
+  };
+  bind('wiz-titulo','titulo','str');
+  bind('wiz-cliente','clienteId','str');
+  bind('wiz-pagamento','pagamento','str');
+  bind('wiz-data','data','str');
+  bind('wiz-validade','validade','str');
+  bind('wiz-entrega','dataEntrega','str');
 }
 
-// ── ETAPA 2: ACABAMENTOS ──────────────────────────────────────
+// ── DESENHO SVG AO VIVO ────────────────────────────────────────
+function renderDesenhoOrc(larg, alt, forma) {
+  forma = forma || 'retangular';
+  larg = parseFloat(larg) || 0;
+  alt  = parseFloat(alt)  || 0;
+  if(larg <= 0 || alt <= 0) return '<div style="display:flex;align-items:center;justify-content:center;height:120px;color:var(--gray);font-size:13px">Preencha largura e comprimento</div>';
+  const escala = 160;
+  const maxDim = Math.max(larg, alt, 0.1);
+  const w = Math.round((larg/maxDim)*escala);
+  const h = Math.round((alt/maxDim)*escala);
+  const area = (larg*alt).toFixed(3);
+  if(forma === 'retangular') {
+    return `<svg viewBox="0 0 ${w+60} ${h+60}" style="max-width:100%;border:1px solid #eee;border-radius:8px;background:#f9f9f9;display:block">
+      <rect x="30" y="30" width="${w}" height="${h}" fill="rgba(201,168,76,0.15)" stroke="#C9A84C" stroke-width="2" rx="2"/>
+      <text x="${30+w/2}" y="${30+h/2}" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#C9A84C" font-weight="bold">${area} m²</text>
+      <text x="${30+w/2}" y="${30+h+18}" text-anchor="middle" font-size="10" fill="#888">${larg}m</text>
+      <text x="14" y="${30+h/2}" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#888" transform="rotate(-90,14,${30+h/2})">${alt}m</text>
+    </svg>`;
+  }
+  if(forma === 'L') {
+    const w2=Math.round(w*0.5); const h2=Math.round(h*0.5);
+    return `<svg viewBox="0 0 ${w+60} ${h+60}" style="max-width:100%;border:1px solid #eee;border-radius:8px;background:#f9f9f9;display:block">
+      <polygon points="30,30 ${30+w},30 ${30+w},${30+h2} ${30+w2},${30+h2} ${30+w2},${30+h} 30,${30+h}" fill="rgba(201,168,76,0.15)" stroke="#C9A84C" stroke-width="2"/>
+      <text x="${30+w*0.65}" y="${30+h2/2}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#C9A84C" font-weight="bold">${area} m²</text>
+    </svg>`;
+  }
+  if(forma === 'U') {
+    const wc=Math.round(w*0.35); const hc=Math.round(h*0.5);
+    return `<svg viewBox="0 0 ${w+60} ${h+60}" style="max-width:100%;border:1px solid #eee;border-radius:8px;background:#f9f9f9;display:block">
+      <polygon points="30,30 ${30+w},30 ${30+w},${30+h} ${30+w-wc},${30+h} ${30+w-wc},${30+hc} ${30+wc},${30+hc} ${30+wc},${30+h} 30,${30+h}" fill="rgba(201,168,76,0.15)" stroke="#C9A84C" stroke-width="2"/>
+      <text x="${30+w/2}" y="${30+h*0.25}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#C9A84C" font-weight="bold">${area} m²</text>
+    </svg>`;
+  }
+  return '';
+}
+
+// ── ETAPA 2: MATERIAIS E ITENS ────────────────────────────────
 function wizStep2() {
-  const acs = [
-    { key:'meiaEsquadria', nome:'Meia Esquadria',  unid:'ml',  preco:wiz.acabamentos.meiaEsquadria.preco },
-    { key:'bordaReta',     nome:'Borda Reta Polida',unid:'ml',  preco:wiz.acabamentos.bordaReta.preco     },
-    { key:'polimento',     nome:'Polimento',        unid:'m²',  preco:wiz.acabamentos.polimento.preco     },
-    { key:'corteEspecial', nome:'Corte Especial',   unid:'ml',  preco:wiz.acabamentos.corteEspecial.preco },
+  const mats = (state.materiais || []).filter(m => m.cat === 'chapa' || !m.cat);
+  const markup = state.pricing?.markup || 3;
+  const area = wiz.curLarg * wiz.curAlt * wiz.curQtd;
+  const precoVenda = wiz.curMatCusto * markup;
+  const subtotal = area * precoVenda;
+
+  const acsData = [
+    { key:'meiaEsquadria', nome:'Meia Esquadria',   unid:'ml',  preco: wiz.acabamentos.meiaEsquadria.preco },
+    { key:'bordaReta',     nome:'Borda Reta Polida', unid:'ml',  preco: wiz.acabamentos.bordaReta.preco },
+    { key:'polimento',     nome:'Polimento',         unid:'m²',  preco: wiz.acabamentos.polimento.preco },
+    { key:'corteEspecial', nome:'Corte Especial',    unid:'ml',  preco: wiz.acabamentos.corteEspecial.preco },
+    { key:'furos',         nome:'Furos',             unid:'un',  preco: wiz.acabamentos.furos.preco },
   ];
+
+  const itensRows = wiz.itens.length ? wiz.itens.map((it, i) => `
+    <tr>
+      <td style="font-size:13px">${it.desc}</td>
+      <td style="font-size:12px;color:var(--gray)">${it.largura>0?it.largura+'×'+it.altura:'—'}</td>
+      <td style="font-size:12px;text-align:center">${it.qtd}</td>
+      <td style="font-size:12px;color:var(--gray)">${it.vlrm2 > 0 ? fmt(it.vlrm2)+'/m²' : '—'}</td>
+      <td style="font-weight:600;font-size:13px">${fmt(it.total)}</td>
+      <td><button class="btn btn-ghost btn-sm" data-remove="${i}" style="color:var(--red);padding:2px 8px;font-size:16px">×</button></td>
+    </tr>`).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--gray);font-size:13px;padding:12px">Nenhum item adicionado</td></tr>`;
+
+  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
+
   return `
-    <div class="wizard-section-title">Acabamentos necessários</div>
-    <p style="font-size:13px;color:var(--gray);margin-bottom:16px">
-      Ative os acabamentos que serão aplicados e informe a quantidade.
-    </p>
-    <div class="acabamento-list" id="wiz-acabamentos">
-      ${acs.map(a => {
-        const ac = wiz.acabamentos[a.key];
-        const qField = a.unid === 'm²' ? 'm2' : 'ml';
-        return `
-        <div class="acabamento-item ${ac.ativo?'active':''}" data-key="${a.key}">
-          <div class="acabamento-left">
-            <button class="acabamento-toggle ${ac.ativo?'on':''}" data-key="${a.key}"></button>
-            <div>
-              <div class="acabamento-name">${a.nome}</div>
-              <div class="acabamento-unit">${fmt(a.preco)} por ${a.unid}</div>
-            </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+      <!-- Coluna Esquerda: Configurar material -->
+      <div>
+        <div class="wizard-section-title">A — Selecionar Material</div>
+        <div class="form-group">
+          <label class="form-label">MATERIAL DO ESTOQUE</label>
+          <select id="wiz-mat-sel" class="form-select">
+            <option value="">Selecionar...</option>
+            ${mats.map(m => `<option value="${m.id}" data-custo="${m.custo}" data-nome="${m.nome}" ${wiz.curMatId==m.id?'selected':''}>${m.nome} — R$${m.custo}/m²</option>`).join('')}
+            <option value="custom">+ Digitar manualmente</option>
+          </select>
+        </div>
+        <div id="wiz-custom-mat" style="display:${wiz.curMatId==='custom'?'block':'none'}">
+          <div class="form-group">
+            <label class="form-label">DESCRIÇÃO</label>
+            <input class="form-input" id="wiz-custom-nome" placeholder="Ex: Granito Especial" value="${wiz.curMatNome||''}">
           </div>
-          <div class="acabamento-qty">
-            <input type="number" class="form-input" min="0" step="0.1"
-              placeholder="0" value="${ac[qField]||''}"
-              data-key="${a.key}" data-field="${qField}"
-              style="width:80px;text-align:center">
-            <span style="font-size:12px;color:var(--gray)">${a.unid}</span>
+          <div class="form-group">
+            <label class="form-label">CUSTO/M² (R$)</label>
+            <input class="form-input" type="number" id="wiz-custom-custo" placeholder="0,00" value="${wiz.curMatCusto||''}">
           </div>
-        </div>`;
-      }).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">LARGURA (m)</label>
+            <input class="form-input" type="number" id="wiz-larg" step="0.01" min="0" placeholder="0,00" value="${wiz.curLarg||''}">
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">COMP. (m)</label>
+            <input class="form-input" type="number" id="wiz-alt" step="0.01" min="0" placeholder="0,00" value="${wiz.curAlt||''}">
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">PEÇAS</label>
+            <input class="form-input" type="number" id="wiz-qtd" step="1" min="1" placeholder="1" value="${wiz.curQtd||1}">
+          </div>
+        </div>
+        <div id="wiz-area-prev" style="background:var(--marble);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--gray);margin-bottom:10px">
+          ${area > 0 ? `Área: <strong>${area.toFixed(3)} m²</strong> · Preço: <strong>${fmt(precoVenda)}/m²</strong> · Subtotal: <strong style="color:var(--dark)">${fmt(subtotal)}</strong>` : 'Selecione material e dimensões'}
+        </div>
+        <!-- Forma -->
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          ${['retangular','L','U'].map(f => `<button class="btn btn-sm ${wiz.curForma===f?'btn-gold':'btn-outline'}" data-forma="${f}" style="flex:1;font-size:11px">${f==='retangular'?'⬜ Ret.':f==='L'?'📐 L':'🔲 U'}</button>`).join('')}
+        </div>
+        <!-- Desenho SVG -->
+        <div id="orc-desenho-preview">${renderDesenhoOrc(wiz.curLarg, wiz.curAlt, wiz.curForma)}</div>
+        <button id="wiz-add-item" class="btn btn-gold" style="width:100%;margin-top:10px">+ Adicionar à lista</button>
+
+        <div class="wizard-section-title" style="margin-top:16px">B — Acabamentos</div>
+        <div class="acabamento-list" id="wiz-acabamentos">
+          ${acsData.map(a => {
+            const ac = wiz.acabamentos[a.key];
+            const qField = a.unid === 'm²' ? 'm2' : a.unid === 'un' ? 'qtd' : 'ml';
+            return `
+            <div class="acabamento-item ${ac.ativo?'active':''}" data-key="${a.key}">
+              <div class="acabamento-left">
+                <button class="acabamento-toggle ${ac.ativo?'on':''}" data-key="${a.key}"></button>
+                <div>
+                  <div class="acabamento-name">${a.nome}</div>
+                  <div class="acabamento-unit">${fmt(a.preco)} por ${a.unid}</div>
+                </div>
+              </div>
+              <div class="acabamento-qty">
+                <input type="number" class="form-input" min="0" step="0.1"
+                  placeholder="0" value="${ac[qField]||''}"
+                  data-key="${a.key}" data-field="${qField}"
+                  style="width:70px;text-align:center">
+                <span style="font-size:12px;color:var(--gray)">${a.unid}</span>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Coluna Direita: Lista de itens -->
+      <div>
+        <div class="wizard-section-title">C — Itens Adicionados</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;font-size:13px;border-collapse:collapse">
+            <thead><tr style="background:var(--marble);font-size:11px;color:var(--gray)">
+              <th style="padding:6px 8px;text-align:left;font-weight:600">Descrição</th>
+              <th style="padding:6px;text-align:left;font-weight:600">Dim.</th>
+              <th style="padding:6px;text-align:center;font-weight:600">Qtd</th>
+              <th style="padding:6px;text-align:left;font-weight:600">Preço</th>
+              <th style="padding:6px;text-align:left;font-weight:600">Total</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="wiz-itens-tbody">${itensRows}</tbody>
+            ${totalItens > 0 ? `<tfoot><tr style="background:var(--marble)">
+              <td colspan="4" style="padding:8px;font-weight:700;font-size:12px;color:var(--gray)">SUBTOTAL MATERIAIS</td>
+              <td style="padding:8px;font-weight:700;color:var(--dark)">${fmt(totalItens)}</td>
+              <td></td>
+            </tr></tfoot>` : ''}
+          </table>
+        </div>
+      </div>
     </div>
   `;
 }
 
 function wizBindStep2() {
+  // Material select
+  const matSel = document.getElementById('wiz-mat-sel');
+  if(matSel) matSel.onchange = () => {
+    const v = matSel.value;
+    const customDiv = document.getElementById('wiz-custom-mat');
+    if(v === 'custom') {
+      wiz.curMatId = 'custom';
+      if(customDiv) customDiv.style.display = 'block';
+    } else {
+      wiz.curMatId = v;
+      const opt = matSel.options[matSel.selectedIndex];
+      wiz.curMatCusto = parseFloat(opt.dataset.custo) || 0;
+      wiz.curMatNome  = opt.dataset.nome || '';
+      if(customDiv) customDiv.style.display = 'none';
+    }
+    wizUpdatePreview();
+  };
+
+  // Custom inputs
+  const customNome  = document.getElementById('wiz-custom-nome');
+  const customCusto = document.getElementById('wiz-custom-custo');
+  if(customNome)  customNome.oninput  = () => { wiz.curMatNome  = customNome.value; };
+  if(customCusto) customCusto.oninput = () => { wiz.curMatCusto = parseFloat(customCusto.value)||0; wizUpdatePreview(); };
+
+  // Dimensões
+  ['wiz-larg','wiz-alt','wiz-qtd'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.oninput = () => {
+      wiz.curLarg = parseFloat(document.getElementById('wiz-larg').value)||0;
+      wiz.curAlt  = parseFloat(document.getElementById('wiz-alt').value)||0;
+      wiz.curQtd  = parseInt(document.getElementById('wiz-qtd').value)||1;
+      wizUpdatePreview();
+    };
+  });
+
+  // Forma buttons
+  document.querySelectorAll('[data-forma]').forEach(btn => {
+    btn.onclick = () => {
+      wiz.curForma = btn.dataset.forma;
+      document.querySelectorAll('[data-forma]').forEach(b => {
+        b.className = b.className.replace('btn-gold','btn-outline');
+      });
+      btn.className = btn.className.replace('btn-outline','btn-gold');
+      const prev = document.getElementById('orc-desenho-preview');
+      if(prev) prev.innerHTML = renderDesenhoOrc(wiz.curLarg, wiz.curAlt, wiz.curForma);
+    };
+  });
+
+  // Botão adicionar item
+  const addBtn = document.getElementById('wiz-add-item');
+  if(addBtn) addBtn.onclick = wizAdicionarItem;
+
+  // Remover itens
+  document.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = parseInt(btn.dataset.remove);
+      wiz.itens.splice(idx, 1);
+      const body = document.getElementById('wizard-body');
+      if(body) { body.innerHTML = wizStep2(); setTimeout(wizBindStep2, 0); }
+      wizUpdateDots();
+    };
+  });
+
+  // Acabamentos toggles
   document.querySelectorAll('.acabamento-toggle').forEach(btn => {
     btn.onclick = () => {
       const key = btn.dataset.key;
@@ -3935,45 +4083,284 @@ function wizBindStep2() {
       const key   = inp.dataset.key;
       const field = inp.dataset.field;
       wiz.acabamentos[key][field] = parseFloat(inp.value)||0;
+      wizUpdateDots();
     };
   });
 }
 
-// ── ETAPA 3: SERVIÇOS ─────────────────────────────────────────
+function wizUpdatePreview() {
+  const markup = state.pricing?.markup || 3;
+  const area   = wiz.curLarg * wiz.curAlt * wiz.curQtd;
+  const precoV = wiz.curMatCusto * markup;
+  const sub    = area * precoV;
+  const prev   = document.getElementById('wiz-area-prev');
+  if(prev) {
+    prev.innerHTML = area > 0
+      ? `Área: <strong>${area.toFixed(3)} m²</strong> · Preço: <strong>${fmt(precoV)}/m²</strong> · Subtotal: <strong style="color:var(--dark)">${fmt(sub)}</strong>`
+      : 'Selecione material e dimensões';
+  }
+  const svgPrev = document.getElementById('orc-desenho-preview');
+  if(svgPrev) svgPrev.innerHTML = renderDesenhoOrc(wiz.curLarg, wiz.curAlt, wiz.curForma);
+  wizUpdateDots();
+}
+
+function wizAdicionarItem() {
+  if(!wiz.curMatId) { showToast('Selecione um material', 'err'); return; }
+  if(wiz.curLarg <= 0 || wiz.curAlt <= 0) { showToast('Informe as dimensões', 'err'); return; }
+  const markup   = state.pricing?.markup || 3;
+  const area     = wiz.curLarg * wiz.curAlt * wiz.curQtd;
+  const precoV   = wiz.curMatCusto * markup;
+  const nome     = wiz.curMatNome || 'Material';
+  wiz.itens.push({
+    desc:    `${nome} (${area.toFixed(3)} m²)`,
+    mat:     nome,
+    largura: wiz.curLarg,
+    altura:  wiz.curAlt,
+    qtd:     wiz.curQtd,
+    vlrm2:   parseFloat(precoV.toFixed(2)),
+    total:   parseFloat((area * precoV).toFixed(2)),
+    _custo:  wiz.curMatCusto,
+    _area:   area,
+    _forma:  wiz.curForma,
+  });
+  showToast('Item adicionado!', 'ok2');
+  // Resetar campos de material/dimensão mas manter acabamentos
+  wiz.curMatId = null; wiz.curMatNome = ''; wiz.curMatCusto = 0;
+  wiz.curLarg = 0; wiz.curAlt = 0; wiz.curQtd = 1;
+  const body = document.getElementById('wizard-body');
+  if(body) { body.innerHTML = wizStep2(); setTimeout(wizBindStep2, 0); }
+  wizUpdateDots();
+}
+
+// ── ETAPA 3: SERVIÇOS + ADICIONAIS + RESUMO ───────────────────
 function wizStep3() {
-  const area = wiz.largura * wiz.altura * wiz.qtdPecas;
+  const markup     = state.pricing?.markup || 3;
+  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
+  const totalCusto = wiz.itens.reduce((s,it) => s + ((it._custo||0) * (it._area||0)), 0);
+  const areaTotal  = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
+
+  // Acabamentos
+  let totalAcab = 0, custoAcab = 0;
+  const acabLines = [];
+  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial', furos:'Furos' };
+  Object.entries(wiz.acabamentos).forEach(([key, a]) => {
+    if(a.ativo) {
+      const qty   = a.ml || a.m2 || a.qtd || 0;
+      const total = qty * a.preco;
+      totalAcab += total;
+      custoAcab += total * 0.5;
+      acabLines.push({ nome: acabNames[key], qty, unid: a.m2 !== undefined ? 'm²' : a.qtd !== undefined && !a.ml ? 'un' : 'ml', total });
+    }
+  });
+
+  const totalColoc = wiz.colocacao.ativo ? areaTotal * wiz.colocacao.preco : 0;
+  const totalFrete = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
+  const totalAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
+  const custoAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco * 0.6, 0);
+
+  const subMat   = totalItens;
+  const subServ  = totalColoc + totalFrete;
+  const subAdic  = totalAdic;
+  const subAcab  = totalAcab;
+
+  const totalVenda = subMat + subAcab + subServ + subAdic + (wiz.maoObra||0) - (wiz.desconto||0);
+  const custoTot   = totalCusto + custoAcab + (totalColoc*0.6) + totalFrete + custoAdic;
+  const lucro      = totalVenda - custoTot;
+  const margem     = totalVenda > 0 ? Math.round(lucro / totalVenda * 100) : 0;
+  const margemColor= margem >= 30 ? 'var(--green)' : margem >= 15 ? 'var(--gold)' : 'var(--red)';
+
   return `
-    <div class="wizard-section-title">Serviços</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
 
-    <div class="servico-toggle-row ${wiz.colocacao.ativo?'active':''}" id="srv-colocacao-row">
-      <div class="servico-toggle-info">
-        <h4>Colocação / Instalação</h4>
-        <p>${fmt(wiz.colocacao.preco)}/m² · Área: ${area.toFixed(2)}m² · Subtotal: ${fmt(wiz.colocacao.preco * area)}</p>
-      </div>
-      <button class="acabamento-toggle ${wiz.colocacao.ativo?'on':''}" id="toggle-colocacao"></button>
-    </div>
-    <div class="servico-extra ${wiz.colocacao.ativo?'show':''}" id="srv-colocacao-extra">
-      <label class="form-label" style="margin-top:8px">PREÇO POR M² (R$)</label>
-      <input class="form-input" type="number" id="srv-colocacao-preco"
-        value="${wiz.colocacao.preco}" style="max-width:160px">
-    </div>
+      <!-- Esquerda: Serviços + Adicionais -->
+      <div>
+        <div class="wizard-section-title">A — Serviços</div>
 
-    <div class="servico-toggle-row ${wiz.frete.ativo?'active':''}" id="srv-frete-row" style="margin-top:10px">
-      <div class="servico-toggle-info">
-        <h4>Frete / Entrega</h4>
-        <p>Calculado por distância em km</p>
+        <div class="servico-toggle-row ${wiz.colocacao.ativo?'active':''}" id="srv-coloc-row">
+          <div class="servico-toggle-info">
+            <h4>Colocação / Instalação</h4>
+            <p>${fmt(wiz.colocacao.preco)}/m² · Área total: ${areaTotal.toFixed(2)}m²</p>
+          </div>
+          <button class="acabamento-toggle ${wiz.colocacao.ativo?'on':''}" id="tog-coloc"></button>
+        </div>
+        <div class="servico-extra ${wiz.colocacao.ativo?'show':''}" id="srv-coloc-extra">
+          <label class="form-label" style="margin-top:8px">PREÇO/M² (R$)</label>
+          <input class="form-input" type="number" id="srv-coloc-preco" value="${wiz.colocacao.preco}" style="max-width:140px">
+        </div>
+
+        <div class="servico-toggle-row ${wiz.frete.ativo?'active':''}" id="srv-frete-row" style="margin-top:8px">
+          <div class="servico-toggle-info">
+            <h4>Frete / Entrega</h4>
+            <p>Calculado por km</p>
+          </div>
+          <button class="acabamento-toggle ${wiz.frete.ativo?'on':''}" id="tog-frete"></button>
+        </div>
+        <div class="servico-extra ${wiz.frete.ativo?'show':''}" id="srv-frete-extra">
+          <label class="form-label" style="margin-top:8px">DISTÂNCIA (km)</label>
+          <input class="form-input" type="number" id="srv-frete-km" value="${wiz.frete.km}" placeholder="0" style="max-width:140px">
+          <div id="srv-frete-prev" style="margin-top:6px;font-size:12px;color:var(--gray)">${wiz.frete.km>0?'Frete: '+fmt(calcFrete(wiz.frete.km)):''}</div>
+        </div>
+
+        <div class="wizard-section-title" style="margin-top:16px">B — Adicionais</div>
+        <div id="wiz-adicionais-list">
+          ${wiz.adicionais.map((a,i) => `
+          <div class="adicional-row">
+            <div class="adicional-name" style="font-size:13px">${a.nome}</div>
+            <div class="adicional-price">${fmt(a.preco)}</div>
+            <div class="qty-control">
+              <button class="qty-btn" data-idx="${i}" data-dir="-1">−</button>
+              <div class="qty-display" id="wiz-qty-${i}">${a.qtd}</div>
+              <button class="qty-btn" data-idx="${i}" data-dir="1">+</button>
+            </div>
+          </div>`).join('')}
+        </div>
+
+        <div class="wizard-section-title" style="margin-top:16px">C — Ajustes</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">MÃO DE OBRA ADICIONAL (R$)</label>
+            <input class="form-input" type="number" id="wiz-mao-obra" value="${wiz.maoObra||0}" min="0" step="0.01">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">DESCONTO (R$)</label>
+            <input class="form-input" type="number" id="wiz-desconto" value="${wiz.desconto||0}" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:10px;margin-bottom:0">
+          <label class="form-label">OBSERVAÇÕES PARA O CLIENTE</label>
+          <textarea class="form-input" id="wiz-obs" rows="3" placeholder="Prazo de entrega, condições especiais...">${wiz.obs||''}</textarea>
+        </div>
       </div>
-      <button class="acabamento-toggle ${wiz.frete.ativo?'on':''}" id="toggle-frete"></button>
-    </div>
-    <div class="servico-extra ${wiz.frete.ativo?'show':''}" id="srv-frete-extra">
-      <label class="form-label" style="margin-top:8px">DISTÂNCIA (km)</label>
-      <input class="form-input" type="number" id="srv-frete-km"
-        value="${wiz.frete.km}" placeholder="0" style="max-width:160px">
-      <div id="srv-frete-preview" style="margin-top:8px;font-size:13px;color:var(--gray)">
-        ${wiz.frete.km > 0 ? 'Frete estimado: ' + fmt(calcFrete(wiz.frete.km)) : ''}
+
+      <!-- Direita: Resumo financeiro -->
+      <div>
+        <div class="wizard-section-title">D — Resumo Financeiro</div>
+        <div style="background:var(--marble);border-radius:10px;padding:14px" id="wiz-resumo-box">
+
+          ${totalItens > 0 ? `<div class="resumo-linha"><span class="resumo-label">Materiais (${wiz.itens.length} item${wiz.itens.length>1?'s':''})</span><span class="resumo-valor">${fmt(subMat)}</span></div>` : ''}
+          ${acabLines.map(a => `<div class="resumo-linha"><span class="resumo-label">${a.nome} (${a.qty} ${a.unid})</span><span class="resumo-valor">${fmt(a.total)}</span></div>`).join('')}
+          ${wiz.colocacao.ativo ? `<div class="resumo-linha"><span class="resumo-label">Colocação (${areaTotal.toFixed(2)}m²)</span><span class="resumo-valor">${fmt(totalColoc)}</span></div>` : ''}
+          ${wiz.frete.ativo ? `<div class="resumo-linha"><span class="resumo-label">Frete (~${wiz.frete.km}km)</span><span class="resumo-valor">${fmt(totalFrete)}</span></div>` : ''}
+          ${wiz.adicionais.filter(a=>a.qtd>0).map(a=>`<div class="resumo-linha"><span class="resumo-label">${a.nome} ×${a.qtd}</span><span class="resumo-valor">${fmt(a.qtd*a.preco)}</span></div>`).join('')}
+          ${(wiz.maoObra||0) > 0 ? `<div class="resumo-linha"><span class="resumo-label">Mão de obra adicional</span><span class="resumo-valor">${fmt(wiz.maoObra)}</span></div>` : ''}
+          ${(wiz.desconto||0) > 0 ? `<div class="resumo-linha"><span class="resumo-label" style="color:var(--red)">Desconto</span><span class="resumo-valor" style="color:var(--red)">−${fmt(wiz.desconto)}</span></div>` : ''}
+
+          <div style="margin-top:8px;padding-top:8px;border-top:2px solid var(--marble2)">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:3px">
+              <span>Subtotal materiais</span><span>${fmt(subMat)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:3px">
+              <span>Subtotal serviços</span><span>${fmt(subServ)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:3px">
+              <span>Subtotal acabamentos</span><span>${fmt(subAcab)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray)">
+              <span>Subtotal adicionais</span><span>${fmt(subAdic)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="resumo-total" style="margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span class="resumo-total-label">TOTAL DE VENDA</span>
+            <span class="resumo-total-valor" id="wiz-total-valor">${fmt(totalVenda)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <span style="color:rgba(255,255,255,0.5);font-size:12px">Custo estimado</span>
+            <span style="color:rgba(255,255,255,0.6);font-size:12px">${fmt(custoTot)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px">
+            <span style="color:rgba(255,255,255,0.5);font-size:12px">Margem de lucro</span>
+            <span style="color:${margemColor};font-size:14px;font-weight:700" id="wiz-margem-val">${margem}% — ${fmt(lucro)}</span>
+          </div>
+        </div>
       </div>
     </div>
   `;
+}
+
+function wizBindStep3() {
+  // Colocação toggle
+  const togColoc = document.getElementById('tog-coloc');
+  if(togColoc) togColoc.onclick = () => {
+    wiz.colocacao.ativo = !wiz.colocacao.ativo;
+    togColoc.classList.toggle('on', wiz.colocacao.ativo);
+    document.getElementById('srv-coloc-row').classList.toggle('active', wiz.colocacao.ativo);
+    document.getElementById('srv-coloc-extra').classList.toggle('show', wiz.colocacao.ativo);
+    wizRefreshResumo3();
+  };
+  const precoColoc = document.getElementById('srv-coloc-preco');
+  if(precoColoc) precoColoc.oninput = () => { wiz.colocacao.preco = parseFloat(precoColoc.value)||120; wizRefreshResumo3(); };
+
+  // Frete toggle
+  const togFrete = document.getElementById('tog-frete');
+  if(togFrete) togFrete.onclick = () => {
+    wiz.frete.ativo = !wiz.frete.ativo;
+    togFrete.classList.toggle('on', wiz.frete.ativo);
+    document.getElementById('srv-frete-row').classList.toggle('active', wiz.frete.ativo);
+    document.getElementById('srv-frete-extra').classList.toggle('show', wiz.frete.ativo);
+    wizRefreshResumo3();
+  };
+  const kmInp = document.getElementById('srv-frete-km');
+  if(kmInp) kmInp.oninput = () => {
+    wiz.frete.km = parseFloat(kmInp.value)||0;
+    const p = document.getElementById('srv-frete-prev');
+    if(p) p.textContent = wiz.frete.km > 0 ? 'Frete: ' + fmt(calcFrete(wiz.frete.km)) : '';
+    wizRefreshResumo3();
+  };
+
+  // Adicionais
+  document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.onclick = () => {
+      const i   = parseInt(btn.dataset.idx);
+      const dir = parseInt(btn.dataset.dir);
+      wiz.adicionais[i].qtd = Math.max(0, (wiz.adicionais[i].qtd||0) + dir);
+      const disp = document.getElementById('wiz-qty-'+i);
+      if(disp) disp.textContent = wiz.adicionais[i].qtd;
+      wizRefreshResumo3();
+    };
+  });
+
+  // Mão de obra / desconto / obs
+  const moInp = document.getElementById('wiz-mao-obra');
+  if(moInp) moInp.oninput = () => { wiz.maoObra = parseFloat(moInp.value)||0; wizRefreshResumo3(); };
+  const desInp = document.getElementById('wiz-desconto');
+  if(desInp) desInp.oninput = () => { wiz.desconto = parseFloat(desInp.value)||0; wizRefreshResumo3(); };
+  const obsInp = document.getElementById('wiz-obs');
+  if(obsInp) obsInp.oninput = () => { wiz.obs = obsInp.value; };
+}
+
+function wizRefreshResumo3() {
+  // Re-render just the resumo (avoid full re-render)
+  const areaTotal  = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
+  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
+  const totalCusto = wiz.itens.reduce((s,it) => s + ((it._custo||0) * (it._area||0)), 0);
+  let totalAcab = 0, custoAcab = 0;
+  const acabLines = [];
+  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial', furos:'Furos' };
+  Object.entries(wiz.acabamentos).forEach(([key, a]) => {
+    if(a.ativo) {
+      const qty = a.ml || a.m2 || a.qtd || 0;
+      const tot = qty * a.preco;
+      totalAcab += tot; custoAcab += tot * 0.5;
+      acabLines.push({ nome: acabNames[key], qty, unid: a.m2 !== undefined ? 'm²' : a.qtd !== undefined && !a.ml ? 'un' : 'ml', total: tot });
+    }
+  });
+  const totalColoc = wiz.colocacao.ativo ? areaTotal * wiz.colocacao.preco : 0;
+  const totalFrete = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
+  const totalAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
+  const custoAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco * 0.6, 0);
+  const totalVenda = totalItens + totalAcab + totalColoc + totalFrete + totalAdic + (wiz.maoObra||0) - (wiz.desconto||0);
+  const custoTot   = totalCusto + custoAcab + (totalColoc*0.6) + totalFrete + custoAdic;
+  const lucro      = totalVenda - custoTot;
+  const margem     = totalVenda > 0 ? Math.round(lucro / totalVenda * 100) : 0;
+  const margemColor= margem >= 30 ? 'var(--green)' : margem >= 15 ? 'var(--gold)' : 'var(--red)';
+  const tv = document.getElementById('wiz-total-valor');
+  if(tv) tv.textContent = fmt(totalVenda);
+  const mv = document.getElementById('wiz-margem-val');
+  if(mv) { mv.textContent = `${margem}% — ${fmt(lucro)}`; mv.style.color = margemColor; }
+  wizUpdateDots();
 }
 
 function calcFrete(km) {
@@ -3983,265 +4370,94 @@ function calcFrete(km) {
   return 500 + (km - 60) * 3;
 }
 
-function wizBindStep3() {
-  const toggleColocacao = document.getElementById('toggle-colocacao');
-  if(toggleColocacao) toggleColocacao.onclick = () => {
-    wiz.colocacao.ativo = !wiz.colocacao.ativo;
-    toggleColocacao.classList.toggle('on', wiz.colocacao.ativo);
-    document.getElementById('srv-colocacao-row').classList.toggle('active', wiz.colocacao.ativo);
-    document.getElementById('srv-colocacao-extra').classList.toggle('show', wiz.colocacao.ativo);
-  };
-  const precoCol = document.getElementById('srv-colocacao-preco');
-  if(precoCol) precoCol.oninput = () => { wiz.colocacao.preco = parseFloat(precoCol.value)||120; };
-
-  const toggleFrete = document.getElementById('toggle-frete');
-  if(toggleFrete) toggleFrete.onclick = () => {
-    wiz.frete.ativo = !wiz.frete.ativo;
-    toggleFrete.classList.toggle('on', wiz.frete.ativo);
-    document.getElementById('srv-frete-row').classList.toggle('active', wiz.frete.ativo);
-    document.getElementById('srv-frete-extra').classList.toggle('show', wiz.frete.ativo);
-  };
-  const kmInput = document.getElementById('srv-frete-km');
-  if(kmInput) kmInput.oninput = () => {
-    wiz.frete.km = parseFloat(kmInput.value)||0;
-    const prev = document.getElementById('srv-frete-preview');
-    if(prev) prev.textContent = wiz.frete.km > 0 ? 'Frete estimado: ' + fmt(calcFrete(wiz.frete.km)) : '';
-  };
-}
-
-// ── ETAPA 4: ADICIONAIS ───────────────────────────────────────
-function wizStep4() {
-  return `
-    <div class="wizard-section-title">Produtos Adicionais</div>
-    <p style="font-size:13px;color:var(--gray);margin-bottom:16px">
-      Cubas, torneiras e acessórios. Use os botões +/− para adicionar.
-    </p>
-    <div id="wiz-adicionais-list">
-      ${wiz.adicionais.map((a,i) => `
-        <div class="adicional-row">
-          <div class="adicional-name">${a.nome}</div>
-          <div class="adicional-price">${fmt(a.preco)}</div>
-          <div class="qty-control">
-            <button class="qty-btn" data-idx="${i}" data-dir="-1">−</button>
-            <div class="qty-display" id="wiz-qty-${i}">${a.qtd}</div>
-            <button class="qty-btn" data-idx="${i}" data-dir="1">+</button>
-          </div>
-        </div>`).join('')}
-    </div>
-  `;
-}
-
-function wizBindStep4() {
-  document.querySelectorAll('.qty-btn').forEach(btn => {
-    btn.onclick = () => {
-      const i   = parseInt(btn.dataset.idx);
-      const dir = parseInt(btn.dataset.dir);
-      wiz.adicionais[i].qtd = Math.max(0, (wiz.adicionais[i].qtd||0) + dir);
-      const display = document.getElementById('wiz-qty-'+i);
-      if(display) display.textContent = wiz.adicionais[i].qtd;
-    };
-  });
-}
-
-// ── ETAPA 5: RESUMO ───────────────────────────────────────────
 function calcWizTotal() {
-  const markup = state.pricing?.markup || 3;
-  const area   = wiz.largura * wiz.altura * wiz.qtdPecas;
-  const custo  = wiz.materialCusto || 0;
-  const totalMat = area * custo * markup;
-
+  const totalItens = wiz.itens.reduce((s,it) => s + it.total, 0);
   let totalAcab = 0;
   Object.values(wiz.acabamentos).forEach(a => {
-    if(a.ativo) totalAcab += (a.ml||a.m2||0) * a.preco;
+    if(a.ativo) totalAcab += (a.ml || a.m2 || a.qtd || 0) * a.preco;
   });
-
-  const totalColoc  = wiz.colocacao.ativo ? area * wiz.colocacao.preco : 0;
-  const totalFrete  = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
-  const totalAdic   = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
-
-  return totalMat + totalAcab + totalColoc + totalFrete + totalAdic;
-}
-
-function wizStep5() {
-  const markup     = state.pricing?.markup || 3;
-  const area       = wiz.largura * wiz.altura * wiz.qtdPecas;
-  const custoUnit  = wiz.materialCusto || 0;
-  const precoVenda = custoUnit * markup;
-  const totalMat   = area * precoVenda;
-  const custoMat   = area * custoUnit;
-
-  let totalAcab = 0, custoAcab = 0;
-  const acabLines = [];
-  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta', polimento:'Polimento', corteEspecial:'Corte Especial' };
-  Object.entries(wiz.acabamentos).forEach(([key,a]) => {
-    if(a.ativo) {
-      const qty   = a.ml || a.m2 || 0;
-      const total = qty * a.preco;
-      const custo = qty * (a.preco * 0.5);
-      totalAcab += total; custoAcab += custo;
-      acabLines.push({ nome: acabNames[key], qty, total });
-    }
-  });
-
-  const totalColoc = wiz.colocacao.ativo ? area * wiz.colocacao.preco : 0;
+  const areaTotal  = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
+  const totalColoc = wiz.colocacao.ativo ? areaTotal * wiz.colocacao.preco : 0;
   const totalFrete = wiz.frete.ativo ? calcFrete(wiz.frete.km) : 0;
   const totalAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco, 0);
-  const custoAdic  = wiz.adicionais.reduce((s,a) => s + a.qtd * a.preco * 0.6, 0);
-
-  const totalVenda = totalMat + totalAcab + totalColoc + totalFrete + totalAdic;
-  const custoTotal = custoMat + custoAcab + (totalColoc*0.6) + totalFrete + custoAdic;
-  const margem     = totalVenda > 0 ? Math.round((totalVenda - custoTotal) / totalVenda * 100) : 0;
-  const margemColor= margem >= 30 ? 'var(--green)' : margem >= 15 ? 'var(--gold)' : 'var(--red)';
-
-  const cliOpts = state.clientes.map(c =>
-    `<option value="${c.id}" ${wiz.clienteId===c.id?'selected':''}>${c.nome}</option>`
-  ).join('');
-
-  return `
-    <div class="wizard-section-title">Informações do Orçamento</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">TÍTULO</label>
-        <input class="form-input" id="wiz-titulo" placeholder="Ex: Cozinha - João" value="${wiz.titulo}">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">CLIENTE</label>
-        <div style="display:flex;gap:6px">
-          <select class="form-select" id="wiz-cliente" style="flex:1">
-            <option value="">Selecionar...</option>${cliOpts}
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="form-group" style="margin-bottom:16px">
-      <label class="form-label">PAGAMENTO</label>
-      <select class="form-select" id="wiz-pagamento">
-        ${['À vista','50% entrada + 50% entrega','30/60 dias','A combinar'].map(p =>
-          `<option ${wiz.pagamento===p?'selected':''}>${p}</option>`).join('')}
-      </select>
-    </div>
-
-    <div class="wizard-section-title">Resumo do Orçamento</div>
-    <div style="background:var(--marble);border-radius:10px;padding:16px">
-      <div class="resumo-linha">
-        <span class="resumo-label">${wiz.materialNome||'Material'} (${area.toFixed(3)} m²)</span>
-        <span class="resumo-valor">${fmt(totalMat)}</span>
-      </div>
-      ${acabLines.map(a => `
-      <div class="resumo-linha">
-        <span class="resumo-label">${a.nome} (${a.qty} ${a.ml?'ml':'m²'})</span>
-        <span class="resumo-valor">${fmt(a.total)}</span>
-      </div>`).join('')}
-      ${wiz.colocacao.ativo ? `
-      <div class="resumo-linha">
-        <span class="resumo-label">Colocação (${area.toFixed(2)} m²)</span>
-        <span class="resumo-valor">${fmt(totalColoc)}</span>
-      </div>` : ''}
-      ${wiz.frete.ativo ? `
-      <div class="resumo-linha">
-        <span class="resumo-label">Frete (~${wiz.frete.km}km)</span>
-        <span class="resumo-valor">${fmt(totalFrete)}</span>
-      </div>` : ''}
-      ${wiz.adicionais.filter(a=>a.qtd>0).map(a => `
-      <div class="resumo-linha">
-        <span class="resumo-label">${a.nome} × ${a.qtd}</span>
-        <span class="resumo-valor">${fmt(a.qtd * a.preco)}</span>
-      </div>`).join('')}
-    </div>
-
-    <div class="resumo-total" style="margin-top:12px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <span class="resumo-total-label">TOTAL DE VENDA</span>
-        <span class="resumo-total-valor">${fmt(totalVenda)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px">
-        <span style="color:rgba(255,255,255,0.5);font-size:12px">Custo total estimado</span>
-        <span style="color:rgba(255,255,255,0.6);font-size:12px">${fmt(custoTotal)}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:4px">
-        <span style="color:rgba(255,255,255,0.5);font-size:12px">Margem de lucro</span>
-        <span style="color:${margemColor};font-size:14px;font-weight:700">${margem}% — ${fmt(totalVenda - custoTotal)}</span>
-      </div>
-    </div>
-  `;
+  return totalItens + totalAcab + totalColoc + totalFrete + totalAdic + (wiz.maoObra||0) - (wiz.desconto||0);
 }
 
 // ── GERAR ORÇAMENTO ───────────────────────────────────────────
 async function wizGerarOrcamento() {
-  const titulo = document.getElementById('wiz-titulo')?.value?.trim();
-  const clienteId = document.getElementById('wiz-cliente')?.value;
-  const pagamento = document.getElementById('wiz-pagamento')?.value || 'À vista';
-
-  if(!titulo)    { showToast('Informe o título do orçamento', 'err'); return; }
-  if(!clienteId) { showToast('Selecione um cliente', 'err'); return; }
-
-  const markup    = state.pricing?.markup || 3;
-  const area      = wiz.largura * wiz.altura * wiz.qtdPecas;
-  const custoUnit = wiz.materialCusto || 0;
-  const precoVenda= custoUnit * markup;
+  if(!wiz.titulo) { showToast('Título do orçamento não informado', 'err'); return; }
 
   const itens = [];
 
-  // Material principal
-  itens.push({
-    desc:    `${wiz.materialNome||'Material'} (${area.toFixed(3)} m²)`,
-    mat:     wiz.materialNome || '-',
-    largura: wiz.largura,
-    altura:  wiz.altura,
-    qtd:     wiz.qtdPecas,
-    vlrm2:   parseFloat(precoVenda.toFixed(2)),
-    total:   parseFloat((area * precoVenda).toFixed(2)),
+  // Itens de material
+  wiz.itens.forEach(it => {
+    itens.push({
+      desc: it.desc, mat: it.mat,
+      largura: it.largura, altura: it.altura,
+      qtd: it.qtd, vlrm2: it.vlrm2, total: it.total,
+    });
   });
 
   // Acabamentos
-  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial' };
-  Object.entries(wiz.acabamentos).forEach(([key,a]) => {
-    if(a.ativo && (a.ml||a.m2)) {
-      const qty = a.ml||a.m2;
-      itens.push({ desc: acabNames[key], mat:'-', largura:qty, altura:1, qtd:1, vlrm2:a.preco, total:qty*a.preco });
+  const acabNames = { meiaEsquadria:'Meia Esquadria', bordaReta:'Borda Reta Polida', polimento:'Polimento', corteEspecial:'Corte Especial', furos:'Furos' };
+  Object.entries(wiz.acabamentos).forEach(([key, a]) => {
+    if(a.ativo) {
+      const qty = a.ml || a.m2 || a.qtd || 0;
+      if(qty > 0) itens.push({
+        desc: acabNames[key], mat: '-',
+        largura: qty, altura: 1, qtd: 1,
+        vlrm2: a.preco, total: qty * a.preco,
+        _servico: true,
+      });
     }
   });
 
   // Colocação
-  if(wiz.colocacao.ativo) {
-    const t = area * wiz.colocacao.preco;
-    itens.push({ desc:`Colocação/Instalação (${area.toFixed(2)}m²)`, mat:'-', largura:area, altura:1, qtd:1, vlrm2:wiz.colocacao.preco, total:parseFloat(t.toFixed(2)) });
+  const areaTotal = wiz.itens.reduce((s,it) => s + (it._area||0), 0);
+  if(wiz.colocacao.ativo && areaTotal > 0) {
+    const t = areaTotal * wiz.colocacao.preco;
+    itens.push({ desc: `Colocação/Instalação (${areaTotal.toFixed(2)}m²)`, mat:'-', largura:areaTotal, altura:1, qtd:1, vlrm2:wiz.colocacao.preco, total:parseFloat(t.toFixed(2)), _servico:true });
   }
 
   // Frete
   if(wiz.frete.ativo) {
     const t = calcFrete(wiz.frete.km);
-    itens.push({ desc:`Frete (~${wiz.frete.km}km)`, mat:'-', largura:0, altura:0, qtd:1, vlrm2:t, total:t });
+    itens.push({ desc:`Frete (~${wiz.frete.km}km)`, mat:'-', largura:0, altura:0, qtd:1, vlrm2:t, total:t, _servico:true });
   }
 
   // Adicionais
-  wiz.adicionais.filter(a=>a.qtd>0).forEach(a => {
+  wiz.adicionais.filter(a => a.qtd > 0).forEach(a => {
     itens.push({ desc:a.nome, mat:'-', largura:0, altura:0, qtd:a.qtd, vlrm2:a.preco, total:a.qtd*a.preco });
   });
 
-  // Salvar
   const orcData = {
-    titulo, clienteId, pagamento,
-    data: new Date().toISOString().split('T')[0],
-    validade: '',
-    obs: `Gerado pelo assistente de orçamento. Markup: ${markup}×`,
-    maoObra: 0, desconto: 0, status: 'rascunho',
+    titulo:      wiz.titulo,
+    clienteId:   wiz.clienteId || null,
+    data:        wiz.data || new Date().toISOString().split('T')[0],
+    validade:    wiz.validade || '',
+    dataEntrega: wiz.dataEntrega || null,
+    pagamento:   wiz.pagamento,
+    maoObra:     wiz.maoObra || 0,
+    desconto:    wiz.desconto || 0,
+    obs:         wiz.obs || '',
+    status:      'rascunho',
   };
 
   const btn = document.getElementById('wizard-btn-next');
-  btn.textContent = '⏳ Salvando...'; btn.disabled = true;
+  if(btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
 
   try {
     await sbSaveOrcamento(orcData, itens);
     await loadOrcamentos();
     closeWizard();
-    showToast('Orçamento gerado com sucesso!', 'ok2');
+    showToast('Orçamento criado!', 'ok2');
     showPage('orcamentos');
   } catch(e) {
     showToast('Erro ao salvar: ' + e.message, 'err');
-    btn.textContent = '✅ Gerar Orçamento'; btn.disabled = false;
+    if(btn) { btn.textContent = '✅ Gerar Orçamento'; btn.disabled = false; }
   }
 }
+
 
 // ═══════════════════════════════════════════
 // AGENTE IA — MARMO IA
