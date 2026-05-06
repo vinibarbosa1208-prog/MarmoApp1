@@ -4467,141 +4467,342 @@ async function wizGerarOrcamento() {
 // ═══════════════════════════════════════════
 // AGENTE IA — MARMO IA
 // ═══════════════════════════════════════════
-let agentOpen = false;
-let agentHistory = [];
+// ═══════════════════════════════════════════
+// AGENTE IA — MARMO IA (com Voz + Imagem)
+// ═══════════════════════════════════════════
+let agentOpen        = false;
+let agentHistory     = [];
 let agentPendingOrcamento = null;
 
-const AGENT_SYSTEM = `Você é o MarmoIA, assistente especializado em orçamentos para marmorarias brasileiras.
+// ── VOZ ────────────────────────────────────────────────────────
+let recognition  = null;
+let isListening  = false;
 
-Seu objetivo é guiar o responsável pela marmoraria através de um processo de orçamento estruturado, coletando todas as informações necessárias e ao final gerar um orçamento detalhado com margem de lucro real.
+function initVoice() {
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('Seu navegador não suporta voz. Use o Chrome.', 'err');
+    return false;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'pt-BR';
+  recognition.continuous = false;
+  recognition.interimResults = true;
 
-FLUXO DE COLETA:
-1. Tipo de projeto (pia, bancada, soleira, tampo, revestimento, etc)
-2. Material desejado (granito, mármore, porcelanato, quartzito, etc)
-3. Medidas exatas (comprimento, largura, espessura)
-4. Quantidade de peças/ambientes
-5. Acabamentos necessários (polimento, borda, meia esquadria)
-6. Serviços (instalação, furos de cuba/torneira/fogão)
-7. Endereço de entrega/instalação (para calcular frete)
-8. Prazo desejado
+  recognition.onresult = (event) => {
+    let interim = '', final = '';
+    for(let i = event.resultIndex; i < event.results.length; i++) {
+      if(event.results[i].isFinal) final += event.results[i][0].transcript;
+      else interim += event.results[i][0].transcript;
+    }
+    const input = document.getElementById('agent-input');
+    if(input) input.value = final || interim;
+    if(final) { stopListening(); sendAgentMessage(final); }
+  };
 
-TABELA DE PREÇOS BASE (use estes valores de custo de mercado brasileiro):
-- Granito Preto São Gabriel: R$280/m²
-- Granito Branco Itaúnas: R$320/m²
-- Granito Amarelo Real: R$180/m²
-- Mármore Branco Carrara: R$620/m²
-- Mármore Travertino: R$420/m²
-- Porcelanato (genérico): R$75/m²
-- Quartzito Taj Mahal: R$850/m²
+  recognition.onerror = (e) => { stopListening(); showToast('Erro de voz: ' + e.error, 'err'); };
+  recognition.onend   = () => stopListening();
+  return true;
+}
 
-SERVIÇOS (custo):
-- Instalação: R$80/m² (cobrar R$120/m²)
-- Polimento: R$50/m² (cobrar R$80/m²)
-- Furo cuba: R$45/und (cobrar R$90/und)
-- Furo torneira/fogão: R$25/und (cobrar R$45/und)
-- Meia esquadria: R$30/ml (cobrar R$55/ml)
-- Corte especial: R$40/ml (cobrar R$65/ml)
+function startListening() {
+  if(!recognition && !initVoice()) return;
+  isListening = true;
+  recognition.start();
+  const btn = document.getElementById('btn-voice');
+  if(btn) { btn.style.background = '#e74c3c'; btn.innerHTML = '⏹'; }
+  const input = document.getElementById('agent-input');
+  if(input) input.placeholder = '🎤 Ouvindo...';
+}
 
-CÁLCULO DE FRETE:
-- Até 10km: R$120 fixo
-- 11–30km: R$200
-- 31–60km: R$350
-- Acima 60km: R$500 + R$3/km adicional
+function stopListening() {
+  isListening = false;
+  if(recognition) try { recognition.stop(); } catch(e) {}
+  const btn = document.getElementById('btn-voice');
+  if(btn) { btn.style.background = ''; btn.innerHTML = '🎤'; }
+  const input = document.getElementById('agent-input');
+  if(input) input.placeholder = 'Descreva o projeto ou use o microfone...';
+}
 
-MARKUP PADRÃO: 3× o custo do material
+function toggleVoice() {
+  if(isListening) stopListening(); else startListening();
+}
 
-FORMATO DO ORÇAMENTO FINAL:
-Quando tiver TODAS as informações, responda com um JSON no seguinte formato exato (sem markdown, só o JSON puro):
-{"tipo":"orcamento","titulo":"[título descritivo]","itens":[{"desc":"[descrição]","area":[numero],"vlrm2":[preco_venda],"total":[total],"custo_unit":[custo_m2]}],"servicos":[{"desc":"[serviço]","qtd":[numero],"unid":"[m²/ml/und]","preco":[preco],"total":[total]}],"frete":{"distancia_km":[km_estimado],"valor":[valor_frete]},"resumo":{"subtotal_material":[valor],"subtotal_servicos":[valor],"frete":[valor],"total_venda":[valor],"custo_total":[valor],"margem_lucro_pct":[percentual],"margem_lucro_rs":[valor_rs]}}
+// ── ANÁLISE DE IMAGEM ──────────────────────────────────────────
+async function analyzeDrawing(imageBase64, mimeType) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 1024,
+      system: `Você é um especialista em marmoraria. Analise o desenho/croqui enviado e extraia as informações para montar um orçamento. Responda APENAS em JSON válido com esta estrutura:
+{
+  "formato": "retangular|L|U|custom",
+  "largura": número em metros,
+  "comprimento": número em metros,
+  "espessura": "2cm|3cm" ou null,
+  "furos": número de furos (0 se nenhum),
+  "acabamentos": ["meia_esquadria"|"borda_reta"|"polimento"|"corte_especial"],
+  "quantidade_pecas": número,
+  "observacoes": "descrição breve da peça",
+  "complexidade": "simples|media|complexa"
+}
+Se não conseguir identificar uma dimensão, use null.`,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+          { type: 'text', text: 'Analise este desenho de marmoraria e extraia as informações para o orçamento.' }
+        ]
+      }]
+    })
+  });
 
-Seja direto e profissional. Use linguagem do setor. Pergunte uma etapa de cada vez. Quando o cliente mencionar o endereço, estime a distância com base no CEP informado. Se o CEP da marmoraria for informado, use-o como origem.`;
+  if(!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'Erro na API de visão');
+  }
 
-function toggleAgent() {
-  if (!hasFeature('marmoIA')) {
-    showUpgradeModal('marmoIA');
+  const data = await response.json();
+  const text = data.content[0].text;
+  try {
+    return JSON.parse(text.replace(/```json|```/g, '').trim());
+  } catch(e) {
+    throw new Error('Não consegui interpretar o desenho. Tente uma foto mais clara.');
+  }
+}
+
+async function handleDrawingUpload(file) {
+  if(!file) return;
+  showToast('Analisando desenho...', 'ok2');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64   = e.target.result.split(',')[1];
+    const mimeType = file.type || 'image/jpeg';
+    try {
+      const result = await analyzeDrawing(base64, mimeType);
+      const msg = `📐 **Desenho analisado!**
+
+**Formato:** ${result.formato || '?'}
+**Dimensões:** ${result.largura || '?'}m × ${result.comprimento || '?'}m
+**Espessura:** ${result.espessura || 'não identificada'}
+**Furos:** ${result.furos || 0}
+**Acabamentos:** ${result.acabamentos?.join(', ') || 'nenhum'}
+**Peças:** ${result.quantidade_pecas || 1}
+**Complexidade:** ${result.complexidade || '?'}
+**Observações:** ${result.observacoes || ''}
+
+Quer que eu monte o orçamento com essas informações?`;
+
+      addAgentMessage(msg, 'assistant');
+      window._drawingData = result;
+
+      setTimeout(() => {
+        const msgs = document.getElementById('agent-messages');
+        if(!msgs) return;
+        const lastMsg = msgs.lastElementChild;
+        if(lastMsg) {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-gold btn-sm';
+          btn.style.cssText = 'margin-top:10px;font-size:12px;padding:6px 14px';
+          btn.textContent = '✅ Usar no orçamento';
+          btn.onclick = () => applyDrawingToOrcamento(result);
+          lastMsg.appendChild(btn);
+        }
+      }, 100);
+
+    } catch(err) {
+      addAgentMessage('❌ ' + err.message, 'assistant');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyDrawingToOrcamento(data) {
+  window._drawingData = data;
+  closeAgent();
+  openWizard();
+  showToast('Dados do desenho carregados no orçamento!', 'ok2');
+}
+
+// ── CONTEXTO DA MARMORARIA ─────────────────────────────────────
+function buildMarmoContext() {
+  const mats = (state.materiais || []).map(m =>
+    `${m.nome}: custo R$${m.custo}/m², estoque ${m.estoque}${m.unid}`
+  ).join('\n');
+  const markup = state.pricing?.markup || 3;
+  return `Você é o MarmoIA, assistente especialista em marmoraria da empresa "${currentMarmoraria?.nome || 'Marmoraria'}".
+
+DADOS DA MARMORARIA:
+- Markup padrão: ${markup}x sobre o custo
+- Materiais em estoque:
+${mats || 'Nenhum material cadastrado ainda'}
+
+SERVIÇOS DISPONÍVEIS:
+- Meia Esquadria: R$55/ml
+- Borda Reta Polida: R$35/ml
+- Polimento: R$80/m²
+- Corte Especial: R$65/ml
+- Colocação/Instalação: R$120/m²
+- Frete até 10km: R$120 | até 30km: R$200 | até 60km: R$350 | acima: R$500+R$3/km extra
+
+INSTRUÇÕES:
+1. Conduza a conversa em etapas para coletar: material, dimensões (L×A em metros), acabamentos, colocação, frete, cliente
+2. Quando tiver todas as informações, calcule o orçamento aplicando o markup
+3. Apresente o resumo com: total de venda, custo estimado e margem de lucro
+4. Pergunte se o marmoreiro quer salvar o orçamento
+5. Responda SEMPRE em português brasileiro, de forma direta e prática
+6. Use linguagem do setor de marmoraria
+7. Quando tiver TODAS as informações necessárias, gere um JSON de orçamento no formato: {"tipo":"orcamento","titulo":"[título]","itens":[{"desc":"[desc]","area":[num],"vlrm2":[num],"total":[num],"custo_unit":[num]}],"servicos":[{"desc":"[desc]","qtd":[num],"unid":"[m²/ml/und]","preco":[num],"total":[num]}],"frete":{"distancia_km":[num],"valor":[num]},"resumo":{"subtotal_material":[num],"subtotal_servicos":[num],"frete":[num],"total_venda":[num],"custo_total":[num],"margem_lucro_pct":[num],"margem_lucro_rs":[num]}}`;
+}
+
+// ── ENVIAR MENSAGEM AO AGENTE ──────────────────────────────────
+async function sendAgentMessage(text) {
+  text = (text || '').trim();
+  if(!text) return;
+
+  const input = document.getElementById('agent-input');
+  if(input) input.value = '';
+
+  // Comandos rápidos
+  if(text.toLowerCase().includes('limpar conversa')) {
+    agentHistory = [];
+    agentPendingOrcamento = null;
+    const c = document.getElementById('agent-messages');
+    if(c) c.innerHTML = '';
+    agentGreet();
     return;
   }
-  agentOpen = !agentOpen;
-  const panel = document.getElementById('agent-panel');
-  const main = document.querySelector('.main');
-  panel.classList.toggle('open', agentOpen);
-  if (main) main.classList.toggle('main-shifted', agentOpen);
-  if (agentOpen && agentHistory.length === 0) {
-    agentGreet();
+
+  addAgentMessage(text, 'user');
+
+  // Indicador de digitação
+  const loadId = 'load-' + Date.now();
+  addAgentMessage('...', 'assistant', loadId);
+
+  try {
+    const context  = buildMarmoContext();
+    const messages = agentHistory
+      .filter(m => m.role !== 'system')
+      .slice(-12)
+      .map(m => ({ role: m.role, content: m.content }));
+    messages.push({ role: 'user', content: text });
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1200,
+        system: context,
+        messages: messages
+      })
+    });
+
+    const data = await response.json();
+
+    // Remove loading
+    const loadEl = document.getElementById(loadId);
+    if(loadEl) loadEl.remove();
+
+    if(data.error) throw new Error(data.error.message);
+
+    const reply = data.content[0].text;
+
+    addAgentMessage(reply, 'assistant');
+    agentHistory.push({ role: 'user',      content: text  });
+    agentHistory.push({ role: 'assistant', content: reply });
+
+    // Persiste conversa no Supabase (non-blocking)
+    if(currentMarmoraria) {
+      sb.from('ia_conversas').insert({
+        marmoraria_id: currentMarmoraria.id,
+        mensagem: text,
+        resposta: reply
+      }).then(() => {});
+    }
+
+  } catch(err) {
+    const loadEl = document.getElementById(loadId);
+    if(loadEl) loadEl.remove();
+    addAgentMessage('❌ Erro ao conectar com a IA: ' + err.message, 'assistant');
   }
 }
 
-function agentGreet() {
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-  const msg = `${greeting}! 👋 Sou o **MarmoIA**, seu assistente de orçamentos.\n\nPosso te ajudar a:\n• 📐 Gerar orçamentos completos e detalhados\n• 💰 Calcular margem de lucro real por projeto\n• 🚚 Estimar frete por distância\n• ✅ Importar o orçamento direto para o sistema\n\nPor onde vamos começar? Me descreva o projeto ou clique em **"Novo orçamento"**.`;
-  addAgentMessage('agent', msg);
-}
+// ── RENDERIZAR MENSAGEM ────────────────────────────────────────
+function addAgentMessage(text, role, id) {
+  const container = document.getElementById('agent-messages');
+  if(!container) return;
 
-function addAgentMessage(role, text, extra = null) {
-  const msgs = document.getElementById('agent-messages');
-  if (!msgs) return;
-  const time = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const isUser = role === 'user';
   const div = document.createElement('div');
-  div.className = `msg msg-${role}`;
+  div.className = 'agent-message agent-' + role;
+  if(id) div.id = id;
 
-  // Parse JSON orçamento
-  let orcCard = '';
+  // Detecta JSON de orçamento
   let cleanText = text;
+  let orcCard   = '';
   try {
-    const jsonMatch = text.match(/\{\"tipo\":\"orcamento\".*\}/s);
-    if (jsonMatch) {
+    const jsonMatch = text.match(/\{"tipo":"orcamento".*\}/s);
+    if(jsonMatch) {
       const orc = JSON.parse(jsonMatch[0]);
       agentPendingOrcamento = orc;
-      cleanText = text.replace(jsonMatch[0], '').trim() || 'Aqui está seu orçamento detalhado:';
+      cleanText = text.replace(jsonMatch[0], '').trim() || 'Aqui está o orçamento detalhado:';
       orcCard = buildOrcamentoCard(orc);
     }
   } catch(e) {}
 
-  // Format markdown-ish
-  const formatted = cleanText
+  // Formata markdown básico
+  const html = cleanText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n/g, '<br>');
 
   div.innerHTML = `
-    <div class="msg-bubble">${formatted}${orcCard}</div>
-    <div class="msg-time">${time}</div>
+    <div style="
+      padding:10px 14px;
+      border-radius:${isUser ? '10px 10px 2px 10px' : '10px 10px 10px 2px'};
+      max-width:88%;
+      font-size:13.5px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      word-break:break-word;
+      ${isUser
+        ? 'background:#1A1A2E;color:#fff;margin-left:auto;'
+        : 'background:#F4F1EB;color:#1A1A2E;margin-right:auto;'}
+    ">${html}${orcCard}</div>
   `;
 
-  if (extra) {
-    const extraDiv = document.createElement('div');
-    extraDiv.innerHTML = extra;
-    div.appendChild(extraDiv);
-  }
-
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
 }
 
+// ── CARD DE ORÇAMENTO ──────────────────────────────────────────
 function buildOrcamentoCard(orc) {
-  const r = orc.resumo;
+  const r = orc.resumo || {};
   const margemColor = r.margem_lucro_pct >= 30 ? '#27AE60' : r.margem_lucro_pct >= 15 ? '#C9A84C' : '#C0392B';
+  const itensHtml = (orc.itens || []).map(i =>
+    `<div class="orcamento-card-item"><span>${i.desc} (${i.area}m²)</span><span>${fmt(i.total)}</span></div>`
+  ).join('');
+  const servsHtml = (orc.servicos || []).map(s =>
+    `<div class="orcamento-card-item"><span>🔧 ${s.desc} — ${s.qtd}${s.unid}</span><span>${fmt(s.total)}</span></div>`
+  ).join('');
   return `
-    <div class="orcamento-card">
-      <div class="orcamento-card-title">📋 ${orc.titulo}</div>
-      ${orc.itens.map(i => `
-        <div class="orcamento-card-item">
-          <span>${i.desc} (${i.area}m²)</span>
-          <span>${fmt(i.total)}</span>
-        </div>`).join('')}
-      ${orc.servicos.map(s => `
-        <div class="orcamento-card-item">
-          <span>🔧 ${s.desc} — ${s.qtd}${s.unid}</span>
-          <span>${fmt(s.total)}</span>
-        </div>`).join('')}
-      <div class="orcamento-card-item">
-        <span>🚚 Frete (~${orc.frete.distancia_km}km)</span>
-        <span>${fmt(orc.frete.valor)}</span>
-      </div>
-      <div class="orcamento-card-total">
-        <span>TOTAL DE VENDA</span>
-        <span>${fmt(r.total_venda)}</span>
-      </div>
+    <div class="orcamento-card" style="margin-top:10px">
+      <div class="orcamento-card-title">📋 ${orc.titulo || 'Orçamento'}</div>
+      ${itensHtml}${servsHtml}
+      ${orc.frete ? `<div class="orcamento-card-item"><span>🚚 Frete (~${orc.frete.distancia_km}km)</span><span>${fmt(orc.frete.valor)}</span></div>` : ''}
+      <div class="orcamento-card-total"><span>TOTAL DE VENDA</span><span>${fmt(r.total_venda)}</span></div>
       <div style="margin-top:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.1)">
         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
           <span style="color:rgba(255,255,255,0.6)">Custo total</span>
@@ -4612,154 +4813,80 @@ function buildOrcamentoCard(orc) {
           <span style="color:${margemColor};font-weight:700">${r.margem_lucro_pct}% — ${fmt(r.margem_lucro_rs)}</span>
         </div>
       </div>
-      <button class="btn-import-orc" onclick="importarOrcamentoIA()">✅ Importar para o sistema</button>
-    </div>
-  `;
+      <button class="btn-import-orc" onclick="importarOrcamentoIA()" style="margin-top:10px">✅ Importar para o sistema</button>
+    </div>`;
 }
 
-function showTyping() {
-  const msgs = document.getElementById('agent-messages');
-  if (!msgs) return;
-  const div = document.createElement('div');
-  div.className = 'msg msg-agent';
-  div.id = 'typing-indicator';
-  div.innerHTML = '<div class="agent-typing"><span></span><span></span><span></span></div>';
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+// ── TOGGLE / SAUDAÇÃO / FECHAR ─────────────────────────────────
+function toggleAgent() {
+  if(!hasFeature('marmoIA')) { showUpgradeModal('marmoIA'); return; }
+  agentOpen = !agentOpen;
+  const panel = document.getElementById('agent-panel');
+  const main  = document.querySelector('.main');
+  if(panel) panel.classList.toggle('open', agentOpen);
+  if(main)  main.classList.toggle('main-shifted', agentOpen);
+  if(agentOpen && agentHistory.length === 0) agentGreet();
 }
 
-function hideTyping() {
-  const t = document.getElementById('typing-indicator');
-  if (t) t.remove();
+function closeAgent() {
+  agentOpen = false;
+  const panel = document.getElementById('agent-panel');
+  const main  = document.querySelector('.main');
+  if(panel) panel.classList.remove('open');
+  if(main)  main.classList.remove('main-shifted');
 }
 
-async function sendAgentMsg() {
+function agentGreet() {
+  agentHistory = [];
+  const container = document.getElementById('agent-messages');
+  if(container) container.innerHTML = '';
+  const greeting = `Olá! Sou o MarmoIA 👋
+
+Posso te ajudar a montar orçamentos de 3 formas:
+
+🎤 **Por voz** — clique no microfone e descreva o projeto
+📷 **Por desenho** — envie a foto do croqui do cliente
+✍️ **Por texto** — descreva o projeto aqui
+
+Como quer começar?`;
+  addAgentMessage(greeting, 'assistant');
+}
+
+function agentQuickSend(text) {
   const input = document.getElementById('agent-input');
-  const text = input.value.trim();
-  if (!text) return;
-
-  // Special commands
-  if (text.toLowerCase().includes('limpar conversa')) {
-    agentHistory = [];
-    agentPendingOrcamento = null;
-    document.getElementById('agent-messages').innerHTML = '';
-    input.value = '';
-    input.style.height = 'auto';
-    agentGreet();
-    return;
-  }
-
-  addAgentMessage('user', text);
-  agentHistory.push({ role: 'user', content: text });
-  input.value = '';
-  input.style.height = 'auto';
-
-  const btn = document.getElementById('agent-send-btn');
-  btn.disabled = true;
-  showTyping();
-
-  try {
-    const apiKey = state.pricing?.apiKey || '';
-    if (!apiKey) {
-      hideTyping();
-      addAgentMessage('agent', '⚠️ **API key não configurada.**\n\nVá em **Preços e Serviços** no menu lateral e insira sua API key da Anthropic para ativar o agente.\n\nSe quiser testar sem API, posso simular um orçamento com dados de exemplo — é só pedir!');
-      btn.disabled = false;
-      return;
-    }
-
-    // Build context with current stock prices
-    const estoqueCtx = state.materiais.length
-      ? '\n\nESTOQUE ATUAL DA MARMORARIA:\n' + state.materiais.map(m => `- ${m.nome}: custo R$${m.custo}/${m.unid}, estoque ${m.estoque}${m.unid}`).join('\n')
-      : '';
-
-    const cepCtx = state.pricing?.cep
-      ? `\n\nCEP DA MARMORARIA: ${state.pricing.cep}`
-      : '';
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        system: AGENT_SYSTEM + estoqueCtx + cepCtx,
-        messages: agentHistory,
-      })
-    });
-
-    const data = await response.json();
-    hideTyping();
-
-    if (!response.ok) {
-      const errMsg = data.error?.message || 'Erro na API';
-      addAgentMessage('agent', `❌ Erro: ${errMsg}`);
-    } else {
-      const reply = data.content[0]?.text || '';
-      agentHistory.push({ role: 'assistant', content: reply });
-      addAgentMessage('agent', reply);
-    }
-  } catch(err) {
-    hideTyping();
-    addAgentMessage('agent', `❌ Erro de conexão: ${err.message}`);
-  }
-
-  btn.disabled = false;
+  if(input) input.value = text;
+  sendAgentMessage(text);
 }
 
-function agentQuickSend() {
-  const text = arguments[0];
-  document.getElementById('agent-input').value = text;
-  sendAgentMsg();
-}
-
+// ── IMPORTAR ORÇAMENTO DA IA ───────────────────────────────────
 function importarOrcamentoIA() {
-  if (!agentPendingOrcamento) return;
+  if(!agentPendingOrcamento) return;
   const orc = agentPendingOrcamento;
-
-  // Build items array
   const itens = [
-    ...orc.itens.map(i => ({
-      desc: i.desc,
-      mat: '-',
-      largura: parseFloat((i.area).toFixed(4)),
-      altura: 1,
-      qtd: 1,
-      vlrm2: i.vlrm2,
-      total: i.total,
+    ...(orc.itens || []).map(i => ({
+      desc: i.desc, mat: '-',
+      largura: parseFloat((i.area||0).toFixed(4)), altura: 1, qtd: 1,
+      vlrm2: i.vlrm2, total: i.total,
     })),
-    ...orc.servicos.map(s => ({
-      desc: s.desc,
-      mat: '-',
+    ...(orc.servicos || []).map(s => ({
+      desc: s.desc, mat: '-',
       largura: s.unid === 'ml' ? s.qtd : s.unid === 'm²' ? s.qtd : 0,
-      altura: 1,
-      qtd: s.unid === 'und' ? s.qtd : 1,
-      vlrm2: s.preco,
-      total: s.total,
+      altura: 1, qtd: s.unid === 'und' ? s.qtd : 1,
+      vlrm2: s.preco, total: s.total,
     })),
-    {
-      desc: `Frete (~${orc.frete.distancia_km}km)`,
-      mat: '-',
-      largura: 0, altura: 0, qtd: 1,
-      vlrm2: orc.frete.valor,
-      total: orc.frete.valor,
-    }
+    ...(orc.frete ? [{ desc: `Frete (~${orc.frete.distancia_km}km)`, mat:'-', largura:0, altura:0, qtd:1, vlrm2:orc.frete.valor, total:orc.frete.valor }] : []),
   ];
-
-  // Pre-fill new orcamento form
   state.editingOrcId = null;
   state.orcItems = itens;
-  document.getElementById('modal-orc-title').textContent = 'Orçamento via MarmoIA';
-  renderOrcForm({ titulo: orc.titulo, pagamento: 'A combinar', obs: `Gerado pelo MarmoIA. Margem: ${orc.resumo.margem_lucro_pct}%`, status:'rascunho' });
-
-  // Open orcamento modal
-  openModal('modal-orcamento');
-
-  addAgentMessage('agent', `✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado no formulário. Revise os dados, vincule a um cliente e salve.`);
+  const titleEl = document.getElementById('modal-orc-title');
+  if(titleEl) titleEl.textContent = 'Orçamento via MarmoIA';
+  if(typeof renderOrcForm === 'function') {
+    renderOrcForm({ titulo: orc.titulo, pagamento: 'A combinar', obs: `Gerado pelo MarmoIA. Margem: ${orc.resumo?.margem_lucro_pct || 0}%`, status:'rascunho' });
+    if(typeof openModal === 'function') openModal('modal-orcamento');
+  } else {
+    openWizard();
+  }
+  addAgentMessage(`✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado. Revise os dados e salve.`, 'assistant');
 }
 
 
@@ -4875,8 +5002,25 @@ function fetchCEPCli() {
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
-// Verificar sessão ao carregar
+// INIT
+// ═══════════════════════════════════════════
 checkSession();
+
+// Bind: upload de imagem para o agente
+document.addEventListener('DOMContentLoaded', () => {
+  const imgUpload = document.getElementById('agent-img-upload');
+  if(imgUpload) {
+    imgUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if(file) {
+        if(!agentOpen) toggleAgent();
+        handleDrawingUpload(file);
+        // Reset input para permitir re-upload do mesmo arquivo
+        imgUpload.value = '';
+      }
+    });
+  }
+});
 
 // Handle return from Stripe Checkout
 (function() {
