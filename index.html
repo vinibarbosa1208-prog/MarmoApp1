@@ -3234,6 +3234,12 @@ function updatePlanUI() {
   // Also add plan indicator on dashboard
   const planWrap = document.getElementById('plan-indicator-wrap');
   if (planWrap) planWrap.innerHTML = getPlanIndicatorHTML();
+
+  // Auto-seed materiais e serviços padrão se não houver nenhum
+  setTimeout(async function() {
+    await seedMateriaisPadrao();
+    await seedServicosPadrao();
+  }, 1000);
 }
 
 async function doLogout() {
@@ -3302,15 +3308,31 @@ async function loadOS() {
 }
 
 async function loadServicos() {
-  const { data } = await sb.from('servicos').select('*').eq('ativo', true).order('ordem');
-  if (data && data.length > 0) {
-    state.pricing.servicos = data.map(s => ({
-      id: s.id, nome: s.nome, icon: s.icone, unid: s.unidade, preco: s.preco_padrao,
-    }));
-    state.servicos = data.map(s => ({
-      id: s.id, nome: s.nome, unidade: s.unidade,
-      preco: s.preco_padrao, preco_unitario: s.preco_padrao,
-    }));
+  try {
+    const { data, error } = await sb.from('servicos').select('*').eq('marmoraria_id', currentMarmoraria.id).order('nome');
+    if (data && data.length > 0) {
+      state.pricing.servicos = data.map(s => ({
+        id: s.id, nome: s.nome, icon: s.icone||'🔧', unid: s.unidade||'un', preco: s.preco_unitario||s.preco_padrao||0,
+      }));
+      state.servicos = data.map(s => ({
+        id: s.id, nome: s.nome, unidade: s.unidade||'un',
+        preco: s.preco_unitario||s.preco_padrao||0, preco_unitario: s.preco_unitario||s.preco_padrao||0,
+      }));
+    } else {
+      // Fallback: try without marmoraria_id filter (global services)
+      const { data: global } = await sb.from('servicos').select('*').order('nome');
+      if(global && global.length > 0) {
+        state.servicos = global.map(s => ({
+          id: s.id, nome: s.nome, unidade: s.unidade||'un',
+          preco: s.preco_unitario||s.preco_padrao||0, preco_unitario: s.preco_unitario||s.preco_padrao||0,
+        }));
+      } else {
+        state.servicos = [];
+      }
+    }
+  } catch(e) {
+    console.warn('loadServicos error:', e);
+    state.servicos = [];
   }
 }
 
@@ -3552,9 +3574,30 @@ function orcTotal(o) {
   return sub + (parseFloat(o.maoObra||o.mao_obra)||0) - (parseFloat(o.desconto||o.desconto_rs)||0);
 }
 function statusBadge(s) {
-  const map = { rascunho: ['badge-draft','Rascunho'], enviado: ['badge-sent','Enviado'], aprovado: ['badge-approved','Aprovado'], recusado: ['badge-rejected','Recusado'], expired: ['badge-expired','Expirado'] };
-  const [cls, label] = map[s] || ['badge-draft', s];
+  const map = { 
+    rascunho: ['badge-draft','Rascunho'], enviado: ['badge-sent','Enviado'], 
+    aprovado: ['badge-approved','Aprovado'], recusado: ['badge-rejected','Recusado'], 
+    expired: ['badge-expired','Expirado'],
+    novo: ['badge-draft','Novo'], visualizado: ['badge-sent','Visualizado'],
+    em_negociacao: ['badge-sent','Em Negociação'], fechado: ['badge-approved','Fechado'],
+    perdido: ['badge-rejected','Perdido'],
+  };
+  const [cls, label] = map[s] || ['badge-draft', s||'Rascunho'];
   return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function crmBadge(s) {
+  const colors = {
+    novo:'#2980B9', enviado:'#8E44AD', visualizado:'#E67E22',
+    em_negociacao:'#16A085', fechado:'#27AE60', perdido:'#C0392B',
+  };
+  const labels = {
+    novo:'Novo', enviado:'Enviado', visualizado:'Visualizado',
+    em_negociacao:'Em Negociação', fechado:'Fechado', perdido:'Perdido',
+  };
+  var cor = colors[s] || '#888';
+  var txt = labels[s] || s || 'Novo';
+  return '<span style="background:'+cor+';color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap">'+txt+'</span>';
 }
 function osBadge(s) {
   const map = { prod: ['badge-prod','Em Produção'], ready: ['badge-ready','Pronto p/ Instalar'], sched: ['badge-sent','Agendado'], done: ['badge-done','Concluído'] };
@@ -3705,7 +3748,7 @@ function renderOrcTable(list) {
       <td class="font-bold">${fmt(total)}</td>
       <td>${margem !== null ? `<span class="${margem >= 30 ? 'text-green' : margem >= 15 ? 'text-gold' : 'text-red'}">${margem}%</span>` : '<span class="text-gray">—</span>'}</td>
       <td>${statusBadge(o.status)}</td>
-      <td><select onchange="atualizarCRMStatus(${o.id}, this.value)" style="background:#2D2D2D;border:1px solid ${crmColors[crmStatus]||'#444'};color:${crmColors[crmStatus]||'#FFF'};border-radius:6px;padding:3px 6px;font-size:11px;cursor:pointer">
+      <td><select onchange="atualizarCRMStatus('${o.id}', this.value)" style="background:#2D2D2D;border:1px solid ${crmColors[crmStatus]||'#444'};color:${crmColors[crmStatus]||'#FFF'};border-radius:6px;padding:3px 6px;font-size:11px;cursor:pointer">
         ${['novo','enviado','visualizado','em_negociacao','fechado','perdido'].map(s=>`<option value="${s}"${crmStatus===s?' selected':''}>${{novo:'Novo',enviado:'Enviado',visualizado:'Visualizado',em_negociacao:'Em negociação',fechado:'Fechado',perdido:'Perdido'}[s]}</option>`).join('')}
       </select></td>
       <td>
@@ -3713,7 +3756,7 @@ function renderOrcTable(list) {
           <button class="btn btn-ghost btn-sm btn-icon" title="Baixar PDF" onclick="gerarPDFById('${o.id}')">📄</button>
           <button class="btn btn-ghost btn-sm btn-icon" title="WhatsApp" onclick="enviarWhatsAppOrc(${o.id})">📲</button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editarOrcamento('${o.id}')">✏️</button>
-          <button class="btn btn-ghost btn-sm btn-icon" title="Status" onclick="cycleStatus(${o.id})">🔄</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Status" onclick="cycleStatus('${o.id}')">🔄</button>
         </div>
       </td>
     </tr>`;
@@ -3745,35 +3788,30 @@ function filterOrcamentos(q) {
 
 async function cycleStatus(id) {
   const o = state.orcamentos.find(o => o.id === id);
-  const cycle = ['rascunho','enviado','aprovado','recusado'];
-  const newStatus = cycle[(cycle.indexOf(o.status) + 1) % cycle.length];
+  if(!o) return;
+  // CRM pipeline
+  const crmCycle = ['novo','enviado','visualizado','em_negociacao','fechado','perdido'];
+  const statusCycle = ['rascunho','enviado','aprovado','recusado'];
+  const newCrmStatus = crmCycle[(crmCycle.indexOf(o.crm_status||'novo') + 1) % (crmCycle.length-1)];
+  const newStatus = statusCycle[(statusCycle.indexOf(o.status||'rascunho') + 1) % statusCycle.length];
   try {
-    await sb.from('orcamentos').update({ status: newStatus }).eq('id', id);
+    await sb.from('orcamentos').update({ 
+      status: newStatus,
+      crm_status: newCrmStatus 
+    }).eq('id', id);
     o.status = newStatus;
+    o.crm_status = newCrmStatus;
+    // If closed, add producao_status
+    if(newCrmStatus === 'fechado') {
+      await sb.from('orcamentos').update({ producao_status: 'comercial' }).eq('id', id);
+      o.producao_status = 'comercial';
+    }
     renderOrcamentos();
-    showToast(`Status: ${newStatus}`, 'ok2');
+    showToast('Status: ' + newStatus + ' | CRM: ' + newCrmStatus, 'ok2');
   } catch(e) {
-    showToast('Erro ao atualizar status', 'err');
+    showToast('Erro: ' + e.message, 'err');
   }
 }
-
-function openNovoOrcamento() {
-  state.editingOrcId = null;
-  state.orcItems = [];
-  document.getElementById('modal-orc-title').textContent = 'Novo Orçamento';
-  renderOrcForm();
-  openModal('modal-orcamento');
-}
-
-function editOrcamento(id) {
-  const o = state.orcamentos.find(o => o.id === id);
-  state.editingOrcId = id;
-  state.orcItems = JSON.parse(JSON.stringify(o.itens));
-  document.getElementById('modal-orc-title').textContent = 'Editar Orçamento';
-  renderOrcForm(o);
-  openModal('modal-orcamento');
-}
-
 async function editarOrcamento(id) {
   var orc = state.orcamentos.find(function(o){ return o.id == id; });
   if(!orc){ showToast('Orçamento não encontrado','err'); return; }
@@ -3789,9 +3827,18 @@ async function editarOrcamento(id) {
   });
   state.editingOrcId = id;
   state.orcItems = itens;
-  orc.itens = itens;
+  // Normalize fields for the form
+  var orcNorm = Object.assign({}, orc);
+  orcNorm.clienteId = orc.cliente_id || orc.clienteId;
+  orcNorm.data = orc.data_emissao || orc.data || new Date().toISOString().split('T')[0];
+  orcNorm.validade = orc.data_validade || orc.validade || '';
+  orcNorm.pagamento = orc.condicao_pagamento || orc.pagamento || 'À vista';
+  orcNorm.obs = orc.observacoes || orc.obs || '';
+  orcNorm.maoObra = parseFloat(orc.mao_obra || orc.maoObra) || 0;
+  orcNorm.desconto = parseFloat(orc.desconto_rs || orc.desconto) || 0;
+  orcNorm.itens = itens;
   document.getElementById('modal-orc-title').textContent = 'Editar Orçamento';
-  renderOrcForm(orc);
+  renderOrcForm(orcNorm);
   openModal('modal-orcamento');
 }
 
@@ -7230,6 +7277,78 @@ async function ncSalvar() {
   } finally {
     btn.textContent = '✅ Salvar Cliente'; btn.disabled = false;
   }
+}
+
+
+// ══════════════════════════════════════
+// SEED MATERIAIS PADRÃO
+// ══════════════════════════════════════
+async function seedMateriaisPadrao() {
+  if(!currentMarmoraria) return;
+  var mats = state.materiais || [];
+  if(mats.length > 0) return; // já tem materiais
+  
+  var padrao = [
+    {nome:'Granito Branco Itaúnas', cat:'chapa', unid:'m²', custo:280, estoque:10, minimo:5},
+    {nome:'Granito Preto São Gabriel', cat:'chapa', unid:'m²', custo:320, estoque:10, minimo:5},
+    {nome:'Granito Amarelo Icaraí', cat:'chapa', unid:'m²', custo:260, estoque:8, minimo:3},
+    {nome:'Mármore Branco Carrara', cat:'chapa', unid:'m²', custo:580, estoque:5, minimo:2},
+    {nome:'Mármore Travertino', cat:'chapa', unid:'m²', custo:420, estoque:5, minimo:2},
+    {nome:'Quartzito Taj Mahal', cat:'chapa', unid:'m²', custo:850, estoque:3, minimo:1},
+    {nome:'Porcelanato 60x60', cat:'chapa', unid:'m²', custo:180, estoque:20, minimo:10},
+  ];
+  
+  try {
+    var inserts = padrao.map(function(m) {
+      return {
+        marmoraria_id: currentMarmoraria.id,
+        nome: m.nome, categoria: m.cat, unidade: m.unid,
+        custo_unitario: m.custo, estoque_atual: m.estoque, estoque_minimo: m.minimo, ativo: true,
+      };
+    });
+    var {data, error} = await sb.from('materiais').insert(inserts).select();
+    if(!error && data) {
+      state.materiais = data.map(function(m) { return {
+        id: m.id, nome: m.nome, cat: m.categoria, unid: m.unidade,
+        custo: m.custo_unitario, custo_unitario: m.custo_unitario,
+        estoque: m.estoque_atual, estoque_atual: m.estoque_atual,
+        minimo: m.estoque_minimo, ativo: m.ativo,
+      }; });
+      showToast('Materiais padrão adicionados! Ajuste os preços em Preços e Serviços.', 'ok2');
+    }
+  } catch(e) { console.warn('Seed materiais error:', e); }
+}
+
+async function seedServicosPadrao() {
+  if(!currentMarmoraria) return;
+  if(state.servicos && state.servicos.length > 0) return;
+  
+  var padrao = [
+    {nome:'Meia Esquadria', unid:'ml', preco:55},
+    {nome:'Borda Reta Polida', unid:'ml', preco:35},
+    {nome:'Borda Bullnose', unid:'ml', preco:75},
+    {nome:'Polimento', unid:'m²', preco:80},
+    {nome:'Corte Especial', unid:'ml', preco:65},
+    {nome:'Furo de Cuba', unid:'un', preco:90},
+    {nome:'Colocação/Instalação', unid:'m²', preco:120},
+    {nome:'Frete', unid:'km', preco:3.5},
+  ];
+  
+  try {
+    var inserts = padrao.map(function(s) {
+      return {
+        marmoraria_id: currentMarmoraria.id,
+        nome: s.nome, unidade: s.unid, preco_unitario: s.preco, ativo: true,
+      };
+    });
+    var {data, error} = await sb.from('servicos').insert(inserts).select();
+    if(!error && data) {
+      state.servicos = data.map(function(s) { return {
+        id: s.id, nome: s.nome, unidade: s.unidade,
+        preco: s.preco_unitario, preco_unitario: s.preco_unitario,
+      }; });
+    }
+  } catch(e) { console.warn('Seed servicos error:', e); }
 }
 
 checkSession();
