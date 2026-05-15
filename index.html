@@ -103,7 +103,7 @@ let currentMarmoraria = null;
   .auth-hint { color: #888888; font-size: 12px; text-align: center; margin-top: 14px; }
 
   /* ── LAYOUT ── */
-  #app { display: none; height: 100vh; overflow: hidden; }
+  #app { display: none; min-height: 100vh; }
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
     background: var(--sidebar-bg); display: flex; flex-direction: column; z-index: 100;
@@ -125,7 +125,7 @@ let currentMarmoraria = null;
     font-size: 13.5px; font-weight: 400; border-left: 3px solid transparent;
     border-radius: 0;
   }
-  .nav-item:hover { background: rgba(0,0,0,0.05); color: var(--dark); }
+  .nav-item:hover { background: var(--nav-hover); color: var(--dark); }
   .nav-item.active { background: var(--sidebar-active-bg); color: var(--gold); border-left-color: var(--gold); font-weight: 600; }
   .nav-item svg { flex-shrink: 0; opacity: 0.8; }
   .sidebar-user {
@@ -145,7 +145,7 @@ let currentMarmoraria = null;
   .btn-logout:hover { color: var(--red); }
 
   /* ── MAIN ── */
-  .main { margin-left: var(--sidebar-w); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
   .topbar {
     background: var(--white); border-bottom: 1px solid var(--marble2);
     padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between;
@@ -154,7 +154,7 @@ let currentMarmoraria = null;
   }
   .topbar-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--dark); }
   .topbar-actions { display: flex; align-items: center; gap: 10px; }
-  .content { padding: 28px; flex: 1; overflow-y: auto; min-height: 0; }
+  .content { padding: 28px; flex: 1; }
 
   /* ── BUTTONS ── */
   .btn {
@@ -174,10 +174,10 @@ let currentMarmoraria = null;
   .btn-icon { padding: 7px; border-radius: 7px; }
 
   /* ── CARDS ── */
-  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); }
   .card-header { padding: 18px 22px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; }
   .card-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; }
-  .card-body { padding: 22px; flex: 1; }
+  .card-body { padding: 22px; }
 
   /* ── STATS ── */
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -193,7 +193,7 @@ let currentMarmoraria = null;
   .stat-label { font-size: 12px; color: var(--gray); margin-top: 2px; }
 
   /* ── TABLE ── */
-  .table-wrap { overflow-x: auto; flex: 1; }
+  .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; }
   th { text-align: left; padding: 11px 16px; font-size: 11.5px; font-weight: 600; color: var(--gray); letter-spacing: 0.5px; border-bottom: 2px solid var(--marble2); background: var(--marble); }
   td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid var(--marble2); vertical-align: middle; }
@@ -296,7 +296,7 @@ let currentMarmoraria = null;
   .alert-success { background: rgba(39,174,96,0.1); border: 1px solid rgba(39,174,96,0.3); color: var(--green2); }
 
   /* ── DASHBOARD CHARTS ── */
-  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; align-items: stretch; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
   .pipeline-bar { height: 28px; border-radius: 6px; background: var(--marble2); overflow: hidden; display: flex; margin-top: 8px; }
   .pipeline-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--white); transition: width 0.4s; }
 
@@ -3558,7 +3558,7 @@ function showPage(page) {
     var crmNav = document.getElementById('nav-crm');
     if (crmNav) crmNav.classList.add('active');
   } else {
-    const navMap = { dashboard: 0, orcamentos: 1, crm: 2, clientes: 3, agenda: 4, fila: 4, estoque: 5, marmoIA: 6, whatsapp: 7, precos: 8, relatorios: 9 };
+    const navMap = { dashboard: 0, orcamentos: 1, clientes: 2, agenda: 3, fila: 3, estoque: 4, relatorios: 5, precos: 6 };
     document.querySelectorAll('.nav-item')[navMap[page]]?.classList.add('active');
   }
   const pages = {
@@ -3712,7 +3712,7 @@ function renderOrcamentos() {
       <button class="btn btn-gold" onclick="abrirNovoOrcamento()">+ Novo Orçamento</button>
     </div>`,
     `
-    <div class="card" style="height:100%">
+    <div class="card">
       <div class="card-header">
         <span class="card-title">Todos os Orçamentos</span>
         <div class="search-bar">
@@ -4527,49 +4527,65 @@ function renderPrecosServicos(aba) {
   var bodyHtml = '';
 
   if(aba === 'materiais') {
+    var matBusca = (window._matBusca||'').toLowerCase();
+    var matCat = window._matCat||'';
+    var matsFiltered = mats.filter(function(m){
+      var nome = (m.nome||'').toLowerCase();
+      var cat = (m.categoria||'').toLowerCase();
+      return (!matBusca || nome.includes(matBusca)) && (!matCat || cat === matCat);
+    });
     bodyHtml =
       '<div style="padding:20px 0">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
-          '<div>' +
-            '<div style="font-size:13px;color:#888">Gerencie os materiais que sua marmoraria trabalha e seus preços de custo.</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+          '<div><div style="font-size:13px;color:#888">Gerencie os materiais e seus preços de custo.</div></div>' +
+          '<button onclick="abrirNovoMaterialPreco()" style="background:#C9A84C;color:#1A1A2E;border:none;border-radius:8px;padding:10px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif">+ Novo Material</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:10px;margin-bottom:14px;align-items:center">' +
+          '<div style="position:relative;flex:1">' +
+            '<svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:0.35" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+            '<input id="mat-search" type="text" placeholder="Buscar material..." value="'+(window._matBusca||'')+'" oninput="window._matBusca=this.value;renderPrecosServicos(this.dataset.aba)" data-aba="materiais" style="width:100%;padding:9px 12px 9px 32px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;box-sizing:border-box">' +
           '</div>' +
-          '<button onclick="abrirNovoMaterialPreco()" style="background:#C9A84C;color:#1A1A2E;border:none;border-radius:8px;padding:10px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif;display:flex;align-items:center;gap:6px">+ Novo Material</button>' +
+          '<select onchange="window._matCat=this.value;renderPrecosServicos(this.dataset.aba)" data-aba="materiais" style="padding:9px 14px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;cursor:pointer;background:#fff">' +
+            '<option value=""'+(matCat===''?' selected':'')+'>Todas</option>' +
+            '<option value="granito"'+(matCat==='granito'?' selected':'')+'>🪨 Granito</option>' +
+            '<option value="marmore"'+(matCat==='marmore'?' selected':'')+'>⬜ Mármore</option>' +
+            '<option value="composto"'+(matCat==='composto'?' selected':'')+'>🔷 Composto</option>' +
+            '<option value="chapa"'+(matCat==='chapa'?' selected':'')+'>📐 Chapa</option>' +
+            '<option value="insumo"'+(matCat==='insumo'?' selected':'')+'>🧴 Insumo</option>' +
+          '</select>' +
+          '<span style="font-size:12px;color:#aaa;white-space:nowrap">'+matsFiltered.length+' de '+mats.length+'</span>' +
         '</div>' +
         '<div style="background:#fff;border-radius:12px;border:1px solid #EDE9E2;overflow:hidden">' +
           '<table style="width:100%;border-collapse:collapse">' +
-            '<thead>' +
-              '<tr style="background:#F7F5F1">' +
-                '<th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">MATERIAL</th>' +
-                '<th style="text-align:center;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">CATEGORIA</th>' +
-                '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">CUSTO/m²</th>' +
-                '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">VENDA (3×)</th>' +
-                '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">ESTOQUE</th>' +
-                '<th style="padding:12px 16px;border-bottom:1px solid #EDE9E2;width:80px"></th>' +
-              '</tr>' +
-            '</thead>' +
+            '<thead><tr style="background:#F7F5F1">' +
+              '<th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">MATERIAL</th>' +
+              '<th style="text-align:center;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">CATEGORIA</th>' +
+              '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">CUSTO/m²</th>' +
+              '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">VENDA (3×)</th>' +
+              '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">ESTOQUE</th>' +
+              '<th style="padding:12px 16px;border-bottom:1px solid #EDE9E2;width:80px"></th>' +
+            '</tr></thead>' +
             '<tbody>' +
-              (mats.length === 0
-                ? '<tr><td colspan="6" style="padding:48px;text-align:center;color:#bbb"><div style="font-size:32px;margin-bottom:8px">🪨</div><div style="font-size:14px;font-weight:600;color:#888;margin-bottom:4px">Nenhum material cadastrado</div><div style="font-size:12px">Clique em "+ Novo Material" para adicionar</div></td></tr>'
-                : mats.map(function(m, i) {
+              (matsFiltered.length === 0
+                ? '<tr><td colspan="6" style="padding:48px;text-align:center;color:#bbb"><div style="font-size:32px;margin-bottom:8px">🔍</div>'+(matBusca||matCat?'Nenhum resultado':'Nenhum material cadastrado')+'</td></tr>'
+                : matsFiltered.map(function(m, i) {
                     var custo = parseFloat(m.custo||m.custo_unitario)||0;
                     var mk = (window.state&&state.pricing&&state.pricing.markup)||3;
                     var venda = custo * mk;
-                    return '<tr style="border-bottom:1px solid #F4F1EB;transition:background 0.15s" onmouseover="this.style.background=\'#FAFAF8\'" onmouseout="this.style.background=\'#fff\'">' +
-                      '<td style="padding:14px 16px">' +
-                        '<div style="font-size:14px;font-weight:600;color:#1A1A2E">' + m.nome + '</div>' +
+                    var catBgMap = {granito:'#FFF8EC',marmore:'#F0F4FF',composto:'#EDF7F0',chapa:'#FFF8EC',insumo:'#F9F0FF'};
+                    var catFgMap = {granito:'#9A6E00',marmore:'#2C5F8A',composto:'#276B3D',chapa:'#9A6E00',insumo:'#6B2C8A'};
+                    var catBg = catBgMap[m.categoria]||'#F0EDE6';
+                    var catFg = catFgMap[m.categoria]||'#888';
+                    return '<tr style="border-bottom:1px solid #F4F1EB">' +
+                      '<td style="padding:12px 16px"><div style="font-size:13.5px;font-weight:600;color:#1A1A2E">' + m.nome + '</div></td>' +
+                      '<td style="padding:12px 16px;text-align:center"><span style="background:'+catBg+';color:'+catFg+';font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase">' + (m.categoria||'—') + '</span></td>' +
+                      '<td style="padding:12px 16px;text-align:right">' +
+                        '<input type="number" value="' + custo + '" onchange="atualizarPrecoMaterial(\'+m.id+\',this.value)" style="width:90px;padding:7px 10px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;text-align:right">' +
                       '</td>' +
-                      '<td style="padding:14px 16px;text-align:center">' +
-                        '<span style="background:#F0EDE6;color:#888;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px">' + (m.cat||m.categoria||'Chapa') + '</span>' +
-                      '</td>' +
-                      '<td style="padding:14px 16px;text-align:right">' +
-                        '<input type="number" value="' + custo + '" onchange="atualizarPrecoMaterial(\'+m.id+\',this.value)" ' +
-                        'style="width:90px;padding:7px 10px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;text-align:right;font-family:DM Sans,sans-serif;color:#1A1A2E;outline:none;transition:border 0.15s" ' +
-                        'onfocus=\"this.style.borderColor=\'#C9A84C\'\" onblur=\"this.style.borderColor=\'#EDE9E2\'\" >' +
-                      '</td>' +
-                      '<td style="padding:14px 16px;text-align:right;font-size:14px;font-weight:600;color:#C9A84C">R$ ' + venda.toFixed(2) + '</td>' +
-                      '<td style="padding:14px 16px;text-align:right;font-size:13px;color:#888">' + (m.estoque||m.estoque_atual||0) + ' m²</td>' +
-                      '<td style="padding:14px 16px;text-align:right">' +
-                        '<button onclick="excluirMaterialPreco(\'+m.id+\')" title="Remover" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color=\'#e74c3c\'" onmouseout="this.style.color=\'#DDD\'">🗑</button>' +
+                      '<td style="padding:12px 16px;text-align:right;font-size:14px;font-weight:600;color:#C9A84C">R$ ' + venda.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td>' +
+                      '<td style="padding:12px 16px;text-align:right;font-size:13px;color:#888">' + (m.estoque||m.estoque_atual||0) + '</td>' +
+                      '<td style="padding:12px 16px;text-align:right">' +
+                        '<button onclick="excluirMaterialPreco(\'+m.id+\')" title="Remover" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;padding:4px 8px">🗑</button>' +
                       '</td>' +
                     '</tr>';
                   }).join('')
@@ -4577,54 +4593,63 @@ function renderPrecosServicos(aba) {
             '</tbody>' +
           '</table>' +
         '</div>' +
-        (mats.length > 0
+        (matsFiltered.length > 0
           ? '<div style="margin-top:12px;font-size:12px;color:#aaa;text-align:right">💡 O preço de venda é calculado automaticamente com o markup de ' + ((window.state&&state.pricing&&state.pricing.markup)||3) + '×. Ajuste em Configurações.</div>'
           : '') +
       '</div>';
   } else {
+    var servBusca = (window._servBusca||'').toLowerCase();
+    var servTipo = window._servTipo||'';
+    var servsFiltered = servs.filter(function(s){
+      var nome = (s.nome||s.name||'').toLowerCase();
+      var isFab = (s.ordem||0) < 1000;
+      var matchBusca = !servBusca || nome.includes(servBusca);
+      var matchTipo = !servTipo || (servTipo==='fabricacao' && isFab) || (servTipo==='colocacao' && !isFab);
+      return matchBusca && matchTipo;
+    });
     bodyHtml =
       '<div style="padding:20px 0">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
-          '<div>' +
-            '<div style="font-size:13px;color:#888">Defina os serviços e acabamentos oferecidos e seus preços.</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+          '<div><div style="font-size:13px;color:#888">Defina os serviços e acabamentos e seus preços.</div></div>' +
+          '<button onclick="abrirNovoServicoPreco()" style="background:#C9A84C;color:#1A1A2E;border:none;border-radius:8px;padding:10px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif">+ Novo Serviço</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:10px;margin-bottom:14px;align-items:center">' +
+          '<div style="position:relative;flex:1">' +
+            '<svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:0.35" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+            '<input id="serv-search" type="text" placeholder="Buscar serviço..." value="'+(window._servBusca||'')+'" oninput="window._servBusca=this.value;renderPrecosServicos(this.dataset.aba)" data-aba="servicos" style="width:100%;padding:9px 12px 9px 32px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;box-sizing:border-box">' +
           '</div>' +
-          '<button onclick="abrirNovoServicoPreco()" style="background:#C9A84C;color:#1A1A2E;border:none;border-radius:8px;padding:10px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:DM Sans,sans-serif;display:flex;align-items:center;gap:6px">+ Novo Serviço</button>' +
+          '<select onchange="window._servTipo=this.value;renderPrecosServicos(this.dataset.aba)" data-aba="servicos" style="padding:9px 14px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;cursor:pointer;background:#fff">' +
+            '<option value=""'+(servTipo===''?' selected':'')+'>Todos os tipos</option>' +
+            '<option value="fabricacao"'+(servTipo==='fabricacao'?' selected':'')+'>🔧 Fabricação</option>' +
+            '<option value="colocacao"'+(servTipo==='colocacao'?' selected':'')+'>🏗 Colocação</option>' +
+          '</select>' +
+          '<span style="font-size:12px;color:#aaa;white-space:nowrap">'+servsFiltered.length+' de '+servs.length+'</span>' +
         '</div>' +
         '<div style="background:#fff;border-radius:12px;border:1px solid #EDE9E2;overflow:hidden">' +
           '<table style="width:100%;border-collapse:collapse">' +
-            '<thead>' +
-              '<tr style="background:#F7F5F1">' +
-                '<th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">SERVIÇO / ACABAMENTO</th>' +
-                '<th style="text-align:center;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">UNIDADE</th>' +
-                '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">PREÇO</th>' +
-                '<th style="padding:12px 16px;border-bottom:1px solid #EDE9E2;width:80px"></th>' +
-              '</tr>' +
-            '</thead>' +
+            '<thead><tr style="background:#F7F5F1">' +
+              '<th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">SERVIÇO</th>' +
+              '<th style="text-align:center;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">TIPO</th>' +
+              '<th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:700;color:#888;letter-spacing:0.5px;border-bottom:1px solid #EDE9E2">PREÇO</th>' +
+              '<th style="padding:12px 16px;border-bottom:1px solid #EDE9E2;width:80px"></th>' +
+            '</tr></thead>' +
             '<tbody>' +
-              (servs.length === 0
-                ? '<tr><td colspan="4" style="padding:48px;text-align:center;color:#bbb"><div style="font-size:32px;margin-bottom:8px">🔧</div><div style="font-size:14px;font-weight:600;color:#888;margin-bottom:4px">Nenhum serviço cadastrado</div><div style="font-size:12px">Clique em "+ Novo Serviço" para adicionar</div></td></tr>'
-                : servs.map(function(s) {
-                    var preco = parseFloat(s.preco||s.preco_unitario)||0;
-                    var unidLabel = {'ml':'metro linear','m²':'metro quadrado','un':'unidade','km':'quilômetro'}[s.unidade||s.unid] || (s.unidade||s.unid||'un');
-                    return '<tr style="border-bottom:1px solid #F4F1EB;transition:background 0.15s" onmouseover="this.style.background=\'#FAFAF8\'" onmouseout="this.style.background=\'#fff\'">' +
-                      '<td style="padding:14px 16px">' +
-                        '<div style="font-size:14px;font-weight:600;color:#1A1A2E">' + (s.nome||s.name||'—') + '</div>' +
-                      '</td>' +
-                      '<td style="padding:14px 16px;text-align:center">' +
-                        '<span style="background:#EDF4FF;color:#2980B9;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px">' + unidLabel + '</span>' +
-                      '</td>' +
-                      '<td style="padding:14px 16px;text-align:right">' +
+              (servsFiltered.length === 0
+                ? '<tr><td colspan="4" style="padding:48px;text-align:center;color:#bbb"><div style="font-size:32px;margin-bottom:8px">🔍</div>'+(servBusca||servTipo?'Nenhum resultado':'Nenhum serviço cadastrado')+'</td></tr>'
+                : servsFiltered.map(function(s) {
+                    var preco = parseFloat(s.preco||s.preco_padrao||s.preco_unitario)||0;
+                    var isFab = (s.ordem||0) < 1000;
+                    return '<tr style="border-bottom:1px solid #F4F1EB">' +
+                      '<td style="padding:12px 16px"><div style="font-size:13.5px;font-weight:600;color:#1A1A2E">' + (s.nome||s.name||'—') + '</div></td>' +
+                      '<td style="padding:12px 16px;text-align:center"><span style="background:'+(isFab?'#EDF4FF':'#F0FFF4')+';color:'+(isFab?'#2980B9':'#27AE60')+';font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px">'+(isFab?'FABRICAÇÃO':'COLOCAÇÃO')+'</span></td>' +
+                      '<td style="padding:12px 16px;text-align:right">' +
                         '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">' +
                           '<span style="font-size:12px;color:#888">R$</span>' +
-                          '<input type="number" value="' + preco + '" onchange="atualizarPrecoServico(\'+s.id+\',this.value)" ' +
-                          'style="width:90px;padding:7px 10px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;text-align:right;font-family:DM Sans,sans-serif;color:#1A1A2E;outline:none;transition:border 0.15s" ' +
-                          'onfocus=\"this.style.borderColor=\'#C9A84C\'\" onblur=\"this.style.borderColor=\'#EDE9E2\'\" >' +
+                          '<input type="number" value="' + preco + '" onchange="atualizarPrecoServico(\'+s.id+\',this.value)" style="width:90px;padding:7px 10px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;text-align:right">' +
                           '<span style="font-size:11px;color:#aaa">/' + (s.unidade||s.unid||'un') + '</span>' +
                         '</div>' +
                       '</td>' +
-                      '<td style="padding:14px 16px;text-align:right">' +
-                        '<button onclick="excluirServicoPreco(\'+s.id+\')" title="Remover" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color=\'#e74c3c\'" onmouseout="this.style.color=\'#DDD\'">🗑</button>' +
-                      '</td>' +
+                      '<td style="padding:12px 16px;text-align:right"><button onclick="excluirServicoPreco(\'+s.id+\')" title="Remover" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;padding:4px 8px">🗑</button></td>' +
                     '</tr>';
                   }).join('')
               ) +
@@ -5085,12 +5110,12 @@ function renderRelatorios() {
     <div class="card mt-4">
       <div class="card-header"><span class="card-title">Origem dos Clientes</span></div>
       <div class="card-body">
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
           ${['indicação','google','instagram','presencial','outros'].map(orig => {
             const count = state.clientes.filter(c => c.origem === orig).length;
             const pct = state.clientes.length ? Math.round(count/state.clientes.length*100) : 0;
             return `<div style="text-align:center;min-width:80px">
-              <div style="font-size:28px;font-weight:700;font-family:'Playfair Display',serif;color:var(--dark);background:var(--marble);border-radius:10px;padding:20px 8px;text-align:center">${count}</div>
+              <div style="font-size:24px;font-weight:700;font-family:'Playfair Display',serif;color:var(--dark)">${count}</div>
               <div style="font-size:11px;color:var(--gray);margin-top:2px">${orig.charAt(0).toUpperCase()+orig.slice(1)}</div>
               <div style="font-size:11px;color:var(--gold);font-weight:600">${pct}%</div>
             </div>`;
@@ -5962,92 +5987,111 @@ function wizDraw() {
     
   } else if(W.step===2) {
     var area = W.larg * W.comp * W.qtdPecas;
-    body.innerHTML = 
-      '<div class="wiz-sec">Acabamentos</div>'+
-      '<div class="wiz-toggle-row'+(W.acab.meiaEsq?' on':'')+'" id="row-meia">'+
-        '<div class="wiz-toggle-info"><strong>Meia Esquadria</strong><span>R$ 55/ml</span></div>'+
-        '<div style="display:flex;align-items:center;gap:8px">'+
-          '<input id="ml-meia" type="number" min="0" step="0.1" placeholder="ml" value="'+(W.acab.meiaEsqMl||'')+'" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center;display:'+(W.acab.meiaEsq?'block':'none')+'">'+
-          '<button class="toggle-sw'+(W.acab.meiaEsq?' on':'')+'" id="tog-meia"></button>'+
-        '</div>'+
-      '</div>'+
-      '<div class="wiz-toggle-row'+(W.acab.bordaReta?' on':'')+'" id="row-borda">'+
-        '<div class="wiz-toggle-info"><strong>Borda Reta Polida</strong><span>R$ 35/ml</span></div>'+
-        '<div style="display:flex;align-items:center;gap:8px">'+
-          '<input id="ml-borda" type="number" min="0" step="0.1" placeholder="ml" value="'+(W.acab.bordaRetaMl||'')+'" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center;display:'+(W.acab.bordaReta?'block':'none')+'">'+
-          '<button class="toggle-sw'+(W.acab.bordaReta?' on':'')+'" id="tog-borda"></button>'+
-        '</div>'+
-      '</div>'+
-      '<div class="wiz-toggle-row'+(W.acab.polimento?' on':'')+'" id="row-pol">'+
-        '<div class="wiz-toggle-info"><strong>Polimento</strong><span>R$ 80/m² — Área: '+area.toFixed(2)+'m²</span></div>'+
-        '<button class="toggle-sw'+(W.acab.polimento?' on':'')+'" id="tog-pol"></button>'+
-      '</div>'+
+    if(!W.acab.extra) W.acab.extra = {};
+    var wAcabBusca = (W.acab._busca||'').toLowerCase();
+    var servsFab = (state.servicos||[]).filter(function(s){ return (s.ordem||0) < 1000; });
+    var servsFabFilt = wAcabBusca
+      ? servsFab.filter(function(s){ return (s.nome||'').toLowerCase().includes(wAcabBusca); })
+      : servsFab;
+    var acabHtml =
+      '<div class="wiz-sec">Acabamentos — Selecione e configure</div>' +
+      '<div style="position:relative;margin-bottom:10px">' +
+        '<svg style="position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:0.35" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+        '<input id="wiz-acab-busca" type="text" placeholder="Buscar acabamento..." value="'+(W.acab._busca||'')+'" oninput="W.acab._busca=this.value;wizDraw()" style="width:100%;padding:8px 12px 8px 30px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:12.5px;font-family:DM Sans,sans-serif;box-sizing:border-box">' +
+      '</div>' +
+      (servsFabFilt.length === 0 ? '<div style="padding:16px;text-align:center;color:#aaa;font-size:13px">Nenhum acabamento encontrado</div>' :
+        servsFabFilt.map(function(s, si) {
+          var isOn = !!(W.acab.extra[s.id] && W.acab.extra[s.id].on);
+          var preco = parseFloat(s.preco_padrao||s.preco||0);
+          var un = s.unidade||'un';
+          var qtd = (W.acab.extra[s.id]&&W.acab.extra[s.id].qtd)||0;
+          return '<div class="wiz-toggle-row'+(isOn?' on':'')+'"; id="wiz-row-'+si+'">' +
+            '<div class="wiz-toggle-info"><strong>'+s.nome+'</strong><span>R$ '+preco.toLocaleString('pt-BR',{minimumFractionDigits:2})+'/'+un+'</span></div>' +
+            '<div style="display:flex;align-items:center;gap:8px">' +
+              (un==='m²' ? '' : '<input id="wiz-qtd-'+si+'" type="number" min="0" step="0.1" placeholder="'+un+'" value="'+(isOn&&qtd?qtd:'')+'"; style="width:65px;padding:5px 8px;border:1.5px solid #EDE9E2;border-radius:6px;font-size:12px;font-family:DM Sans,sans-serif;opacity:'+(isOn?'1':'0.3')+';pointer-events:'+(isOn?'all':'none')+'">') +
+              '<button class="toggle-sw'+(isOn?' on':'')+'"; id="wiz-tog-'+si+'"></button>' +
+            '</div>' +
+          '</div>';
+        }).join('')
+      );
+    body.innerHTML =
+      acabHtml +
       '<div class="wiz-sec">Serviços</div>'+
       '<div class="wiz-toggle-row'+(W.colocacao?' on':'')+'" id="row-col">'+
-        '<div class="wiz-toggle-info"><strong>Colocação / Instalação</strong><span>R$ '+W.colocacaoM2+'/m² — Subtotal: R$ '+(area*W.colocacaoM2).toFixed(2)+'</span></div>'+
+        '<div class="wiz-toggle-info"><strong>Colocação / Instalação</strong><span>R$ '+W.colocacaoM2+'/m²</span></div>'+
         '<button class="toggle-sw'+(W.colocacao?' on':'')+'" id="tog-col"></button>'+
       '</div>'+
       '<div class="wiz-toggle-row'+(W.frete?' on':'')+'" id="row-frete">'+
         '<div class="wiz-toggle-info"><strong>Frete / Entrega</strong>'+
           '<span>Por distância em km</span>'+
-          '<input id="wiz-km" type="number" min="0" step="1" placeholder="km" value="'+(W.freteKm||'')+'" style="width:80px;padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-top:6px;display:'+(W.frete?'block':'none')+'">'+
+          '<input id="wiz-km" type="number" min="0" step="1" placeholder="km" value="'+(W.freteKm||'')+'"; style="width:70px;padding:5px 8px;border:1.5px solid #EDE9E2;border-radius:6px;font-size:12px;font-family:DM Sans,sans-serif;margin-left:8px">'+
         '</div>'+
         '<button class="toggle-sw'+(W.frete?' on':'')+'" id="tog-frete"></button>'+
       '</div>'+
       '<div class="wiz-sec">Produtos Adicionais</div>'+
       W.adicionais.map(function(a,i) {
-        return '<div class="wiz-qty-row"><span style="font-size:13px">'+a.n+'</span><span style="font-size:12px;color:#888;margin-right:8px">R$ '+a.p+'</span>'+
+        return '<div class="wiz-qty-row"><span style="font-size:13px">'+a.n+'</span><span style="font-size:12px;color:#aaa">R$ '+a.p.toFixed(2)+'/un</span>'+
           '<div style="display:flex;align-items:center;gap:6px">'+
             '<button class="qbtn" id="qm'+i+'">−</button>'+
             '<span id="qd'+i+'" style="width:28px;text-align:center;font-weight:700">'+a.q+'</span>'+
             '<button class="qbtn" id="qp'+i+'">+</button>'+
           '</div></div>';
       }).join('');
-    
-    // Bind toggles
-    function bindToggle(id, rowId, propFn, mlId) {
-      var tog = document.getElementById(id);
-      var row = document.getElementById(rowId);
+
+    // Bind dynamic acabamentos toggles
+    servsFabFilt.forEach(function(s, si) {
+      var tog = document.getElementById('wiz-tog-'+si);
+      var row = document.getElementById('wiz-row-'+si);
+      var qtdInp = document.getElementById('wiz-qtd-'+si);
       if(!tog) return;
+      if(!W.acab.extra[s.id]) W.acab.extra[s.id] = {on:false, qtd:0, preco: parseFloat(s.preco_padrao||s.preco||0), un: s.unidade||'un', nome: s.nome};
       tog.addEventListener('click', function() {
-        propFn(tog.classList.contains('on') ? false : true);
+        var nowOn = !W.acab.extra[s.id].on;
+        W.acab.extra[s.id].on = nowOn;
         tog.classList.toggle('on');
-        row.classList.toggle('on');
-        if(mlId) {
-          var ml = document.getElementById(mlId);
-          if(ml) ml.style.display = tog.classList.contains('on') ? 'block' : 'none';
-        }
+        if(row) row.classList.toggle('on');
+        if(qtdInp) { qtdInp.style.opacity = nowOn?'1':'0.3'; qtdInp.style.pointerEvents = nowOn?'all':'none'; }
         wizDraw();
       });
-    }
-    
-    bindToggle('tog-meia', 'row-meia', function(v){W.acab.meiaEsq=v;}, 'ml-meia');
-    bindToggle('tog-borda', 'row-borda', function(v){W.acab.bordaReta=v;}, 'ml-borda');
-    bindToggle('tog-pol', 'row-pol', function(v){W.acab.polimento=v;}, null);
-    bindToggle('tog-col', 'row-col', function(v){W.colocacao=v;}, null);
-    bindToggle('tog-frete', 'row-frete', function(v){W.frete=v;}, 'wiz-km');
-    
-    var mlMeia = document.getElementById('ml-meia');
-    if(mlMeia) mlMeia.addEventListener('input', function(){ W.acab.meiaEsqMl=parseFloat(mlMeia.value)||0; wizDraw(); });
-    var mlBorda = document.getElementById('ml-borda');
-    if(mlBorda) mlBorda.addEventListener('input', function(){ W.acab.bordaRetaMl=parseFloat(mlBorda.value)||0; wizDraw(); });
+      if(qtdInp) {
+        qtdInp.addEventListener('input', function() {
+          W.acab.extra[s.id].qtd = parseFloat(qtdInp.value)||0;
+          wizDraw();
+        });
+      }
+    });
+
+    // Service toggles
+    var togCol = document.getElementById('tog-col');
+    if(togCol) togCol.addEventListener('click', function(){
+      W.colocacao = !W.colocacao; togCol.classList.toggle('on');
+      var rc = document.getElementById('row-col'); if(rc) rc.classList.toggle('on');
+      wizDraw();
+    });
+    var togFrete = document.getElementById('tog-frete');
+    if(togFrete) togFrete.addEventListener('click', function(){
+      W.frete = !W.frete; togFrete.classList.toggle('on');
+      var rf = document.getElementById('row-frete'); if(rf) rf.classList.toggle('on');
+      wizDraw();
+    });
     var kmInp = document.getElementById('wiz-km');
     if(kmInp) kmInp.addEventListener('input', function(){ W.freteKm=parseFloat(kmInp.value)||0; wizDraw(); });
-    
-    // Adicionais qty
     W.adicionais.forEach(function(a,i) {
       var bm = document.getElementById('qm'+i);
       var bp = document.getElementById('qp'+i);
       if(bm) bm.addEventListener('click', function(){ a.q=Math.max(0,a.q-1); document.getElementById('qd'+i).textContent=a.q; wizDraw(); });
       if(bp) bp.addEventListener('click', function(){ a.q++; document.getElementById('qd'+i).textContent=a.q; wizDraw(); });
     });
-    
   } else if(W.step===3) {
     var mk = (state.pricing&&state.pricing.markup)||3;
     var area = W.larg * W.comp * W.qtdPecas;
     var pv = W.matCusto * mk;
     var totalMat = area * pv;
-    var totalAcab = (W.acab.meiaEsq?W.acab.meiaEsqMl*55:0) + (W.acab.bordaReta?W.acab.bordaRetaMl*35:0) + (W.acab.polimento?area*80:0);
+    var totalAcab = Object.values(W.acab.extra||{}).reduce(function(s,e){
+      if(!e.on) return s;
+      var qtd = e.un==='m²' ? area : (e.qtd||0);
+      return s + qtd * (e.preco||0);
+    }, 0);
     var totalColoc = W.colocacao ? area*W.colocacaoM2 : 0;
     var km = W.freteKm;
     var totalFrete = W.frete ? (km<=10?120:km<=30?200:km<=60?350:500+(km-60)*3) : 0;
@@ -6855,15 +6899,14 @@ async function noSalvar() {
   if(matId && area > 0) {
     itens.push({ descricao: matNome, tipo:'material', mat_id:matId, largura:larg, comprimento:comp, qtd:qtd, preco_custo:custo, markup:markup, preco_venda:pvMat, total: pvMat*area });
   }
-  // Acabamentos
-  var acMeiaML  = getChk('no-ac-meia')  ? getN('no-ac-meia-ml')  : 0;
-  var acBordaML = getChk('no-ac-borda') ? getN('no-ac-borda-ml') : 0;
-  var acPolM2   = getChk('no-ac-pol')   ? getN('no-ac-pol-m2')   : 0;
-  var acCorteML = getChk('no-ac-corte') ? getN('no-ac-corte-ml') : 0;
-  if(acMeiaML>0)  itens.push({ descricao:'Meia Esquadria', tipo:'acabamento', qtd:acMeiaML,  preco_venda:55,  total:acMeiaML*55  });
-  if(acBordaML>0) itens.push({ descricao:'Borda Reta',     tipo:'acabamento', qtd:acBordaML, preco_venda:35,  total:acBordaML*35 });
-  if(acPolM2>0)   itens.push({ descricao:'Polimento',      tipo:'acabamento', qtd:acPolM2,   preco_venda:80,  total:acPolM2*80   });
-  if(acCorteML>0) itens.push({ descricao:'Corte Especial', tipo:'acabamento', qtd:acCorteML, preco_venda:65,  total:acCorteML*65 });
+  // Acabamentos (do wizard)
+  var _area3 = (W&&W.larg&&W.comp) ? W.larg*W.comp*(W.qtdPecas||1) : 0;
+  Object.values((W&&W.acab&&W.acab.extra)||{}).forEach(function(e) {
+    if(!e.on) return;
+    var qty3 = e.un==='m²' ? _area3 : (e.qtd||0);
+    if(qty3 <= 0) return;
+    itens.push({ descricao: e.nome, tipo:'acabamento', qtd: qty3, preco_venda: e.preco||0, total: qty3*(e.preco||0) });
+  });
   // Serviços
   if(getChk('no-svc-col') && area>0)  itens.push({ descricao:'Colocação', tipo:'servico', qtd:area, preco_venda:120, total:120*area });
   var km = getChk('no-svc-frete') ? getN('no-svc-frete-km') : 0;
