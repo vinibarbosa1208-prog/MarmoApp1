@@ -4554,7 +4554,7 @@ function renderPrecosServicos(aba) {
                     var custo = parseFloat(m.custo||m.custo_unitario)||0;
                     var mk = (window.state&&state.pricing&&state.pricing.markup)||3;
                     var venda = custo * mk;
-                    return '<tr style="border-bottom:1px solid #F4F1EB;transition:background 0.15s" onmouseover="this.style.background='#FAFAF8'" onmouseout="this.style.background='#fff'">' +
+                    return '<tr style="border-bottom:1px solid #F4F1EB;transition:background 0.15s" onmouseover="this.style.background=\'#FAFAF8\'" onmouseout="this.style.background=\'#fff\'">' +
                       '<td style="padding:14px 16px">' +
                         '<div style="font-size:14px;font-weight:600;color:#1A1A2E">' + m.nome + '</div>' +
                       '</td>' +
@@ -4562,14 +4562,14 @@ function renderPrecosServicos(aba) {
                         '<span style="background:#F0EDE6;color:#888;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px">' + (m.cat||m.categoria||'Chapa') + '</span>' +
                       '</td>' +
                       '<td style="padding:14px 16px;text-align:right">' +
-                        '<input type="number" value="' + custo + '" onchange="atualizarPrecoMaterial('' + m.id + '',this.value)" ' +
+                        '<input type="number" value="' + custo + '" onchange="atualizarPrecoMaterial(\'+m.id+\',this.value)" ' +
                         'style="width:90px;padding:7px 10px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;text-align:right;font-family:DM Sans,sans-serif;color:#1A1A2E;outline:none;transition:border 0.15s" ' +
-                        'onfocus="this.style.borderColor='#C9A84C'" onblur="this.style.borderColor='#EDE9E2'">' +
+                        'onfocus=\"this.style.borderColor=\'#C9A84C\'\" onblur=\"this.style.borderColor=\'#EDE9E2\'\" >' +
                       '</td>' +
                       '<td style="padding:14px 16px;text-align:right;font-size:14px;font-weight:600;color:#C9A84C">R$ ' + venda.toFixed(2) + '</td>' +
                       '<td style="padding:14px 16px;text-align:right;font-size:13px;color:#888">' + (m.estoque||m.estoque_atual||0) + ' m²</td>' +
                       '<td style="padding:14px 16px;text-align:right">' +
-                        '<button onclick="excluirMaterialPreco('' + m.id + '')" title="Remover" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#DDD'">🗑</button>' +
+                        '<button onclick="excluirMaterialPreco(\'+m.id+\')" title="Remover" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color=\'#e74c3c\'" onmouseout="this.style.color=\'#DDD\'">🗑</button>' +
                       '</td>' +
                     '</tr>';
                   }).join('')
@@ -4606,7 +4606,7 @@ function renderPrecosServicos(aba) {
                 : servs.map(function(s) {
                     var preco = parseFloat(s.preco||s.preco_unitario)||0;
                     var unidLabel = {'ml':'metro linear','m²':'metro quadrado','un':'unidade','km':'quilômetro'}[s.unidade||s.unid] || (s.unidade||s.unid||'un');
-                    return '<tr style="border-bottom:1px solid #F4F1EB;transition:background 0.15s" onmouseover="this.style.background='#FAFAF8'" onmouseout="this.style.background='#fff'">' +
+                    return '<tr style="border-bottom:1px solid #F4F1EB;transition:background 0.15s" onmouseover="this.style.background=\'#FAFAF8\'" onmouseout="this.style.background=\'#fff\'">' +
                       '<td style="padding:14px 16px">' +
                         '<div style="font-size:14px;font-weight:600;color:#1A1A2E">' + (s.nome||s.name||'—') + '</div>' +
                       '</td>' +
@@ -4616,14 +4616,14 @@ function renderPrecosServicos(aba) {
                       '<td style="padding:14px 16px;text-align:right">' +
                         '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">' +
                           '<span style="font-size:12px;color:#888">R$</span>' +
-                          '<input type="number" value="' + preco + '" onchange="atualizarPrecoServico('' + s.id + '',this.value)" ' +
+                          '<input type="number" value="' + preco + '" onchange="atualizarPrecoServico(\'+s.id+\',this.value)" ' +
                           'style="width:90px;padding:7px 10px;border:1.5px solid #EDE9E2;border-radius:8px;font-size:13px;text-align:right;font-family:DM Sans,sans-serif;color:#1A1A2E;outline:none;transition:border 0.15s" ' +
-                          'onfocus="this.style.borderColor='#C9A84C'" onblur="this.style.borderColor='#EDE9E2'">' +
+                          'onfocus=\"this.style.borderColor=\'#C9A84C\'\" onblur=\"this.style.borderColor=\'#EDE9E2\'\" >' +
                           '<span style="font-size:11px;color:#aaa">/' + (s.unidade||s.unid||'un') + '</span>' +
                         '</div>' +
                       '</td>' +
                       '<td style="padding:14px 16px;text-align:right">' +
-                        '<button onclick="excluirServicoPreco('' + s.id + '')" title="Remover" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#DDD'">🗑</button>' +
+                        '<button onclick="excluirServicoPreco(\'+s.id+\')" title="Remover" style="background:none;border:none;color:#DDD;cursor:pointer;font-size:16px;padding:4px;border-radius:6px;transition:color 0.15s" onmouseover="this.style.color=\'#e74c3c\'" onmouseout="this.style.color=\'#DDD\'">🗑</button>' +
                       '</td>' +
                     '</tr>';
                   }).join('')
@@ -4679,6 +4679,60 @@ function abrirNovoServicoPreco() {
     renderPrecosServicos();
     showToast('Serviço adicionado!','ok2');
   });
+}
+
+// ─── Funções de atualização/exclusão de preços ───
+
+async function atualizarPrecoMaterial(id, valor) {
+  var custo = parseFloat(valor) || 0;
+  var m = state.materiais.find(function(x){ return x.id == id; });
+  if(!m) return;
+  m.custo = custo;
+  m.custo_unitario = custo;
+  var r = await sb.from('materiais').update({ custo_unitario: custo }).eq('id', id);
+  if(r.error) { showToast('Erro ao salvar: ' + r.error.message, 'err'); return; }
+  showToast('Preço atualizado!', 'ok2');
+  renderPrecosServicos('materiais');
+}
+
+async function excluirMaterialPreco(id) {
+  if(!confirm('Remover este material?')) return;
+  var r = await sb.from('materiais').delete().eq('id', id);
+  if(r.error) { showToast('Erro: ' + r.error.message, 'err'); return; }
+  state.materiais = state.materiais.filter(function(m){ return m.id != id; });
+  showToast('Material removido.', 'ok2');
+  renderPrecosServicos('materiais');
+}
+
+async function atualizarPrecoServico(id, valor) {
+  var preco = parseFloat(valor) || 0;
+  var s = (state.servicos || []).find(function(x){ return x.id == id; });
+  if(!s) return;
+  s.preco = preco;
+  s.preco_unitario = preco;
+  var r = await sb.from('servicos').update({ preco_padrao: preco }).eq('id', id);
+  if(r.error) { showToast('Erro ao salvar: ' + r.error.message, 'err'); return; }
+  showToast('Preço atualizado!', 'ok2');
+  renderPrecosServicos('servicos');
+}
+
+async function excluirServicoPreco(id) {
+  if(!confirm('Remover este serviço?')) return;
+  var r = await sb.from('servicos').delete().eq('id', id);
+  if(r.error) { showToast('Erro: ' + r.error.message, 'err'); return; }
+  state.servicos = (state.servicos || []).filter(function(s){ return s.id != id; });
+  showToast('Serviço removido.', 'ok2');
+  renderPrecosServicos('servicos');
+}
+
+async function fecharParaOS(orcId) {
+  if(!confirm('Converter este orçamento em Ordem de Serviço?')) return;
+  var r = await sb.from('orcamentos').update({ status: 'os' }).eq('id', orcId);
+  if(r.error) { showToast('Erro: ' + r.error.message, 'err'); return; }
+  var orc = (state.orcamentos || []).find(function(o){ return o.id == orcId; });
+  if(orc) orc.status = 'os';
+  showToast('OS criada com sucesso!', 'ok2');
+  renderCRM();
 }
 
 // ═══════════════════════════════════════════
@@ -4897,20 +4951,20 @@ function renderCRM() {
 
       // Avançar status button
       if(proxCol) {
-        colsHtml += '<button onclick="atualizarCRMStatus('' + o.id + '','' + proxCol.key + '')" style="' +
+        colsHtml += '<button onclick="atualizarCRMStatus(\'+o.id+\',\'+proxCol.key+\')" style="' +
           'width:100%;background:' + col.cor + ';color:#fff;border:none;border-radius:6px;' +
           'padding:5px;font-size:10px;font-weight:700;cursor:pointer;text-align:center">→ ' + proxCol.label + '</button>';
       }
 
       // WhatsApp + PDF buttons
       colsHtml += '<div style="display:flex;gap:3px">' +
-        '<button onclick="enviarWhatsAppOrc('' + o.id + '')" style="flex:1;background:#25D366;border:none;border-radius:5px;padding:4px;color:#fff;font-size:10px;cursor:pointer">WhatsApp</button>' +
-        '<button onclick="gerarPDFById('' + o.id + '')" style="flex:1;background:#F7F5F1;border:1px solid #EDE9E2;border-radius:5px;padding:4px;color:#666;font-size:10px;cursor:pointer">PDF</button>' +
+        '<button onclick="enviarWhatsAppOrc(\'+o.id+\')" style="flex:1;background:#25D366;border:none;border-radius:5px;padding:4px;color:#fff;font-size:10px;cursor:pointer">WhatsApp</button>' +
+        '<button onclick="gerarPDFById(\'+o.id+\')" style="flex:1;background:#F7F5F1;border:1px solid #EDE9E2;border-radius:5px;padding:4px;color:#666;font-size:10px;cursor:pointer">PDF</button>' +
       '</div>';
 
       // Iniciar OS if fechado
       if(col.key === 'fechado') {
-        colsHtml += '<button onclick="fecharParaOS('' + o.id + '')" style="' +
+        colsHtml += '<button onclick="fecharParaOS(\'+o.id+\')" style="' +
           'width:100%;background:#1A1A2E;color:#C9A84C;border:none;border-radius:6px;' +
           'padding:5px;font-size:10px;font-weight:700;cursor:pointer">→ Iniciar OS</button>';
       }
