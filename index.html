@@ -103,7 +103,7 @@ let currentMarmoraria = null;
   .auth-hint { color: #888888; font-size: 12px; text-align: center; margin-top: 14px; }
 
   /* ── LAYOUT ── */
-  #app { display: none; min-height: 100vh; }
+  #app { display: none; height: 100vh; overflow: hidden; }
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
     background: var(--sidebar-bg); display: flex; flex-direction: column; z-index: 100;
@@ -125,7 +125,7 @@ let currentMarmoraria = null;
     font-size: 13.5px; font-weight: 400; border-left: 3px solid transparent;
     border-radius: 0;
   }
-  .nav-item:hover { background: var(--nav-hover); color: var(--dark); }
+  .nav-item:hover { background: rgba(0,0,0,0.05); color: var(--dark); }
   .nav-item.active { background: var(--sidebar-active-bg); color: var(--gold); border-left-color: var(--gold); font-weight: 600; }
   .nav-item svg { flex-shrink: 0; opacity: 0.8; }
   .sidebar-user {
@@ -145,7 +145,7 @@ let currentMarmoraria = null;
   .btn-logout:hover { color: var(--red); }
 
   /* ── MAIN ── */
-  .main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+  .main { margin-left: var(--sidebar-w); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   .topbar {
     background: var(--white); border-bottom: 1px solid var(--marble2);
     padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between;
@@ -154,7 +154,7 @@ let currentMarmoraria = null;
   }
   .topbar-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--dark); }
   .topbar-actions { display: flex; align-items: center; gap: 10px; }
-  .content { padding: 28px; flex: 1; }
+  .content { padding: 28px; flex: 1; overflow-y: auto; min-height: 0; }
 
   /* ── BUTTONS ── */
   .btn {
@@ -174,10 +174,10 @@ let currentMarmoraria = null;
   .btn-icon { padding: 7px; border-radius: 7px; }
 
   /* ── CARDS ── */
-  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; }
   .card-header { padding: 18px 22px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; }
   .card-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; }
-  .card-body { padding: 22px; }
+  .card-body { padding: 22px; flex: 1; }
 
   /* ── STATS ── */
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -193,7 +193,7 @@ let currentMarmoraria = null;
   .stat-label { font-size: 12px; color: var(--gray); margin-top: 2px; }
 
   /* ── TABLE ── */
-  .table-wrap { overflow-x: auto; }
+  .table-wrap { overflow-x: auto; flex: 1; }
   table { width: 100%; border-collapse: collapse; }
   th { text-align: left; padding: 11px 16px; font-size: 11.5px; font-weight: 600; color: var(--gray); letter-spacing: 0.5px; border-bottom: 2px solid var(--marble2); background: var(--marble); }
   td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid var(--marble2); vertical-align: middle; }
@@ -296,7 +296,7 @@ let currentMarmoraria = null;
   .alert-success { background: rgba(39,174,96,0.1); border: 1px solid rgba(39,174,96,0.3); color: var(--green2); }
 
   /* ── DASHBOARD CHARTS ── */
-  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; align-items: stretch; }
   .pipeline-bar { height: 28px; border-radius: 6px; background: var(--marble2); overflow: hidden; display: flex; margin-top: 8px; }
   .pipeline-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--white); transition: width 0.4s; }
 
@@ -3558,7 +3558,7 @@ function showPage(page) {
     var crmNav = document.getElementById('nav-crm');
     if (crmNav) crmNav.classList.add('active');
   } else {
-    const navMap = { dashboard: 0, orcamentos: 1, clientes: 2, agenda: 3, fila: 3, estoque: 4, relatorios: 5, precos: 6 };
+    const navMap = { dashboard: 0, orcamentos: 1, crm: 2, clientes: 3, agenda: 4, fila: 4, estoque: 5, marmoIA: 6, whatsapp: 7, precos: 8, relatorios: 9 };
     document.querySelectorAll('.nav-item')[navMap[page]]?.classList.add('active');
   }
   const pages = {
@@ -3712,7 +3712,7 @@ function renderOrcamentos() {
       <button class="btn btn-gold" onclick="abrirNovoOrcamento()">+ Novo Orçamento</button>
     </div>`,
     `
-    <div class="card">
+    <div class="card" style="height:100%">
       <div class="card-header">
         <span class="card-title">Todos os Orçamentos</span>
         <div class="search-bar">
@@ -5085,12 +5085,12 @@ function renderRelatorios() {
     <div class="card mt-4">
       <div class="card-header"><span class="card-title">Origem dos Clientes</span></div>
       <div class="card-body">
-        <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
           ${['indicação','google','instagram','presencial','outros'].map(orig => {
             const count = state.clientes.filter(c => c.origem === orig).length;
             const pct = state.clientes.length ? Math.round(count/state.clientes.length*100) : 0;
             return `<div style="text-align:center;min-width:80px">
-              <div style="font-size:24px;font-weight:700;font-family:'Playfair Display',serif;color:var(--dark)">${count}</div>
+              <div style="font-size:28px;font-weight:700;font-family:'Playfair Display',serif;color:var(--dark);background:var(--marble);border-radius:10px;padding:20px 8px;text-align:center">${count}</div>
               <div style="font-size:11px;color:var(--gray);margin-top:2px">${orig.charAt(0).toUpperCase()+orig.slice(1)}</div>
               <div style="font-size:11px;color:var(--gold);font-weight:600">${pct}%</div>
             </div>`;
