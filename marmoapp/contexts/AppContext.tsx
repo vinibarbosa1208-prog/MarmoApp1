@@ -1,0 +1,157 @@
+'use client'
+
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { supabase } from '@/lib/supabase'
+import type { AppState, Cliente, Orcamento, OrdemServico, Material, Servico, Marmoraria, OrcamentoItem } from '@/lib/types'
+
+interface AppContextValue extends AppState {
+  loadAll: () => Promise<void>
+  loadClientes: () => Promise<void>
+  loadOrcamentos: () => Promise<void>
+  loadMateriais: () => Promise<void>
+  loadServicos: () => Promise<void>
+  setEditingOrcId: (id: string | null) => void
+  setOrcItems: (items: OrcamentoItem[]) => void
+  toast: (msg: string, type?: 'ok' | 'err' | 'ok2') => void
+  toastMsg: { msg: string; type: string } | null
+}
+
+const AppContext = createContext<AppContextValue | null>(null)
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AppState>({
+    user: null,
+    marmoraria: null,
+    clientes: [],
+    orcamentos: [],
+    os: [],
+    materiais: [],
+    servicos: [],
+    editingOrcId: null,
+    orcItems: [],
+  })
+  const [toastMsg, setToastMsg] = useState<{ msg: string; type: string } | null>(null)
+
+  const toast = useCallback((msg: string, type: 'ok' | 'err' | 'ok2' = 'ok') => {
+    setToastMsg({ msg, type })
+    setTimeout(() => setToastMsg(null), 2800)
+  }, [])
+
+  const loadClientes = useCallback(async () => {
+    if (!state.marmoraria?.id) return
+    const { data } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('marmoraria_id', state.marmoraria.id)
+      .order('created_at', { ascending: false })
+    if (data) setState(s => ({ ...s, clientes: data as Cliente[] }))
+  }, [state.marmoraria?.id])
+
+  const loadOrcamentos = useCallback(async () => {
+    if (!state.marmoraria?.id) return
+    const { data: orcs } = await supabase
+      .from('orcamentos')
+      .select('*')
+      .eq('marmoraria_id', state.marmoraria.id)
+      .order('created_at', { ascending: false })
+    if (!orcs) return
+    const ids = orcs.map(o => o.id)
+    const { data: itens } = ids.length
+      ? await supabase.from('orcamento_itens').select('*').in('orcamento_id', ids)
+      : { data: [] }
+
+    const orcamentos: Orcamento[] = orcs.map(o => ({
+      ...o,
+      clienteId: o.cliente_id,
+      maoObra: o.mao_obra,
+      desconto: o.desconto_rs,
+      producao_status: o.producao_status || 'comercial',
+      total: o.total || 0,
+      itens: (itens || []).filter(i => i.orcamento_id === o.id).map(i => ({
+        ...i,
+        total: i.total_item || i.total || 0,
+      })),
+    }))
+    setState(s => ({ ...s, orcamentos }))
+  }, [state.marmoraria?.id])
+
+  const loadMateriais = useCallback(async () => {
+    if (!state.marmoraria?.id) return
+    const { data } = await supabase
+      .from('materiais')
+      .select('*')
+      .eq('marmoraria_id', state.marmoraria.id)
+      .order('nome')
+    if (data) setState(s => ({ ...s, materiais: data as Material[] }))
+  }, [state.marmoraria?.id])
+
+  const loadServicos = useCallback(async () => {
+    if (!state.marmoraria?.id) return
+    const { data } = await supabase
+      .from('servicos')
+      .select('*')
+      .eq('marmoraria_id', state.marmoraria.id)
+      .order('nome')
+    if (data) setState(s => ({ ...s, servicos: data as Servico[] }))
+  }, [state.marmoraria?.id])
+
+  const loadAll = useCallback(async () => {
+    await Promise.all([loadClientes(), loadOrcamentos(), loadMateriais(), loadServicos()])
+  }, [loadClientes, loadOrcamentos, loadMateriais, loadServicos])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return
+      const user = { id: session.user.id, email: session.user.email! }
+
+      // usuarios.id = auth.users.id; get marmoraria via the junction table
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('marmoraria_id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const marmoraria_id = usuario?.marmoraria_id
+
+      if (!marmoraria_id) {
+        setState(s => ({ ...s, user, marmoraria: null }))
+        return
+      }
+
+      const { data: marm } = await supabase
+        .from('marmorarias')
+        .select('*')
+        .eq('id', marmoraria_id)
+        .single()
+
+      setState(s => ({ ...s, user, marmoraria: marm as Marmoraria | null }))
+    })
+  }, [])
+
+  useEffect(() => {
+    if (state.marmoraria?.id) loadAll()
+  }, [state.marmoraria?.id])
+
+  return (
+    <AppContext.Provider value={{
+      ...state,
+      loadAll,
+      loadClientes,
+      loadOrcamentos,
+      loadMateriais,
+      loadServicos,
+      setEditingOrcId: (id) => setState(s => ({ ...s, editingOrcId: id })),
+      setOrcItems: (items) => setState(s => ({ ...s, orcItems: items })),
+      toast,
+      toastMsg,
+    }}>
+      {children}
+    </AppContext.Provider>
+  )
+}
+
+export function useApp() {
+  const ctx = useContext(AppContext)
+  if (!ctx) throw new Error('useApp must be used within AppProvider')
+  return ctx
+}
