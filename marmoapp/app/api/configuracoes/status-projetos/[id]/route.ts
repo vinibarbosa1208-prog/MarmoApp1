@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+async function getMarmorariaId(authHeader: string | null): Promise<string | null> {
+  if (!authHeader) return null
+  const token = authHeader.replace('Bearer ', '')
+  const { data: { user } } = await supabase.auth.getUser(token)
+  if (!user) return null
+  const { data } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).maybeSingle()
+  return (data as { marmoraria_id: string } | null)?.marmoraria_id ?? null
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const marmoraria_id = await getMarmorariaId(req.headers.get('authorization'))
+    if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const body = await req.json() as { nome?: string; cor?: string; ordem?: number }
+    const update: Record<string, string | number> = {}
+    if (body.nome?.trim()) update.nome = body.nome.trim()
+    if (body.cor) update.cor = body.cor
+    if (body.ordem !== undefined) update.ordem = body.ordem
+
+    const { data, error } = await supabase
+      .from('project_custom_statuses')
+      .update(update)
+      .eq('id', id)
+      .eq('marmoraria_id', marmoraria_id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Status não encontrado' }, { status: 404 })
+    return NextResponse.json(data)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params
+    const marmoraria_id = await getMarmorariaId(req.headers.get('authorization'))
+    if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const { error } = await supabase
+      .from('project_custom_statuses')
+      .delete()
+      .eq('id', id)
+      .eq('marmoraria_id', marmoraria_id)
+
+    if (error) throw error
+    return NextResponse.json({ ok: true })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
+  }
+}
