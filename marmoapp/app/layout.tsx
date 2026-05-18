@@ -3,8 +3,13 @@ import { AppProvider } from '@/contexts/AppContext'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'MarmoApp — Gestão de Marmoraria',
+  title: 'MarmoApp — Gestão de Marmorarias',
   description: 'Gestão inteligente para marmorarias',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

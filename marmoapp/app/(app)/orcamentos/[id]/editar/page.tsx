@@ -186,9 +186,10 @@ export default function EditarOrcamentoPage() {
 
       await supabase.from('orcamento_itens').delete().eq('orcamento_id', orcId)
 
-      if (itens.length > 0) {
+      if (itens.length > 0 && marmoraria) {
         await supabase.from('orcamento_itens').insert(itens.map(i => ({
           orcamento_id: orcId,
+          marmoraria_id: marmoraria.id,
           tipo: i.tipo,
           descricao: i.descricao,
           quantidade: i.quantidade,

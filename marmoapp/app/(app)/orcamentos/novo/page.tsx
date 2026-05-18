@@ -161,6 +161,7 @@ export default function NovoOrcamentoPage() {
       if (itens.length > 0) {
         const payload = itens.map(i => ({
           orcamento_id: orc.id,
+          marmoraria_id: marmoraria.id,
           tipo: i.tipo,
           descricao: i.descricao,
           quantidade: i.quantidade,

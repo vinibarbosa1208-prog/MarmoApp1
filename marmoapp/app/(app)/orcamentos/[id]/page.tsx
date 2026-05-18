@@ -57,6 +57,16 @@ export default function VerOrcamentoPage() {
         largura: i.largura,
         altura: i.altura,
         area: i.area,
+        tipo_peca: i.tipo_peca,
+        acabamento_esquerda: i.acabamento_esquerda,
+        acabamento_direita: i.acabamento_direita,
+        acabamento_frente: i.acabamento_frente,
+        acabamento_fundo: i.acabamento_fundo,
+        tem_saia: i.tem_saia,
+        altura_saia: i.altura_saia,
+        tem_frontao: i.tem_frontao,
+        altura_frontao: i.altura_frontao,
+        dados_extras: i.dados_extras ?? undefined,
       })),
     }
   }, [orc, itens])
