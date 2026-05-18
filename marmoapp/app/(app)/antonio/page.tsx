@@ -25,7 +25,7 @@ function OrcamentoActions({ orcamentoId }: { orcamentoId: string }) {
       const { supabase } = await import('@/lib/supabase')
       const { data: itensData } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcamentoId)
       const { gerarOrcamentoPDF } = await import('@/lib/pdf/gerar-orcamento-pdf')
-      const doc = gerarOrcamentoPDF({
+      const doc = await gerarOrcamentoPDF({
         id: orc.id, numero: orc.numero, descricao: orc.descricao, status: orc.status,
         mao_obra: orc.mao_obra || orc.maoObra || 0, desconto_rs: orc.desconto_rs || orc.desconto || 0,
         total: orc.total || 0, observacoes: orc.observacoes, validade: orc.validade, created_at: orc.created_at,

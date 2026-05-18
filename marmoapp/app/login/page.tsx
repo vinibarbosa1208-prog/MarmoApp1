@@ -25,9 +25,11 @@ export default function LoginPage() {
     <div id="auth-screen">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-text" style={{ marginTop: 4 }}>
-            <span className="logo-marmo">marmo</span><span className="logo-app">app</span>
-          </div>
+          <img
+            src="/logo-marmoapp.jpg"
+            alt="MarmoApp"
+            style={{ width: 160, height: 'auto', objectFit: 'contain', marginBottom: 8 }}
+          />
           <p>Gestão inteligente para marmorarias</p>
         </div>
 

@@ -103,11 +103,29 @@ function dataValidade(orc: OrcamentoPDF): string {
   return d.toLocaleDateString('pt-BR')
 }
 
-export function gerarOrcamentoPDF(
+async function loadLogoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch('/logo-marmoapp.jpg')
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => resolve(null as unknown as string)
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
+export async function gerarOrcamentoPDF(
   orc: OrcamentoPDF,
   marmoraria: Marmoraria,
   cliente: Cliente | null
-): jsPDF {
+): Promise<jsPDF> {
+  const logoDataUrl = await loadLogoDataUrl()
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const W = 210
   const GOLD = [201, 168, 76] as [number, number, number]
@@ -121,11 +139,15 @@ export function gerarOrcamentoPDF(
   doc.setFillColor(...DARK)
   doc.rect(0, 0, W, 42, 'F')
 
-  // Marmoraria name
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  doc.setTextColor(...WHITE)
-  doc.text(marmoraria.nome, 16, 18)
+  // Logo or company name
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, 'JPEG', 16, 6, 54, 18)
+  } else {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(22)
+    doc.setTextColor(...WHITE)
+    doc.text(marmoraria.nome, 16, 18)
+  }
 
   // Subtitle
   doc.setFontSize(9)

@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   title: 'MarmoApp — Gestão de Marmorarias',
   description: 'Gestão inteligente para marmorarias',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: '/logo-marmoapp.jpg',
+    shortcut: '/logo-marmoapp.jpg',
+    apple: '/logo-marmoapp.jpg',
   },
 }
 

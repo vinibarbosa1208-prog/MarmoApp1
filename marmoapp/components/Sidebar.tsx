@@ -56,10 +56,12 @@ export default function Sidebar() {
   return (
     <div className="sidebar">
       <div className="sidebar-logo">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontSize: 22, fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
-            <span style={{ color: 'var(--dark)' }}>marmo</span><span style={{ color: 'var(--gold)' }}>app</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img
+            src="/logo-marmoapp.jpg"
+            alt="MarmoApp"
+            style={{ width: 120, height: 40, objectFit: 'contain' }}
+          />
         </div>
         <small id="company-name-sidebar">{marmoraria?.nome || 'Marmoraria'}</small>
       </div>

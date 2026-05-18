@@ -78,7 +78,7 @@ export default function VerOrcamentoPage() {
     setGeneratingPdf(true)
     try {
       const { gerarOrcamentoPDF } = await import('@/lib/pdf/gerar-orcamento-pdf')
-      return gerarOrcamentoPDF(orcPDF, marmoraria, cliente)
+      return await gerarOrcamentoPDF(orcPDF, marmoraria, cliente)
     } finally {
       setGeneratingPdf(false)
     }
