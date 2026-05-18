@@ -26,9 +26,37 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${cls}`}>{lbl}</span>
 }
 
+function ModalConfirmarExclusao({ numero, onConfirm, onCancel, busy }: {
+  numero: string; onConfirm: () => void; onCancel: () => void; busy: boolean
+}) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '28px 32px', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+        <h3 style={{ margin: '0 0 12px', fontFamily: "'Playfair Display', serif", fontSize: 20 }}>Excluir orçamento</h3>
+        <p style={{ color: 'var(--gray)', margin: '0 0 24px', lineHeight: 1.6 }}>
+          Tem certeza que deseja excluir o orçamento <strong>{numero}</strong>? Esta ação não pode ser desfeita.
+        </p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button className="btn btn-outline" onClick={onCancel} disabled={busy}>Cancelar</button>
+          <button
+            className="btn"
+            onClick={onConfirm}
+            disabled={busy}
+            style={{ background: '#c0392b', color: '#fff', border: 'none' }}
+          >
+            {busy ? 'Excluindo...' : 'Excluir'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function OrcamentosPage() {
   const { orcamentos, clientes, loadOrcamentos, toast } = useApp()
   const [query, setQuery] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; numero: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   function clienteNome(id?: string) {
     if (!id) return '—'
@@ -58,6 +86,28 @@ export default function OrcamentosPage() {
     toast(`Status: ${newStatus}`, 'ok2')
   }
 
+  async function excluirOrcamento() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const { supabase: sb } = await import('@/lib/supabase')
+      const { data: { session } } = await sb.auth.getSession()
+      const res = await fetch(`/api/orcamentos/${deleteTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao excluir')
+      toast('Orçamento excluído', 'ok2')
+      setDeleteTarget(null)
+      await loadOrcamentos()
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : 'Erro ao excluir', 'err')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   function enviarWhatsApp(o: Orcamento) {
     const cli = clientes.find(c => c.id === (o.clienteId || o.cliente_id))
     const nome = cli?.nome?.split(' ')[0] || 'cliente'
@@ -72,6 +122,14 @@ export default function OrcamentosPage() {
 
   return (
     <div className="page-inner">
+      {deleteTarget && (
+        <ModalConfirmarExclusao
+          numero={deleteTarget.numero}
+          onConfirm={excluirOrcamento}
+          onCancel={() => setDeleteTarget(null)}
+          busy={deleting}
+        />
+      )}
       <div className="page-header">
         <h1 className="page-title">Orçamentos</h1>
         <Link href="/orcamentos/novo" className="btn btn-gold">+ Novo Orçamento</Link>
@@ -134,6 +192,12 @@ export default function OrcamentosPage() {
                         <Link href={`/orcamentos/${o.id}`} className="btn btn-ghost btn-sm btn-icon" title="Ver">📄</Link>
                         <Link href={`/orcamentos/${o.id}/editar`} className="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</Link>
                         <button className="btn btn-ghost btn-sm btn-icon" title="Ciclar status" onClick={() => cycleStatus(o)}>🔄</button>
+                        <button
+                          className="btn btn-ghost btn-sm btn-icon"
+                          title="Excluir"
+                          onClick={() => setDeleteTarget({ id: o.id, numero: `ORC-${new Date(o.created_at).getFullYear()}-${String(o.numero ?? 0).padStart(4, '0')}` })}
+                          style={{ color: '#c0392b' }}
+                        >🗑️</button>
                       </div>
                     </td>
                   </tr>

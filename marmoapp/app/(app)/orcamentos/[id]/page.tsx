@@ -20,10 +20,12 @@ export default function VerOrcamentoPage() {
   const router = useRouter()
   const params = useParams()
   const orcId = params.id as string
-  const { orcamentos, clientes, marmoraria, toast } = useApp()
+  const { orcamentos, clientes, marmoraria, toast, loadOrcamentos } = useApp()
   const [itens, setItens] = useState<OrcamentoItem[]>([])
   const [loadingItens, setLoadingItens] = useState(true)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const orc = orcamentos.find(o => o.id === orcId)
   const cliente = clientes.find(c => c.id === (orc?.cliente_id || orc?.clienteId)) || null
@@ -101,6 +103,27 @@ export default function VerOrcamentoPage() {
     window.open(url, '_blank')
   }
 
+  async function excluirOrcamento() {
+    setDeleting(true)
+    try {
+      const { supabase: sb } = await import('@/lib/supabase')
+      const { data: { session } } = await sb.auth.getSession()
+      const res = await fetch(`/api/orcamentos/${orcId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao excluir')
+      toast('Orçamento excluído', 'ok2')
+      await loadOrcamentos()
+      router.push('/orcamentos')
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : 'Erro ao excluir', 'err')
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
   function enviarWhatsApp() {
     if (!orc) return
     const nome = cliente?.nome?.split(' ')[0] || 'cliente'
@@ -134,6 +157,27 @@ export default function VerOrcamentoPage() {
 
   return (
     <div className="page-inner">
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '28px 32px', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <h3 style={{ margin: '0 0 12px', fontFamily: "'Playfair Display', serif", fontSize: 20 }}>Excluir orçamento</h3>
+            <p style={{ color: 'var(--gray)', margin: '0 0 24px', lineHeight: 1.6 }}>
+              Tem certeza que deseja excluir o orçamento <strong>{orcNumStr}</strong>? Esta ação não pode ser desfeita.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)} disabled={deleting}>Cancelar</button>
+              <button
+                className="btn"
+                onClick={excluirOrcamento}
+                disabled={deleting}
+                style={{ background: '#c0392b', color: '#fff', border: 'none' }}
+              >
+                {deleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title">{orcNumStr}</h1>
@@ -142,6 +186,11 @@ export default function VerOrcamentoPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-outline" onClick={() => router.push('/orcamentos')}>← Voltar</button>
           <button className="btn btn-outline" onClick={enviarWhatsApp}>📲 WhatsApp</button>
+          <button
+            className="btn btn-outline"
+            onClick={() => setShowDeleteModal(true)}
+            style={{ color: '#c0392b', borderColor: '#c0392b' }}
+          >🗑️ Excluir</button>
           <button className="btn btn-outline" onClick={visualizarPDF} disabled={busy}>
             {generatingPdf ? 'Gerando...' : '👁️ Ver PDF'}
           </button>
