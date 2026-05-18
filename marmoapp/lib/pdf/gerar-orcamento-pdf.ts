@@ -11,6 +11,16 @@ export interface ItemPDF {
   largura?: number
   altura?: number
   area?: number
+  tipo_peca?: string
+  acabamento_esquerda?: string
+  acabamento_direita?: string
+  acabamento_frente?: string
+  acabamento_fundo?: string
+  tem_saia?: boolean
+  altura_saia?: number
+  tem_frontao?: boolean
+  altura_frontao?: number
+  dados_extras?: Record<string, unknown>
 }
 
 export interface OrcamentoPDF {
@@ -29,6 +39,47 @@ export interface OrcamentoPDF {
 
 function fmt(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+const PECA_LABELS_PDF: Record<string, string> = {
+  bancada_simples: 'Bancada Simples', bancada_cuba: 'Bancada c/ Cuba',
+  bancada_saia: 'Bancada c/ Saia', bancada_frontao: 'Bancada c/ Frontão',
+  ilha_cozinha: 'Ilha de Cozinha', escada: 'Escada',
+  soleira: 'Soleira / Peitoril', nicho: 'Nicho',
+}
+const ACAB_LABELS_PDF: Record<string, string> = {
+  reto: 'Reto', boleado: 'Boleado', meia_esquadria: 'Meia Esquadria',
+}
+const LATERAL_LABELS_PDF: Record<string, string> = {
+  esquerda: 'Esq', direita: 'Dir', frente: 'Frente', fundo: 'Fundo',
+  superior: 'Sup', inferior: 'Inf',
+}
+
+function pecaDetalhe(i: ItemPDF): string {
+  if (!i.tipo_peca) return ''
+  const parts: string[] = [PECA_LABELS_PDF[i.tipo_peca] || i.tipo_peca]
+  const acabs: string[] = []
+  for (const lat of ['esquerda', 'direita', 'frente', 'fundo', 'superior', 'inferior']) {
+    const v = (i as unknown as Record<string, unknown>)[`acabamento_${lat}`] as string | undefined
+    if (v) {
+      const raio = i.dados_extras?.[`raio_${lat}`] as number | undefined
+      const lbl = ACAB_LABELS_PDF[v] || v
+      acabs.push(`${LATERAL_LABELS_PDF[lat]}: ${lbl}${v === 'boleado' && raio ? ` R${raio}mm` : ''}`)
+    }
+  }
+  if (acabs.length) parts.push(acabs.join(' | '))
+  if (i.tem_saia && i.altura_saia) parts.push(`Saia: ${i.altura_saia}cm`)
+  if (i.tem_frontao && i.altura_frontao) parts.push(`Frontão: ${i.altura_frontao}cm`)
+  // piece-specific extras
+  const ex = i.dados_extras
+  if (ex) {
+    if (ex.tipo_cuba) parts.push(`Cuba: ${ex.tipo_cuba}`)
+    if (ex.num_degraus) parts.push(`${ex.num_degraus} degraus`)
+    if (ex.largura_piso) parts.push(`Piso ${ex.largura_piso}cm`)
+    if (ex.altura_espelho) parts.push(`Espelho ${ex.altura_espelho}cm`)
+    if (ex.comprimento) parts.push(`${ex.comprimento}×${ex.largura || '?'}cm`)
+  }
+  return parts.join('\n')
 }
 
 function fmtNum(n: number | undefined, decimals = 2): string {
@@ -204,10 +255,12 @@ export function gerarOrcamentoPDF(
       : i.largura && i.altura
         ? `${fmtNum(i.largura, 2)} × ${fmtNum(i.altura, 2)} m`
         : '—'
+    const detalhe = pecaDetalhe(i)
+    const descFull = detalhe ? `${i.descricao}\n${detalhe}` : i.descricao
 
     return hasArea
-      ? [i.tipo, i.descricao, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
-      : [i.tipo, i.descricao, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+      ? [i.tipo, descFull, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+      : [i.tipo, descFull, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
   })
 
   autoTable(doc, {
@@ -223,9 +276,10 @@ export function gerarOrcamentoPDF(
       cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
     },
     bodyStyles: {
-      fontSize: 8.5,
+      fontSize: 8,
       textColor: DARK,
       cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+      overflow: 'linebreak' as const,
     },
     alternateRowStyles: { fillColor: [248, 248, 248] as [number, number, number] },
     columnStyles: hasArea

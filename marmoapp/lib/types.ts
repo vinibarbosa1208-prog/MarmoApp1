@@ -44,6 +44,16 @@ export interface OrcamentoItem {
   largura?: number
   altura?: number
   area?: number
+  tipo_peca?: string
+  acabamento_esquerda?: string
+  acabamento_direita?: string
+  acabamento_frente?: string
+  acabamento_fundo?: string
+  tem_saia?: boolean
+  altura_saia?: number
+  tem_frontao?: boolean
+  altura_frontao?: number
+  dados_extras?: Record<string, unknown>
 }
 
 export type ProducaoStatus =
