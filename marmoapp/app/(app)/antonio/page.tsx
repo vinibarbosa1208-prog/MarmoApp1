@@ -1,12 +1,73 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  orcamentoId?: string
+}
+
+function OrcamentoActions({ orcamentoId }: { orcamentoId: string }) {
+  const { orcamentos, clientes, marmoraria, toast } = useApp()
+  const [busy, setBusy] = useState(false)
+
+  const orc = orcamentos.find(o => o.id === orcamentoId)
+  const cliente = clientes.find(c => c.id === (orc?.cliente_id || orc?.clienteId)) || null
+
+  async function baixarPDF() {
+    if (!orc || !marmoraria) { toast('Dados não disponíveis', 'err'); return }
+    setBusy(true)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: itensData } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcamentoId)
+      const { gerarOrcamentoPDF } = await import('@/lib/pdf/gerar-orcamento-pdf')
+      const doc = gerarOrcamentoPDF({
+        id: orc.id, numero: orc.numero, descricao: orc.descricao, status: orc.status,
+        mao_obra: orc.mao_obra || orc.maoObra || 0, desconto_rs: orc.desconto_rs || orc.desconto || 0,
+        total: orc.total || 0, observacoes: orc.observacoes, validade: orc.validade, created_at: orc.created_at,
+        itens: (itensData || []).map(i => ({
+          tipo: i.tipo, descricao: i.descricao, quantidade: i.quantidade,
+          preco_unitario: i.preco_unitario, total_item: i.total_item || i.preco_unitario * i.quantidade,
+          largura: i.largura, altura: i.altura, area: i.area,
+        })),
+      }, marmoraria, cliente)
+      const year = new Date(orc.created_at).getFullYear()
+      const num = String(orc.numero ?? 0).padStart(4, '0')
+      doc.save(`ORC-${year}-${num}.pdf`)
+      toast('PDF baixado!', 'ok2')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function enviarWhatsApp() {
+    if (!orc) return
+    const nome = cliente?.nome?.split(' ')[0] || 'cliente'
+    let msg = `Olá ${nome}! 😊\n\nSegue seu orçamento!\n\n`
+    if (orc.descricao) msg += `📋 ${orc.descricao}\n`
+    if (orc.total) msg += `💰 Total: ${orc.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n`
+    msg += '\nQualquer dúvida, estamos à disposição!'
+    const tel = (cliente?.telefone || '').replace(/\D/g, '')
+    window.open(`https://wa.me/${tel.startsWith('55') ? tel : '55' + tel}?text=${encodeURIComponent(msg)}`, '_blank')
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+      <Link href={`/orcamentos/${orcamentoId}`} className="btn btn-gold" style={{ fontSize: 12, padding: '6px 14px' }}>
+        📄 Ver Orçamento
+      </Link>
+      <button className="btn btn-outline" style={{ fontSize: 12, padding: '6px 14px' }} onClick={baixarPDF} disabled={busy}>
+        {busy ? '...' : '⬇️ Baixar PDF'}
+      </button>
+      <button className="btn btn-outline" style={{ fontSize: 12, padding: '6px 14px' }} onClick={enviarWhatsApp}>
+        📲 WhatsApp
+      </button>
+    </div>
+  )
 }
 
 export default function AntonioPage() {
@@ -71,7 +132,12 @@ export default function AntonioPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro na API')
 
-      const assistantMsg: Message = { role: 'assistant', content: data.message, timestamp: new Date() }
+      const assistantMsg: Message = {
+        role: 'assistant',
+        content: data.message,
+        timestamp: new Date(),
+        orcamentoId: data.orcamentoId || undefined,
+      }
       setMessages(prev => [...prev, assistantMsg])
     } catch (e: unknown) {
       toast(e instanceof Error ? e.message : 'Erro ao conectar com o agente', 'err')
@@ -148,14 +214,19 @@ export default function AntonioPage() {
                 🤖
               </div>
             )}
-            <div style={{
-              maxWidth: '72%', padding: '12px 16px', borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-              background: msg.role === 'user' ? 'var(--gold)' : '#fff',
-              color: msg.role === 'user' ? 'var(--dark)' : 'var(--dark)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: 14,
-            }}>
-              {msg.content}
+            <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{
+                padding: '12px 16px', borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                background: msg.role === 'user' ? 'var(--gold)' : '#fff',
+                color: 'var(--dark)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: 14,
+              }}>
+                {msg.content}
+              </div>
+              {msg.orcamentoId && (
+                <OrcamentoActions orcamentoId={msg.orcamentoId} />
+              )}
             </div>
           </div>
         ))}

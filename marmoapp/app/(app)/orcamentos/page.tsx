@@ -131,7 +131,8 @@ export default function OrcamentosPage() {
                     <td>
                       <div className="flex gap-2">
                         <button className="btn btn-ghost btn-sm btn-icon" title="WhatsApp" onClick={() => enviarWhatsApp(o)}>📲</button>
-                        <Link href={`/orcamentos/${o.id}`} className="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</Link>
+                        <Link href={`/orcamentos/${o.id}`} className="btn btn-ghost btn-sm btn-icon" title="Ver">📄</Link>
+                        <Link href={`/orcamentos/${o.id}/editar`} className="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</Link>
                         <button className="btn btn-ghost btn-sm btn-icon" title="Ciclar status" onClick={() => cycleStatus(o)}>🔄</button>
                       </div>
                     </td>

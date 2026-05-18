@@ -1,0 +1,322 @@
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import type { Marmoraria, Cliente } from '@/lib/types'
+
+export interface ItemPDF {
+  tipo: string
+  descricao: string
+  quantidade: number
+  preco_unitario: number
+  total_item: number
+  largura?: number
+  altura?: number
+  area?: number
+}
+
+export interface OrcamentoPDF {
+  id: string
+  numero?: number
+  descricao?: string
+  status: string
+  mao_obra: number
+  desconto_rs: number
+  total: number
+  observacoes?: string
+  validade?: string
+  created_at: string
+  itens: ItemPDF[]
+}
+
+function fmt(v: number): string {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function fmtNum(n: number | undefined, decimals = 2): string {
+  if (!n) return '—'
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+}
+
+function orcNum(orc: OrcamentoPDF): string {
+  const year = new Date(orc.created_at).getFullYear()
+  const num = String(orc.numero ?? 0).padStart(4, '0')
+  return `ORC-${year}-${num}`
+}
+
+function dataValidade(orc: OrcamentoPDF): string {
+  if (orc.validade) {
+    const d = new Date(orc.validade)
+    return d.toLocaleDateString('pt-BR')
+  }
+  const d = new Date(orc.created_at)
+  d.setDate(d.getDate() + 30)
+  return d.toLocaleDateString('pt-BR')
+}
+
+export function gerarOrcamentoPDF(
+  orc: OrcamentoPDF,
+  marmoraria: Marmoraria,
+  cliente: Cliente | null
+): jsPDF {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const W = 210
+  const GOLD = [201, 168, 76] as [number, number, number]
+  const DARK = [26, 26, 26] as [number, number, number]
+  const GRAY = [120, 120, 120] as [number, number, number]
+  const WHITE = [255, 255, 255] as [number, number, number]
+
+  let y = 0
+
+  // ── Header background ─────────────────────────────────────
+  doc.setFillColor(...DARK)
+  doc.rect(0, 0, W, 42, 'F')
+
+  // Marmoraria name
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(22)
+  doc.setTextColor(...WHITE)
+  doc.text(marmoraria.nome, 16, 18)
+
+  // Subtitle
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(180, 160, 100)
+  const subParts: string[] = []
+  if (marmoraria.cnpj) subParts.push(`CNPJ: ${marmoraria.cnpj}`)
+  if (marmoraria.telefone) subParts.push(`Tel: ${marmoraria.telefone}`)
+  if (marmoraria.cidade && marmoraria.estado) subParts.push(`${marmoraria.cidade} — ${marmoraria.estado}`)
+  else if (marmoraria.cidade) subParts.push(marmoraria.cidade)
+  if (subParts.length) doc.text(subParts.join('   ·   '), 16, 26)
+
+  if (marmoraria.endereco) {
+    doc.setTextColor(150, 140, 110)
+    doc.text(marmoraria.endereco, 16, 32)
+  }
+
+  // Orcamento number (right side)
+  doc.setTextColor(...GOLD)
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.text(orcNum(orc), W - 16, 18, { align: 'right' })
+
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(180, 160, 100)
+  const emissao = new Date(orc.created_at).toLocaleDateString('pt-BR')
+  doc.text(`Emissão: ${emissao}`, W - 16, 26, { align: 'right' })
+  doc.text(`Validade: ${dataValidade(orc)}`, W - 16, 32, { align: 'right' })
+
+  // Gold accent line
+  doc.setFillColor(...GOLD)
+  doc.rect(0, 42, W, 1.5, 'F')
+
+  y = 52
+
+  // ── Client + Orcamento info ───────────────────────────────
+  // Two columns
+  const col1x = 16
+  const col2x = W / 2 + 4
+
+  // Column 1: Cliente
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...GRAY)
+  doc.text('CLIENTE', col1x, y)
+
+  y += 5
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...DARK)
+  doc.text(cliente?.nome || 'Cliente não informado', col1x, y)
+
+  y += 5
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...GRAY)
+  if (cliente?.telefone) { doc.text(`Tel: ${cliente.telefone}`, col1x, y); y += 4 }
+  if (cliente?.email) { doc.text(`E-mail: ${cliente.email}`, col1x, y); y += 4 }
+  if (cliente?.cpf_cnpj) { doc.text(`CPF/CNPJ: ${cliente.cpf_cnpj}`, col1x, y); y += 4 }
+
+  // Column 2: Orcamento info
+  const infoY = 52
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...GRAY)
+  doc.text('ORÇAMENTO', col2x, infoY)
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...DARK)
+  const statusLabels: Record<string, string> = {
+    rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', recusado: 'Recusado',
+  }
+  const rows2: [string, string][] = [
+    ['Referência:', orcNum(orc)],
+    ['Status:', statusLabels[orc.status] || orc.status],
+    ['Emissão:', new Date(orc.created_at).toLocaleDateString('pt-BR')],
+    ['Válido até:', dataValidade(orc)],
+  ]
+  rows2.forEach(([label, val], idx) => {
+    const ry = infoY + 5 + idx * 5
+    doc.setTextColor(...GRAY)
+    doc.text(label, col2x, ry)
+    doc.setTextColor(...DARK)
+    doc.text(val, col2x + 30, ry)
+  })
+
+  // Separator line
+  y = Math.max(y, infoY + 5 + rows2.length * 5) + 6
+  doc.setDrawColor(...GOLD)
+  doc.setLineWidth(0.5)
+  doc.line(16, y, W - 16, y)
+  y += 6
+
+  // ── Description ──────────────────────────────────────────
+  if (orc.descricao) {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...GRAY)
+    doc.text('DESCRIÇÃO', 16, y)
+    y += 5
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...DARK)
+    const lines = doc.splitTextToSize(orc.descricao, W - 32)
+    doc.text(lines, 16, y)
+    y += lines.length * 5 + 4
+  }
+
+  // ── Items table ───────────────────────────────────────────
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...GRAY)
+  doc.text('ITENS DO ORÇAMENTO', 16, y)
+  y += 3
+
+  const hasArea = orc.itens.some(i => i.area || (i.largura && i.altura))
+
+  const head = hasArea
+    ? [['Tipo', 'Descrição', 'Dimensões', 'Qtd', 'Preço/Un', 'Total']]
+    : [['Tipo', 'Descrição', 'Qtd', 'Preço/Un', 'Total']]
+
+  const body = orc.itens.map(i => {
+    const dim = i.area
+      ? `${fmtNum(i.area)} m²`
+      : i.largura && i.altura
+        ? `${fmtNum(i.largura, 2)} × ${fmtNum(i.altura, 2)} m`
+        : '—'
+
+    return hasArea
+      ? [i.tipo, i.descricao, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+      : [i.tipo, i.descricao, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+  })
+
+  autoTable(doc, {
+    startY: y,
+    head,
+    body,
+    theme: 'grid',
+    headStyles: {
+      fillColor: DARK,
+      textColor: WHITE,
+      fontSize: 8,
+      fontStyle: 'bold',
+      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
+    },
+    bodyStyles: {
+      fontSize: 8.5,
+      textColor: DARK,
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
+    },
+    alternateRowStyles: { fillColor: [248, 248, 248] as [number, number, number] },
+    columnStyles: hasArea
+      ? { 0: { cellWidth: 18 }, 2: { cellWidth: 24, halign: 'center' }, 3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 26, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' } }
+      : { 0: { cellWidth: 18 }, 2: { cellWidth: 14, halign: 'center' }, 3: { cellWidth: 26, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' } },
+    margin: { left: 16, right: 16 },
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  y = (doc as any).lastAutoTable.finalY + 6
+
+  // ── Totals box ───────────────────────────────────────────
+  const subtotal = orc.itens.reduce((s, i) => s + i.total_item, 0)
+  const totalLines: [string, string, boolean][] = [
+    ['Subtotal dos itens', fmt(subtotal), false],
+  ]
+  if (orc.mao_obra > 0) totalLines.push(['Mão de obra', fmt(orc.mao_obra), false])
+  if (orc.desconto_rs > 0) totalLines.push([`Desconto`, `– ${fmt(orc.desconto_rs)}`, false])
+  totalLines.push(['TOTAL GERAL', fmt(orc.total), true])
+
+  const boxW = 90
+  const boxX = W - 16 - boxW
+  const lineH = 7
+  const boxH = totalLines.length * lineH + 8
+
+  // Box background
+  doc.setFillColor(245, 243, 238)
+  doc.roundedRect(boxX, y, boxW, boxH, 2, 2, 'F')
+  doc.setDrawColor(...GOLD)
+  doc.setLineWidth(0.5)
+  doc.roundedRect(boxX, y, boxW, boxH, 2, 2, 'S')
+
+  totalLines.forEach(([label, val, isFinal], idx) => {
+    const ry = y + 5 + idx * lineH
+    if (isFinal) {
+      doc.setFillColor(...GOLD)
+      doc.rect(boxX, ry - 4, boxW, lineH + 1, 'F')
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...DARK)
+      doc.text(label, boxX + 5, ry + 1)
+      doc.text(val, boxX + boxW - 5, ry + 1, { align: 'right' })
+    } else {
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...GRAY)
+      doc.text(label, boxX + 5, ry)
+      doc.setTextColor(...DARK)
+      doc.text(val, boxX + boxW - 5, ry, { align: 'right' })
+    }
+  })
+
+  y += boxH + 8
+
+  // ── Observações ──────────────────────────────────────────
+  if (orc.observacoes) {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...GRAY)
+    doc.text('OBSERVAÇÕES', 16, y)
+    y += 5
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...DARK)
+    const obsLines = doc.splitTextToSize(orc.observacoes, W - 32)
+    doc.text(obsLines, 16, y)
+    y += obsLines.length * 4.5 + 6
+  }
+
+  // ── Signature lines ───────────────────────────────────────
+  const pageH = 297
+  const sigY = Math.max(y + 10, pageH - 35)
+
+  doc.setDrawColor(...GRAY)
+  doc.setLineWidth(0.3)
+  doc.line(16, sigY, 90, sigY)
+  doc.line(W / 2 + 4, sigY, W - 16, sigY)
+
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...GRAY)
+  doc.text('Assinatura do cliente', 16, sigY + 4)
+  doc.text('Responsável pela marmoraria', W / 2 + 4, sigY + 4)
+
+  // ── Footer ────────────────────────────────────────────────
+  doc.setFillColor(...DARK)
+  doc.rect(0, pageH - 12, W, 12, 'F')
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(150, 140, 110)
+  doc.text(`${marmoraria.nome}  ·  Gerado por MarmoApp`, W / 2, pageH - 5, { align: 'center' })
+
+  return doc
+}
