@@ -73,9 +73,12 @@ export interface Orcamento {
   status: 'rascunho' | 'enviado' | 'aprovado' | 'recusado' | 'expired'
   crm_status?: 'novo' | 'enviado' | 'visualizado' | 'em_negociacao' | 'fechado' | 'perdido'
   producao_status?: ProducaoStatus
+  titulo?: string
+  data_validade?: string
   descricao?: string
   mao_obra?: number
   maoObra?: number
+  subtotal?: number
   desconto_rs?: number
   desconto?: number
   total?: number

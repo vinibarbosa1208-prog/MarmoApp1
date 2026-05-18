@@ -65,6 +65,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clienteId: o.cliente_id,
       maoObra: o.mao_obra,
       desconto: o.desconto_rs,
+      descricao: o.titulo,
+      validade: o.data_validade,
       producao_status: o.producao_status || 'comercial',
       total: o.total || 0,
       itens: (itens || []).filter(i => i.orcamento_id === o.id).map(i => ({

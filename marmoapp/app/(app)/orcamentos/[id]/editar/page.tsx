@@ -94,12 +94,12 @@ export default function EditarOrcamentoPage() {
     if (!orc) return
     setForm({
       cliente_id: orc.cliente_id || orc.clienteId || '',
-      descricao: orc.descricao || '',
+      descricao: orc.titulo || orc.descricao || '',
       status: orc.status || 'rascunho',
       mao_obra: String(orc.mao_obra || orc.maoObra || ''),
       desconto_rs: String(orc.desconto_rs || orc.desconto || ''),
       observacoes: orc.observacoes || '',
-      validade: orc.validade || '',
+      validade: orc.data_validade || orc.validade || '',
     })
 
     supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcId).then(({ data }) => {
@@ -169,25 +169,29 @@ export default function EditarOrcamentoPage() {
   const maoObra = parseFloat(form.mao_obra) || 0
   const desconto = parseFloat(form.desconto_rs) || 0
   const totalFinal = subtotal + maoObra - desconto
+  const descontoExcede = desconto > 0 && desconto > subtotal + maoObra
 
   async function salvar() {
     setSaving(true)
     try {
-      await supabase.from('orcamentos').update({
+      const { error: orcErr } = await supabase.from('orcamentos').update({
         cliente_id: form.cliente_id || null,
-        descricao: form.descricao,
+        titulo: form.descricao || 'Orçamento',
         status: form.status,
+        subtotal: subtotal,
         mao_obra: maoObra,
         desconto_rs: desconto,
         total: totalFinal,
         observacoes: form.observacoes,
-        validade: form.validade || null,
+        data_validade: form.validade || null,
       }).eq('id', orcId)
+      if (orcErr) throw orcErr
 
-      await supabase.from('orcamento_itens').delete().eq('orcamento_id', orcId)
+      const { error: delErr } = await supabase.from('orcamento_itens').delete().eq('orcamento_id', orcId)
+      if (delErr) throw delErr
 
       if (itens.length > 0 && marmoraria) {
-        await supabase.from('orcamento_itens').insert(itens.map(i => ({
+        const { error: insErr } = await supabase.from('orcamento_itens').insert(itens.map(i => ({
           orcamento_id: orcId,
           marmoraria_id: marmoraria.id,
           tipo: i.tipo,
@@ -206,6 +210,7 @@ export default function EditarOrcamentoPage() {
           altura_frontao: i.altura_frontao || null,
           dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
         })))
+        if (insErr) throw insErr
       }
 
       await loadOrcamentos()
@@ -402,12 +407,17 @@ export default function EditarOrcamentoPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">DESCONTO (R$)</label>
-                <input className="form-input" type="number" step="0.01" value={form.desconto_rs} onChange={e => up('desconto_rs', e.target.value)} />
+                <input className="form-input" type="number" min="0" step="0.01" value={form.desconto_rs} onChange={e => up('desconto_rs', e.target.value)} />
+                {descontoExcede && (
+                  <p style={{ color: '#c0392b', fontSize: 11, marginTop: 3 }}>
+                    Desconto não pode ser maior que o total.
+                  </p>
+                )}
               </div>
               <hr style={{ border: 'none', borderTop: '2px solid var(--gold)', margin: '8px 0' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700 }}>
                 <span>TOTAL</span>
-                <span style={{ color: 'var(--gold)' }}>{fmt(totalFinal)}</span>
+                <span style={{ color: descontoExcede ? '#c0392b' : 'var(--gold)' }}>{fmt(Math.max(0, totalFinal))}</span>
               </div>
             </div>
           </div>

@@ -133,6 +133,7 @@ export default function NovoOrcamentoPage() {
   const maoObra = parseFloat(form.mao_obra) || 0
   const desconto = parseFloat(form.desconto_rs) || 0
   const totalFinal = subtotal + maoObra - desconto
+  const descontoExcede = desconto > 0 && desconto > subtotal + maoObra
 
   async function salvar() {
     if (!marmoraria) return
@@ -143,13 +144,14 @@ export default function NovoOrcamentoPage() {
         .insert({
           marmoraria_id: marmoraria.id,
           cliente_id: form.cliente_id || null,
-          descricao: form.descricao,
+          titulo: form.descricao || 'Orçamento',
           status: form.status,
+          subtotal: subtotal,
           mao_obra: maoObra,
           desconto_rs: desconto,
           total: totalFinal,
           observacoes: form.observacoes,
-          validade: form.validade || null,
+          data_validade: form.validade || null,
           crm_status: 'novo',
           producao_status: 'comercial',
         })
@@ -398,11 +400,16 @@ export default function NovoOrcamentoPage() {
                   <label className="form-label">DESCONTO (R$)</label>
                   <input className="form-input" type="number" min="0" step="0.01" placeholder="0.00"
                     value={form.desconto_rs} onChange={e => up('desconto_rs', e.target.value)} />
+                  {descontoExcede && (
+                    <p style={{ color: '#c0392b', fontSize: 11, marginTop: 3 }}>
+                      Desconto não pode ser maior que o total.
+                    </p>
+                  )}
                 </div>
                 <hr style={{ border: 'none', borderTop: '2px solid var(--gold)', margin: '4px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700 }}>
                   <span>TOTAL</span>
-                  <span style={{ color: 'var(--gold)' }}>{fmt(totalFinal)}</span>
+                  <span style={{ color: descontoExcede ? '#c0392b' : 'var(--gold)' }}>{fmt(Math.max(0, totalFinal))}</span>
                 </div>
               </div>
             </div>

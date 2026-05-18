@@ -126,7 +126,7 @@ export default function VerOrcamentoPage() {
   const subtotal = itens.reduce((s, i) => s + (i.total_item || i.total || i.preco_unitario * i.quantidade), 0)
   const maoObra = orc.mao_obra || orc.maoObra || 0
   const desconto = orc.desconto_rs || orc.desconto || 0
-  const totalFinal = orc.total || orcTotal(orc)
+  const totalFinal = loadingItens ? (orc.total || orcTotal(orc)) : subtotal + maoObra - desconto
   const year = new Date(orc.created_at).getFullYear()
   const num = String(orc.numero ?? 0).padStart(4, '0')
   const orcNumStr = `ORC-${year}-${num}`
