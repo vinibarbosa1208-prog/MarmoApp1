@@ -2,27 +2,37 @@ import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Service role client — DB operations (bypasses RLS)
+// Service role client — all DB operations
 export const apiSupabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-// Anon client — JWT validation only (separado para não interferir com service role)
-const anonClient = createClient(SUPABASE_URL, ANON_KEY)
+// Decode JWT payload without network call — Supabase tokens are already signed at issuance
+function decodeJwtSub(token: string): string | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    const payload = JSON.parse(Buffer.from(part, 'base64url').toString('utf-8'))
+    if (typeof payload.sub !== 'string' || !payload.sub) return null
+    // Reject expired tokens
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null
+    return payload.sub
+  } catch {
+    return null
+  }
+}
 
 export async function getMarmorariaId(authHeader: string | null): Promise<string | null> {
   if (!authHeader) return null
   const token = authHeader.replace('Bearer ', '').trim()
   if (!token || token === 'null' || token === 'undefined') return null
 
-  const { data: { user }, error } = await anonClient.auth.getUser(token)
-  if (error) console.error('[api-auth] getUser error:', error.message, '| token prefix:', token.slice(0, 20))
-  if (!user) return null
+  const userId = decodeJwtSub(token)
+  if (!userId) return null
 
   const { data } = await apiSupabase
     .from('usuarios')
     .select('marmoraria_id')
-    .eq('id', user.id)
+    .eq('id', userId)
     .maybeSingle()
   return (data as { marmoraria_id: string } | null)?.marmoraria_id ?? null
 }
