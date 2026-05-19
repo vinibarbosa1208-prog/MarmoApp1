@@ -22,9 +22,14 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
 }
 
 // ── Auth helper ───────────────────────────────────────────────
-async function getToken(): Promise<string | null> {
+async function getToken(): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession()
-  return session?.access_token ?? null
+  const token = session?.access_token
+  if (!token) {
+    window.location.href = '/login'
+    throw new Error('Sessão expirada')
+  }
+  return token
 }
 
 async function apiFetch(url: string, opts?: RequestInit): Promise<Response> {
@@ -293,7 +298,7 @@ function EmptyRow({ label }: { label: string }) {
 
 // ── Main component ────────────────────────────────────────────
 export default function ConfiguracoesPage() {
-  const { toast } = useApp()
+  const { toast, user } = useApp()
 
   // Section 1 — tipos de agendamento
   const [tipos, setTipos] = useState<AgendaEventType[]>([])
@@ -334,7 +339,7 @@ export default function ConfiguracoesPage() {
     }
   }, [toast])
 
-  useEffect(() => { loadAll() }, [loadAll])
+  useEffect(() => { if (user) loadAll() }, [loadAll, user])
 
   // ── Generic error extractor ──────────────────────────────────
   async function extractError(res: Response): Promise<string> {

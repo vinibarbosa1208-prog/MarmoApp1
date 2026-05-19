@@ -92,9 +92,10 @@ export default function OrcamentosPage() {
     try {
       const { supabase: sb } = await import('@/lib/supabase')
       const { data: { session } } = await sb.auth.getSession()
+      if (!session?.access_token) { window.location.href = '/login'; return }
       const res = await fetch(`/api/orcamentos/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao excluir')

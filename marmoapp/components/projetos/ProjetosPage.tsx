@@ -98,8 +98,9 @@ export default function ProjetosPage() {
     setLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) { setLoading(false); return }
       const url = filterStatus ? `/api/projetos?status=${filterStatus}` : '/api/projetos'
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${session?.access_token}` } })
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${session.access_token}` } })
       if (res.ok) setProjetos(await res.json())
     } finally {
       setLoading(false)

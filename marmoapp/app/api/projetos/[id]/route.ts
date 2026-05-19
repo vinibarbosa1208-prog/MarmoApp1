@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getMarmorariaId, apiSupabase as supabase } from '@/lib/api-auth'
 import { calcularMargem } from '@/lib/projetos/calcular-margem'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-async function getMarmorariaId(authHeader: string | null): Promise<string | null> {
-  if (!authHeader) return null
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user } } = await supabase.auth.getUser(token)
-  if (!user) return null
-  const { data } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).maybeSingle()
-  return (data as { marmoraria_id: string } | null)?.marmoraria_id ?? null
-}
 
 // GET /api/projetos/[id] — projeto completo com custos e breakdown por tipo
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
