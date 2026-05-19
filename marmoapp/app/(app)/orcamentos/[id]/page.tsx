@@ -106,12 +106,9 @@ export default function VerOrcamentoPage() {
   async function excluirOrcamento() {
     setDeleting(true)
     try {
-      const { supabase: sb } = await import('@/lib/supabase')
-      const { data: { session } } = await sb.auth.getSession()
-      if (!session?.access_token) { window.location.href = '/login'; return }
       const res = await fetch(`/api/orcamentos/${orcId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        credentials: 'include',
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao excluir')

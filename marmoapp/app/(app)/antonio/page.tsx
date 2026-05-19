@@ -156,6 +156,7 @@ export default function AntonioPage() {
     try {
       const res = await fetch('/api/antonio/chat', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: next.map(m => ({ role: m.role, content: m.content })),
@@ -199,7 +200,7 @@ export default function AntonioPage() {
         try {
           const fd = new FormData()
           fd.append('audio', blob, 'audio.webm')
-          const res = await fetch('/api/antonio/audio', { method: 'POST', body: fd })
+          const res = await fetch('/api/antonio/audio', { method: 'POST', credentials: 'include', body: fd })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error)
           setInput(data.text)
