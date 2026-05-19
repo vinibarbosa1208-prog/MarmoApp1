@@ -1,39 +1,46 @@
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Service role client — all DB operations
+// Service role client — used by route handlers for all DB operations
 export const apiSupabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-// Decode JWT payload without network call — Supabase tokens are already signed at issuance
-function decodeJwtSub(token: string): string | null {
-  try {
-    const part = token.split('.')[1]
-    if (!part) return null
-    const payload = JSON.parse(Buffer.from(part, 'base64url').toString('utf-8'))
-    if (typeof payload.sub !== 'string' || !payload.sub) return null
-    // Reject expired tokens
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null
-    return payload.sub
-  } catch {
-    return null
-  }
-}
+// Reads the Supabase session from cookies (set by createBrowserClient on the client)
+// The _ignored param keeps callers that still pass the auth header working unchanged
+export async function getMarmorariaId(_ignored?: string | null): Promise<string | null> {
+  const cookieStore = await cookies()
 
-export async function getMarmorariaId(authHeader: string | null): Promise<string | null> {
-  if (!authHeader) return null
-  const token = authHeader.replace('Bearer ', '').trim()
-  if (!token || token === 'null' || token === 'undefined') return null
+  const authClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Route handlers cannot set cookies after the response has started
+          }
+        },
+      },
+    }
+  )
 
-  const userId = decodeJwtSub(token)
-  if (!userId) return null
+  const { data: { user }, error } = await authClient.auth.getUser()
+  if (error || !user) return null
 
-  const { data, error } = await apiSupabase
+  const { data, error: dbErr } = await apiSupabase
     .from('usuarios')
     .select('marmoraria_id')
-    .eq('id', userId)
+    .eq('id', user.id)
     .maybeSingle()
-  if (error) throw new Error(`auth_db: ${error.message}`)
-  return (data as { marmoraria_id: string } | null)?.marmoraria_id ?? null
+
+  if (dbErr) throw new Error(`auth_db: ${dbErr.message}`)
+  return data?.marmoraria_id ?? null
 }
