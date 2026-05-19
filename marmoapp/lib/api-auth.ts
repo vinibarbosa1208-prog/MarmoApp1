@@ -29,10 +29,11 @@ export async function getMarmorariaId(authHeader: string | null): Promise<string
   const userId = decodeJwtSub(token)
   if (!userId) return null
 
-  const { data } = await apiSupabase
+  const { data, error } = await apiSupabase
     .from('usuarios')
     .select('marmoraria_id')
     .eq('id', userId)
     .maybeSingle()
+  if (error) throw new Error(`auth_db: ${error.message}`)
   return (data as { marmoraria_id: string } | null)?.marmoraria_id ?? null
 }
