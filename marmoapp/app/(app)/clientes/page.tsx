@@ -44,7 +44,19 @@ function ClienteModal({
     setLoading(true)
     setError('')
     try {
-      const payload = { ...form, marmoraria_id: marmorariaId }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('marmoraria_id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      const marmoraria_id = usuario?.marmoraria_id
+      if (!marmoraria_id) throw new Error('Marmoraria não encontrada para este usuário')
+
+      const payload = { ...form, marmoraria_id }
       const { error: err } = cliente
         ? await supabase.from('clientes').update(payload).eq('id', cliente.id)
         : await supabase.from('clientes').insert(payload)
