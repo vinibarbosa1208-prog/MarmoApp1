@@ -35,7 +35,10 @@ export async function getMarmorariaId(_ignored?: string | null): Promise<string 
   const { data: { user }, error } = await authClient.auth.getUser()
   if (error || !user) return null
 
-  const { data, error: dbErr } = await apiSupabase
+  // Use authClient (user JWT) so the RLS policy USING (auth.uid() = id) is satisfied.
+  // apiSupabase falls back to anon key when SUPABASE_SERVICE_KEY is absent in Vercel,
+  // which causes "permission denied for table usuarios" on RLS-protected tables.
+  const { data, error: dbErr } = await authClient
     .from('usuarios')
     .select('marmoraria_id')
     .eq('id', user.id)
