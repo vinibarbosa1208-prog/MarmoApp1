@@ -24,6 +24,7 @@ interface Pedido {
   data_pedido: string
   data_recebimento: string | null
   observacoes: string | null
+  valor_total: number | null
   fornecedoras: { nome: string } | null
   insumo_pedido_itens: { id: string; quantidade: number; preco_unitario: number | null; insumos: { nome: string; unidade: string } }[]
 }
@@ -482,13 +483,13 @@ function AbaPedidos() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Nº Pedido</th><th>Fornecedora</th><th>Status</th><th>Data pedido</th><th>Data recebimento</th><th>Itens</th><th>Ações</th></tr>
+              <tr><th>Nº Pedido</th><th>Fornecedora</th><th>Status</th><th>Data pedido</th><th>Data recebimento</th><th>Itens</th><th>Valor Total</th><th>Ações</th></tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7}><div className="empty-state"><p>Carregando...</p></div></td></tr>
+                <tr><td colSpan={8}><div className="empty-state"><p>Carregando...</p></div></td></tr>
               ) : pedidos.length === 0 ? (
-                <tr><td colSpan={7}><div className="empty-state"><h3>Nenhum pedido</h3></div></td></tr>
+                <tr><td colSpan={8}><div className="empty-state"><h3>Nenhum pedido</h3></div></td></tr>
               ) : pedidos.map(p => (
                 <tr key={p.id}>
                   <td style={{ fontWeight: 500 }}>{p.numero_pedido || '—'}</td>
@@ -497,6 +498,7 @@ function AbaPedidos() {
                   <td className="text-sm">{fmtDate(p.data_pedido)}</td>
                   <td className="text-sm">{fmtDate(p.data_recebimento)}</td>
                   <td className="text-sm">{(p.insumo_pedido_itens || []).length} iten(s)</td>
+                  <td className="font-bold">{p.valor_total != null ? fmt(p.valor_total) : '—'}</td>
                   <td>
                     {p.status === 'pendente' && (
                       <button className="btn btn-ghost btn-sm" onClick={() => receber(p.id)}>
