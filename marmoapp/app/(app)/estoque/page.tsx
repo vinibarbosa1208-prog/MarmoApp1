@@ -18,7 +18,8 @@ function MaterialModal({
     nome: material?.nome || '',
     tipo: material?.tipo || '',
     unidade: material?.unidade || 'm²',
-    preco_unitario: String(material?.preco_unitario || material?.preco || ''),
+    custo_unitario: String(material?.custo_unitario || ''),
+    preco_venda: String(material?.preco_venda || material?.preco_unitario || material?.preco || ''),
     estoque_atual: String(material?.estoque_atual || ''),
     estoque_minimo: String(material?.estoque_minimo || ''),
     fornecedor: material?.fornecedor || '',
@@ -31,10 +32,16 @@ function MaterialModal({
   async function save() {
     if (!form.nome) { setError('Nome é obrigatório'); return }
     setLoading(true)
+    const precoVenda = parseFloat(form.preco_venda) || 0
     const payload = {
-      ...form,
+      nome: form.nome,
+      tipo: form.tipo,
+      unidade: form.unidade,
+      fornecedor: form.fornecedor,
       marmoraria_id: marmorariaId,
-      preco_unitario: parseFloat(form.preco_unitario) || 0,
+      custo_unitario: parseFloat(form.custo_unitario) || 0,
+      preco_venda: precoVenda,
+      preco_unitario: precoVenda,
       estoque_atual: parseFloat(form.estoque_atual) || 0,
       estoque_minimo: parseFloat(form.estoque_minimo) || 0,
     }
@@ -65,19 +72,25 @@ function MaterialModal({
               <input className="form-input" placeholder="Ex: Mármore, Granito" value={form.tipo} onChange={e => up('tipo', e.target.value)} />
             </div>
           </div>
+          <div className="form-group">
+            <label className="form-label">UNIDADE</label>
+            <select className="form-select" value={form.unidade} onChange={e => up('unidade', e.target.value)}>
+              <option value="m²">m²</option>
+              <option value="m">m linear</option>
+              <option value="un">unidade</option>
+              <option value="kg">kg</option>
+            </select>
+          </div>
           <div className="form-row form-row-2">
             <div className="form-group">
-              <label className="form-label">UNIDADE</label>
-              <select className="form-select" value={form.unidade} onChange={e => up('unidade', e.target.value)}>
-                <option value="m²">m²</option>
-                <option value="m">m linear</option>
-                <option value="un">unidade</option>
-                <option value="kg">kg</option>
-              </select>
+              <label className="form-label">VALOR DE COMPRA (R$)</label>
+              <input className="form-input" type="number" step="0.01" placeholder="0.00" value={form.custo_unitario} onChange={e => up('custo_unitario', e.target.value)} />
+              <span style={{ fontSize: 11, color: 'var(--gray)', marginTop: 3, display: 'block' }}>Quanto você paga ao fornecedor por {form.unidade}</span>
             </div>
             <div className="form-group">
-              <label className="form-label">PREÇO / UNIDADE (R$)</label>
-              <input className="form-input" type="number" step="0.01" placeholder="0.00" value={form.preco_unitario} onChange={e => up('preco_unitario', e.target.value)} />
+              <label className="form-label">VALOR DE VENDA (R$)</label>
+              <input className="form-input" type="number" step="0.01" placeholder="0.00" value={form.preco_venda} onChange={e => up('preco_venda', e.target.value)} />
+              <span style={{ fontSize: 11, color: 'var(--gray)', marginTop: 3, display: 'block' }}>Quanto você cobra do cliente por {form.unidade}</span>
             </div>
           </div>
           <div className="form-row form-row-2">

@@ -94,6 +94,8 @@ export interface Material {
   nome: string
   tipo?: string
   unidade: string
+  custo_unitario?: number
+  preco_venda?: number
   preco_unitario?: number
   preco?: number
   preco_padrao?: number
