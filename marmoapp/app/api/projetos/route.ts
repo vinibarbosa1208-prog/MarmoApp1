@@ -1,40 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMarmorariaId, apiSupabase as supabase } from '@/lib/api-auth'
-import { calcularMargem } from '@/lib/projetos/calcular-margem'
-import type { CreateProjectInput } from '@/lib/projetos/types'
 
-// GET /api/projetos?status=em_andamento
 export async function GET(req: NextRequest) {
   try {
     const marmoraria_id = await getMarmorariaId(req.headers.get('authorization'))
     if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const status = req.nextUrl.searchParams.get('status')
+    const orcamento_id = req.nextUrl.searchParams.get('orcamento_id')
 
     let query = supabase
-      .from('projects')
-      .select('*, clientes(nome), project_costs(valor)')
+      .from('projetos')
+      .select('*, clientes(nome)')
       .eq('marmoraria_id', marmoraria_id)
       .order('created_at', { ascending: false })
 
     if (status) query = query.eq('status', status)
+    if (orcamento_id) query = query.eq('orcamento_id', orcamento_id)
 
     const { data, error } = await query
     if (error) throw error
 
-    const projetos = (data || []).map(p => {
-      const custos: { valor: number }[] = p.project_costs || []
-      const { custoTotal, margemValor, margemPercentual } = calcularMargem(p.valor_venda, custos)
-      return {
-        ...p,
-        cliente_nome: p.clientes?.nome ?? null,
-        custo_total: custoTotal,
-        margem_valor: margemValor,
-        margem_percentual: margemPercentual,
-        project_costs: undefined,
-        clientes: undefined,
-      }
-    })
+    const projetos = (data || []).map(p => ({
+      ...p,
+      cliente_nome: p.clientes?.nome ?? null,
+      clientes: undefined,
+      margem_percentual: p.valor_venda > 0 ? Math.round((p.margem_lucro / p.valor_venda) * 10000) / 100 : 0,
+    }))
 
     return NextResponse.json(projetos)
   } catch (e: unknown) {
@@ -42,21 +34,27 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/projetos
 export async function POST(req: NextRequest) {
   try {
     const marmoraria_id = await getMarmorariaId(req.headers.get('authorization'))
     if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const body: CreateProjectInput = await req.json()
-    if (!body.nome?.trim()) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
-    if (body.valor_venda === undefined || body.valor_venda < 0) {
-      return NextResponse.json({ error: 'Valor de venda inválido' }, { status: 400 })
-    }
+    const body = await req.json()
+    if (!body.titulo?.trim()) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
 
     const { data, error } = await supabase
-      .from('projects')
-      .insert({ ...body, marmoraria_id })
+      .from('projetos')
+      .insert({
+        marmoraria_id,
+        titulo: body.titulo.trim(),
+        descricao: body.descricao || null,
+        valor_venda: Number(body.valor_venda) || 0,
+        status: body.status || 'em_andamento',
+        cliente_id: body.cliente_id || null,
+        orcamento_id: body.orcamento_id || null,
+        data_inicio: body.data_inicio || null,
+        data_conclusao: body.data_conclusao || null,
+      })
       .select()
       .single()
 

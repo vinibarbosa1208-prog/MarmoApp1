@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
-import type { Project, ProjectStatus } from '@/lib/projetos/types'
+import type { Projeto, ProjectStatus } from '@/lib/projetos/types'
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
   em_andamento: 'Em andamento', concluido: 'Concluído', cancelado: 'Cancelado',
@@ -19,27 +18,22 @@ function margemColor(pct: number): string {
   return 'var(--red)'
 }
 
-interface NovoProjetoModalProps {
-  onClose: () => void
-  onSaved: () => void
-}
-
-function NovoProjetoModal({ onClose, onSaved }: NovoProjetoModalProps) {
+function NovoProjetoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [saving, setSaving] = useState(false)
-  const [nome, setNome] = useState('')
+  const [titulo, setTitulo] = useState('')
   const [valorVenda, setValorVenda] = useState('')
   const [descricao, setDescricao] = useState('')
   const [dataInicio, setDataInicio] = useState(new Date().toISOString().split('T')[0])
 
   async function salvar() {
-    if (!nome.trim()) return
+    if (!titulo.trim()) return
     setSaving(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/projetos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ nome: nome.trim(), valor_venda: parseFloat(valorVenda) || 0, descricao, data_inicio: dataInicio }),
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: titulo.trim(), valor_venda: parseFloat(valorVenda) || 0, descricao, data_inicio: dataInicio }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       onSaved()
@@ -58,8 +52,8 @@ function NovoProjetoModal({ onClose, onSaved }: NovoProjetoModalProps) {
         </div>
         <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Nome do projeto *</label>
-            <input className="form-control" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Bancada cozinha João Silva" />
+            <label className="form-label">Título do projeto *</label>
+            <input className="form-control" value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Bancada cozinha João Silva" />
           </div>
           <div className="form-row form-row-2">
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -78,7 +72,7 @@ function NovoProjetoModal({ onClose, onSaved }: NovoProjetoModalProps) {
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
             <button className="btn btn-outline" onClick={onClose} disabled={saving}>Cancelar</button>
-            <button className="btn btn-gold" onClick={salvar} disabled={saving || !nome.trim()}>
+            <button className="btn btn-gold" onClick={salvar} disabled={saving || !titulo.trim()}>
               {saving ? 'Criando...' : 'Criar projeto'}
             </button>
           </div>
@@ -89,7 +83,7 @@ function NovoProjetoModal({ onClose, onSaved }: NovoProjetoModalProps) {
 }
 
 export default function ProjetosPage() {
-  const [projetos, setProjetos] = useState<Project[]>([])
+  const [projetos, setProjetos] = useState<Projeto[]>([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('')
@@ -97,10 +91,8 @@ export default function ProjetosPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) { setLoading(false); return }
       const url = filterStatus ? `/api/projetos?status=${filterStatus}` : '/api/projetos'
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const res = await fetch(url, { credentials: 'include' })
       if (res.ok) setProjetos(await res.json())
     } finally {
       setLoading(false)
@@ -116,7 +108,6 @@ export default function ProjetosPage() {
         <button className="btn btn-gold" onClick={() => setShowModal(true)}>+ Novo projeto</button>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {(['', 'em_andamento', 'concluido', 'cancelado'] as const).map(s => (
           <button key={s} className={`btn btn-sm ${filterStatus === s ? 'btn-gold' : 'btn-outline'}`}
@@ -127,7 +118,6 @@ export default function ProjetosPage() {
         {loading && <span style={{ fontSize: 12, color: 'var(--gray)', alignSelf: 'center' }}>Carregando...</span>}
       </div>
 
-      {/* Stats */}
       {projetos.length > 0 && (() => {
         const ativos = projetos.filter(p => p.status === 'em_andamento')
         const receitaTotal = ativos.reduce((s, p) => s + p.valor_venda, 0)
@@ -157,7 +147,6 @@ export default function ProjetosPage() {
         )
       })()}
 
-      {/* Project cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
         {projetos.map(p => {
           const margem = p.margem_percentual ?? 0
@@ -170,7 +159,7 @@ export default function ProjetosPage() {
                 <div className="card-body">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--dark)', marginBottom: 2 }}>{p.nome}</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--dark)', marginBottom: 2 }}>{p.titulo}</div>
                       {p.cliente_nome && <div style={{ fontSize: 12, color: 'var(--gray)' }}>{p.cliente_nome}</div>}
                     </div>
                     <span className={`badge ${STATUS_BADGE[p.status]}`}>{STATUS_LABEL[p.status]}</span>
@@ -189,7 +178,6 @@ export default function ProjetosPage() {
                       <div style={{ fontSize: 15, fontWeight: 700, color: cor }}>{margem}%</div>
                     </div>
                   </div>
-                  {/* Margem bar */}
                   <div style={{ height: 4, background: 'var(--marble2)', borderRadius: 2, marginTop: 12 }}>
                     <div style={{ height: '100%', width: `${Math.max(0, Math.min(100, margem))}%`, background: cor, borderRadius: 2, transition: 'width 0.4s' }} />
                   </div>
@@ -200,7 +188,10 @@ export default function ProjetosPage() {
         })}
         {projetos.length === 0 && !loading && (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--gray)', padding: '60px 0' }}>
-            Nenhum projeto encontrado. <button className="btn btn-gold btn-sm" style={{ marginLeft: 8 }} onClick={() => setShowModal(true)}>Criar primeiro projeto</button>
+            Nenhum projeto encontrado.{' '}
+            <button className="btn btn-gold btn-sm" style={{ marginLeft: 8 }} onClick={() => setShowModal(true)}>
+              Criar primeiro projeto
+            </button>
           </div>
         )}
       </div>

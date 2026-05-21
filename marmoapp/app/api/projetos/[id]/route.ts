@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMarmorariaId, apiSupabase as supabase } from '@/lib/api-auth'
-import { calcularMargem } from '@/lib/projetos/calcular-margem'
 
-// GET /api/projetos/[id] — projeto completo com custos e breakdown por tipo
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -10,15 +8,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { data: projeto, error } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        clientes(nome),
-        project_costs(
-          id, descricao, valor, data, created_at, updated_at,
-          tipo:project_cost_types(id, nome, cor)
-        )
-      `)
+      .from('projetos')
+      .select('*, clientes(nome), projeto_custos(*), projeto_etapas(*)')
       .eq('id', id)
       .eq('marmoraria_id', marmoraria_id)
       .single()
@@ -26,35 +17,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (error) throw error
     if (!projeto) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
 
-    const custos = projeto.project_costs || []
-    const { custoTotal, margemValor, margemPercentual } = calcularMargem(projeto.valor_venda, custos)
+    const margem_percentual = projeto.valor_venda > 0
+      ? Math.round((projeto.margem_lucro / projeto.valor_venda) * 10000) / 100
+      : 0
 
-    // Breakdown por tipo
-    const byTipo: Record<string, { nome: string; cor: string; total: number }> = {}
-    for (const c of custos) {
-      const tipoId = c.tipo?.id ?? 'sem_tipo'
-      const tipoNome = c.tipo?.nome ?? 'Sem categoria'
-      const tipoCor = c.tipo?.cor ?? '#888888'
-      if (!byTipo[tipoId]) byTipo[tipoId] = { nome: tipoNome, cor: tipoCor, total: 0 }
-      byTipo[tipoId].total += Number(c.valor)
-    }
+    const etapas = (projeto.projeto_etapas || []).sort(
+      (a: { entrada_em: string }, b: { entrada_em: string }) =>
+        new Date(a.entrada_em).getTime() - new Date(b.entrada_em).getTime()
+    )
 
     return NextResponse.json({
       ...projeto,
       cliente_nome: projeto.clientes?.nome ?? null,
       clientes: undefined,
-      custos,
-      custo_total: custoTotal,
-      margem_valor: margemValor,
-      margem_percentual: margemPercentual,
-      breakdown_por_tipo: Object.values(byTipo),
+      custos: projeto.projeto_custos || [],
+      projeto_custos: undefined,
+      etapas,
+      projeto_etapas: undefined,
+      margem_percentual,
     })
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
   }
 }
 
-// PUT /api/projetos/[id]
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
@@ -65,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     delete body.marmoraria_id
 
     const { data, error } = await supabase
-      .from('projects')
+      .from('projetos')
       .update(body)
       .eq('id', id)
       .eq('marmoraria_id', marmoraria_id)

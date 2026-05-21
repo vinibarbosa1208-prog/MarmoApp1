@@ -7,45 +7,60 @@ export interface ProjectCostType {
   cor: string
   created_at: string
 }
+export type CustoTipo = 'material' | 'mao_obra' | 'instalacao' | 'operacional' | 'outros'
+export type ProjetoEtapa = 'comercial' | 'producao' | 'pronto' | 'agendado' | 'instalacao' | 'concluido'
 
-export interface ProjectCost {
+export interface ProjetoCusto {
   id: string
-  project_id: string
-  tipo_id?: string
+  projeto_id: string
+  marmoraria_id: string
+  tipo: CustoTipo
   descricao: string
   valor: number
   data: string
+  funcionario_id?: string | null
   created_at: string
-  updated_at: string
-  // joined
-  tipo?: ProjectCostType
 }
 
-export interface Project {
+export interface ProjetoEtapaRecord {
+  id: string
+  projeto_id: string
+  etapa: ProjetoEtapa
+  entrada_em: string
+  saida_em?: string | null
+  dias_na_etapa?: number | null
+}
+
+export interface Projeto {
   id: string
   marmoraria_id: string
-  orcamento_id?: string
-  cliente_id?: string
-  nome: string
-  descricao?: string
+  orcamento_id?: string | null
+  cliente_id?: string | null
+  titulo: string
+  descricao?: string | null
   valor_venda: number
   status: ProjectStatus
-  data_inicio?: string
-  data_conclusao?: string
+  data_inicio?: string | null
+  data_conclusao?: string | null
+  custo_material: number
+  custo_mao_obra: number
+  custo_instalacao: number
+  custo_operacional: number
+  custo_total: number
+  margem_lucro: number
   created_at: string
   updated_at: string
   // computed/joined
-  custo_total?: number
-  margem_valor?: number
+  cliente_nome?: string | null
   margem_percentual?: number
-  cliente_nome?: string
-  custos?: ProjectCost[]
+  custos?: ProjetoCusto[]
+  etapas?: ProjetoEtapaRecord[]
 }
 
-export interface CreateProjectInput {
+export interface CreateProjetoInput {
   orcamento_id?: string
   cliente_id?: string
-  nome: string
+  titulo: string
   descricao?: string
   valor_venda: number
   status?: ProjectStatus
@@ -53,9 +68,10 @@ export interface CreateProjectInput {
   data_conclusao?: string
 }
 
-export interface CreateProjectCostInput {
-  tipo_id?: string
+export interface CreateProjetoCustoInput {
+  tipo: CustoTipo
   descricao: string
   valor: number
   data?: string
+  funcionario_id?: string
 }

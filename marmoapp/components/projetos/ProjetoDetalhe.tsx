@@ -2,16 +2,26 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { fmt } from '@/lib/utils'
 import { useApp } from '@/contexts/AppContext'
 import LancarCustoModal from './LancarCustoModal'
-import type { Project, ProjectCost, ProjectCostType } from '@/lib/projetos/types'
+import type { Projeto, ProjetoEtapa } from '@/lib/projetos/types'
 
-type ProjectWithBreakdown = Project & {
-  custos: ProjectCost[]
-  breakdown_por_tipo: { nome: string; cor: string; total: number }[]
-}
+const ETAPAS_SEQ: { id: ProjetoEtapa; label: string }[] = [
+  { id: 'comercial', label: 'Comercial' },
+  { id: 'producao', label: 'Produção' },
+  { id: 'pronto', label: 'Pronto' },
+  { id: 'agendado', label: 'Agendado' },
+  { id: 'instalacao', label: 'Instalação' },
+  { id: 'concluido', label: 'Concluído' },
+]
+
+const BREAKDOWN = [
+  { key: 'custo_material' as const, label: 'Material', cor: '#2980B9' },
+  { key: 'custo_mao_obra' as const, label: 'Mão de Obra', cor: '#8E44AD' },
+  { key: 'custo_instalacao' as const, label: 'Instalação', cor: '#27AE60' },
+  { key: 'custo_operacional' as const, label: 'Operacional', cor: '#E67E22' },
+]
 
 function margemColor(pct: number): string {
   if (pct >= 30) return 'var(--green)'
@@ -22,34 +32,16 @@ function margemColor(pct: number): string {
 export default function ProjetoDetalhe({ id }: { id: string }) {
   const { toast } = useApp()
   const router = useRouter()
-  const [projeto, setProjeto] = useState<ProjectWithBreakdown | null>(null)
-  const [tipos, setTipos] = useState<ProjectCostType[]>([])
+  const [projeto, setProjeto] = useState<Projeto | null>(null)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [avancando, setAvancando] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-      const [projRes, tiposRes] = await Promise.all([
-        fetch(`/api/projetos/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`/api/projetos/${id}/custos`, { headers: { Authorization: `Bearer ${token}` } }),
-      ])
-      if (!projRes.ok) { router.push('/projetos'); return }
-      const projData = await projRes.json()
-      if (tiposRes.ok) projData.custos = await tiposRes.json()
-
-      setProjeto(projData)
-
-      // Load cost types
-      const { data: { user } } = await supabase.auth.getUser(token!)
-      if (user) {
-        const { data: usr } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).maybeSingle()
-        if (usr?.marmoraria_id) {
-          const { data: ct } = await supabase.from('project_cost_types').select('*').eq('marmoraria_id', usr.marmoraria_id).order('nome')
-          setTipos(ct || [])
-        }
-      }
+      const res = await fetch(`/api/projetos/${id}`, { credentials: 'include' })
+      if (!res.ok) { router.push('/projetos'); return }
+      setProjeto(await res.json())
     } finally {
       setLoading(false)
     }
@@ -58,13 +50,31 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
   useEffect(() => { load() }, [load])
 
   async function deletarCusto(custoId: string) {
-    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch(`/api/projetos/${id}/custos/${custoId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      credentials: 'include',
     })
     if (res.ok) { toast('Custo removido', 'ok'); load() }
     else toast('Erro ao remover custo', 'err')
+  }
+
+  async function avancarEtapa(etapa: ProjetoEtapa) {
+    setAvancando(true)
+    try {
+      const res = await fetch(`/api/projetos/${id}/etapas`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ etapa }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      toast('Etapa avançada!', 'ok2')
+      load()
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : 'Erro ao avançar', 'err')
+    } finally {
+      setAvancando(false)
+    }
   }
 
   if (loading) return <div className="page-inner"><div style={{ textAlign: 'center', color: 'var(--gray)', padding: 60 }}>Carregando...</div></div>
@@ -72,6 +82,15 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
 
   const margem = projeto.margem_percentual ?? 0
   const cor = margemColor(margem)
+  const etapas = projeto.etapas ?? []
+  const etapaAtual = etapas.find(e => !e.saida_em)
+  const etapaAtualIdx = etapaAtual ? ETAPAS_SEQ.findIndex(s => s.id === etapaAtual.etapa) : -1
+  const proxEtapa = etapaAtualIdx >= 0 && etapaAtualIdx < ETAPAS_SEQ.length - 1
+    ? ETAPAS_SEQ[etapaAtualIdx + 1]
+    : null
+
+  const custos = projeto.custos ?? []
+  const outros = (projeto.custo_total ?? 0) - BREAKDOWN.reduce((s, b) => s + (projeto[b.key] ?? 0), 0)
 
   return (
     <div className="page-inner">
@@ -80,14 +99,21 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
           <button className="btn btn-ghost btn-sm" onClick={() => router.push('/projetos')} style={{ marginBottom: 4 }}>
             ← Projetos
           </button>
-          <h1 className="page-title" style={{ marginTop: 4 }}>{projeto.nome}</h1>
+          <h1 className="page-title" style={{ marginTop: 4 }}>{projeto.titulo}</h1>
           {projeto.cliente_nome && <div style={{ fontSize: 13, color: 'var(--gray)' }}>{projeto.cliente_nome}</div>}
         </div>
-        <button className="btn btn-gold" onClick={() => setShowModal(true)}>+ Lançar custo</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {projeto.status !== 'concluido' && (
+            <button className="btn btn-outline btn-sm" onClick={() => avancarEtapa('concluido')} disabled={avancando}>
+              ✅ Marcar Concluído
+            </button>
+          )}
+          <button className="btn btn-gold" onClick={() => setShowModal(true)}>+ Lançar custo</button>
+        </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
+      {/* Resumo financeiro */}
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 20 }}>
         <div className="stat-card" style={{ borderLeftColor: 'var(--blue)' }}>
           <div className="stat-info">
             <div className="stat-value">{fmt(projeto.valor_venda)}</div>
@@ -102,14 +128,63 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
         </div>
         <div className="stat-card" style={{ borderLeftColor: cor }}>
           <div className="stat-info">
-            <div className="stat-value" style={{ color: cor }}>{fmt(projeto.margem_valor ?? 0)}</div>
-            <div className="stat-label">Margem (R$)</div>
+            <div className="stat-value" style={{ color: cor }}>{fmt(projeto.margem_lucro ?? 0)}</div>
+            <div className="stat-label">Lucro (R$)</div>
           </div>
         </div>
         <div className="stat-card" style={{ borderLeftColor: cor }}>
           <div className="stat-info">
             <div className="stat-value" style={{ color: cor, fontSize: 24 }}>{margem}%</div>
-            <div className="stat-label">Margem (%)</div>
+            <div className="stat-label">Margem</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline de Etapas */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-header">
+          <span className="card-title">Etapas do Projeto</span>
+          {proxEtapa && (
+            <button className="btn btn-gold btn-sm" onClick={() => avancarEtapa(proxEtapa.id)} disabled={avancando}>
+              {avancando ? 'Avançando...' : `→ ${proxEtapa.label}`}
+            </button>
+          )}
+        </div>
+        <div className="card-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', paddingBottom: 8 }}>
+            {ETAPAS_SEQ.map((etapa, idx) => {
+              const registro = etapas.find(e => e.etapa === etapa.id)
+              const isAtual = etapaAtual?.etapa === etapa.id
+              const isConcluida = !!registro?.saida_em
+              const isPendente = !registro
+              return (
+                <div key={etapa.id} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 100 }}>
+                  <div style={{ textAlign: 'center', flex: 1 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%', margin: '0 auto 6px',
+                      background: isConcluida ? 'var(--green)' : isAtual ? 'var(--gold)' : 'var(--marble2)',
+                      border: isAtual ? '2px solid var(--gold)' : '2px solid transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, color: (isConcluida || isAtual) ? '#fff' : 'var(--gray2)',
+                    }}>
+                      {isConcluida ? '✓' : idx + 1}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: isAtual ? 700 : 400, color: isAtual ? 'var(--gold)' : isPendente ? 'var(--gray2)' : 'var(--dark)' }}>
+                      {etapa.label}
+                    </div>
+                    {registro && (
+                      <div style={{ fontSize: 10, color: 'var(--gray)', marginTop: 2 }}>
+                        {new Date(registro.entrada_em).toLocaleDateString('pt-BR')}
+                        {registro.dias_na_etapa != null && ` · ${registro.dias_na_etapa}d`}
+                      </div>
+                    )}
+                  </div>
+                  {idx < ETAPAS_SEQ.length - 1 && (
+                    <div style={{ height: 2, flex: '0 0 20px', background: isConcluida ? 'var(--green)' : 'var(--marble2)' }} />
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -119,19 +194,21 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
         <div className="card">
           <div className="card-header"><span className="card-title">Por categoria</span></div>
           <div className="card-body">
-            {(projeto.breakdown_por_tipo || []).length === 0 && (
+            {(projeto.custo_total ?? 0) === 0 && (
               <div style={{ color: 'var(--gray)', fontSize: 13 }}>Sem custos lançados</div>
             )}
-            {(projeto.breakdown_por_tipo || []).map(b => {
-              const pct = (projeto.custo_total ?? 0) > 0 ? (b.total / (projeto.custo_total ?? 1)) * 100 : 0
+            {BREAKDOWN.map(b => {
+              const val = projeto[b.key] ?? 0
+              if (val === 0) return null
+              const pct = (projeto.custo_total ?? 0) > 0 ? (val / (projeto.custo_total ?? 1)) * 100 : 0
               return (
-                <div key={b.nome} style={{ marginBottom: 14 }}>
+                <div key={b.key} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: b.cor, display: 'inline-block' }} />
-                      {b.nome}
+                      {b.label}
                     </span>
-                    <strong>{fmt(b.total)}</strong>
+                    <strong>{fmt(val)}</strong>
                   </div>
                   <div style={{ height: 5, background: 'var(--marble2)', borderRadius: 3 }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: b.cor, borderRadius: 3 }} />
@@ -139,6 +216,20 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
                 </div>
               )
             })}
+            {outros > 0.01 && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#95A5A6', display: 'inline-block' }} />
+                    Outros
+                  </span>
+                  <strong>{fmt(outros)}</strong>
+                </div>
+                <div style={{ height: 5, background: 'var(--marble2)', borderRadius: 3 }}>
+                  <div style={{ height: '100%', width: `${(projeto.custo_total ?? 0) > 0 ? (outros / (projeto.custo_total ?? 1)) * 100 : 0}%`, background: '#95A5A6', borderRadius: 3 }} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -160,18 +251,17 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
                 </tr>
               </thead>
               <tbody>
-                {(projeto.custos || []).map(c => (
+                {custos.map(c => (
                   <tr key={c.id}>
                     <td style={{ fontSize: 12, color: 'var(--gray)' }}>
                       {new Date(c.data + 'T00:00').toLocaleDateString('pt-BR')}
                     </td>
                     <td>{c.descricao}</td>
                     <td>
-                      {c.tipo ? (
-                        <span style={{ fontSize: 12, color: c.tipo.cor, fontWeight: 500 }}>
-                          {c.tipo.nome}
-                        </span>
-                      ) : <span style={{ color: 'var(--gray2)', fontSize: 12 }}>—</span>}
+                      <span style={{ fontSize: 12, fontWeight: 500, color: BREAKDOWN.find(b => b.key === `custo_${c.tipo}`)?.cor ?? '#95A5A6' }}>
+                        {c.tipo === 'mao_obra' ? 'Mão de Obra' : c.tipo === 'outros' ? 'Outros' :
+                          c.tipo.charAt(0).toUpperCase() + c.tipo.slice(1)}
+                      </span>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(c.valor)}</td>
                     <td>
@@ -180,7 +270,7 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
                     </td>
                   </tr>
                 ))}
-                {(projeto.custos || []).length === 0 && (
+                {custos.length === 0 && (
                   <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--gray)', padding: '20px 0' }}>Nenhum custo lançado</td></tr>
                 )}
               </tbody>
@@ -192,7 +282,6 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
       {showModal && (
         <LancarCustoModal
           projectId={id}
-          tipos={tipos}
           onClose={() => setShowModal(false)}
           onSaved={load}
           toast={toast}

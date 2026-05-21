@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { fmt, orcTotal } from '@/lib/utils'
@@ -38,12 +38,8 @@ function ModalConfirmarExclusao({ numero, onConfirm, onCancel, busy }: {
         </p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button className="btn btn-outline" onClick={onCancel} disabled={busy}>Cancelar</button>
-          <button
-            className="btn"
-            onClick={onConfirm}
-            disabled={busy}
-            style={{ background: '#c0392b', color: '#fff', border: 'none' }}
-          >
+          <button className="btn" onClick={onConfirm} disabled={busy}
+            style={{ background: '#c0392b', color: '#fff', border: 'none' }}>
             {busy ? 'Excluindo...' : 'Excluir'}
           </button>
         </div>
@@ -57,6 +53,17 @@ export default function OrcamentosPage() {
   const [query, setQuery] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; numero: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [projetoMap, setProjetoMap] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    fetch('/api/projetos', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { id: string; orcamento_id?: string | null }[]) => {
+        const map: Record<string, string> = {}
+        data.forEach(p => { if (p.orcamento_id) map[p.orcamento_id] = p.id })
+        setProjetoMap(map)
+      })
+  }, [])
 
   function clienteNome(id?: string) {
     if (!id) return '—'
@@ -162,6 +169,7 @@ export default function OrcamentosPage() {
                 <tr><td colSpan={7}><div className="empty-state"><h3>Nenhum orçamento</h3><p>Crie seu primeiro orçamento</p></div></td></tr>
               ) : filtered.map(o => {
                 const crmStatus = o.crm_status || 'novo'
+                const projetoId = projetoMap[o.id]
                 return (
                   <tr key={o.id}>
                     <td className="text-gray text-sm">#{o.numero || o.id.slice(0, 6)}</td>
@@ -189,6 +197,12 @@ export default function OrcamentosPage() {
                         <button className="btn btn-ghost btn-sm btn-icon" title="WhatsApp" onClick={() => enviarWhatsApp(o)}>📲</button>
                         <Link href={`/orcamentos/${o.id}`} className="btn btn-ghost btn-sm btn-icon" title="Ver">📄</Link>
                         <Link href={`/orcamentos/${o.id}/editar`} className="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</Link>
+                        {projetoId && (
+                          <Link href={`/projetos/${projetoId}`} className="btn btn-ghost btn-sm" title="Ver projeto"
+                            style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 600 }}>
+                            → Projeto
+                          </Link>
+                        )}
                         <button className="btn btn-ghost btn-sm btn-icon" title="Ciclar status" onClick={() => cycleStatus(o)}>🔄</button>
                         <button
                           className="btn btn-ghost btn-sm btn-icon"

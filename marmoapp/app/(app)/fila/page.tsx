@@ -114,15 +114,30 @@ const PIPELINE = [
   { id: 'finalizado',        label: 'Finalizado',          cor: '#2C3E50' },
 ]
 
+const FILA_TO_ETAPA: Record<string, string> = {
+  corte: 'producao',
+  aguardando_data: 'pronto',
+  instalacao: 'agendado',
+  finalizado: 'concluido',
+}
+
 export default function FilaPage() {
   const { orcamentos, clientes, loadOrcamentos, toast } = useApp()
   const [instaladores, setInstaladores] = useState<Funcionario[]>([])
   const [instalarModal, setInstalarModal] = useState<{ open: boolean; orcId: string; orcLabel: string }>({ open: false, orcId: '', orcLabel: '' })
+  const [projetoMap, setProjetoMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/api/funcionarios', { credentials: 'include' })
       .then(r => r.ok ? r.json() : [])
       .then((data: Funcionario[]) => setInstaladores(data.filter(f => f.ativo && f.cargo === 'instalador')))
+    fetch('/api/projetos', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { id: string; orcamento_id?: string | null }[]) => {
+        const map: Record<string, string> = {}
+        data.forEach(p => { if (p.orcamento_id) map[p.orcamento_id] = p.id })
+        setProjetoMap(map)
+      })
   }, [])
 
   const ativos = orcamentos.filter(o => o.crm_status === 'fechado' || o.producao_status)
@@ -130,6 +145,16 @@ export default function FilaPage() {
   async function avancar(orcId: string, novoStatus: string) {
     const { error } = await supabase.from('orcamentos').update({ producao_status: novoStatus }).eq('id', orcId)
     if (error) { toast('Erro: ' + error.message, 'err'); return }
+    const etapa = FILA_TO_ETAPA[novoStatus]
+    const projetoId = projetoMap[orcId]
+    if (etapa && projetoId) {
+      fetch(`/api/projetos/${projetoId}/etapas`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ etapa }),
+      })
+    }
     await loadOrcamentos()
     toast('Pedido avançado!', 'ok2')
   }
