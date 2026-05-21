@@ -97,6 +97,7 @@ export default function EditarOrcamentoPage() {
   const [mostrarErros, setMostrarErros] = useState(false)
   const [itens, setItens] = useState<ItemForm[]>([])
   const [novoItem, setNovoItem] = useState<ItemForm>({ ...ITEM_DEFAULTS })
+  const [servicoIdSel, setServicodeIdSel] = useState('')
 
   const orc = orcamentos.find(o => o.id === orcId)
   const [form, setForm] = useState({
@@ -167,6 +168,7 @@ export default function EditarOrcamentoPage() {
     if (!itemValido) { toast('Preencha todos os campos obrigatórios do item', 'err'); return }
     setItens(prev => [...prev, { ...novoItem }])
     setNovoItem({ ...ITEM_DEFAULTS })
+    setServicodeIdSel('')
     setMostrarErros(false)
   }
 
@@ -179,8 +181,10 @@ export default function EditarOrcamentoPage() {
 
   function preencherServico(id: string) {
     const s = servicos.find(x => x.id === id)
-    if (s) upItem({ descricao: s.nome, preco_unitario: s.preco_padrao || 0, tipo: 'servico' })
+    if (s) { upItem({ descricao: s.nome, preco_unitario: s.preco_padrao || 0, tipo: 'servico' }); setServicodeIdSel(id) }
   }
+
+  const servicoUnit = servicoIdSel ? (servicos.find(s => s.id === servicoIdSel)?.unidade || '') : ''
 
   const subtotal = itens.reduce((s, i) => s + calcTotal(i), 0)
   const maoObra = parseFloat(form.mao_obra) || 0
@@ -305,7 +309,13 @@ export default function EditarOrcamentoPage() {
                 <div className="form-row form-row-2" style={{ marginBottom: 12 }}>
                   <div className="form-group">
                     <label className="form-label">TIPO</label>
-                    <select className="form-select" value={novoItem.tipo} onChange={e => upItem({ tipo: e.target.value as ItemForm['tipo'] })}>
+                    <select className="form-select" value={novoItem.tipo} onChange={e => {
+                      const tipo = e.target.value as ItemForm['tipo']
+                      const extras: Partial<ItemForm> = { tipo }
+                      if (tipo !== 'material') Object.assign(extras, { tipo_peca: '', largura: 0, altura: 0, area: 0, tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0, acabamento_esquerda: '', acabamento_direita: '', acabamento_frente: '', acabamento_fundo: '', dados_extras: {} })
+                      if (tipo !== 'servico') setServicodeIdSel('')
+                      upItem(extras)
+                    }}>
                       <option value="material">Material</option>
                       <option value="servico">Serviço</option>
                       <option value="frete">Frete</option>
@@ -321,94 +331,98 @@ export default function EditarOrcamentoPage() {
                       </select>
                     </div>
                   )}
-                  {novoItem.tipo === 'servico' && (
-                    <div className="form-group">
-                      <label className="form-label">SERVIÇO</label>
-                      <select className="form-select" onChange={e => preencherServico(e.target.value)}>
-                        <option value="">Escolher...</option>
-                        {servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                      </select>
-                    </div>
-                  )}
                 </div>
 
-                <div className="form-group" style={{ marginBottom: 12 }}>
-                  <label className="form-label">PEÇA DE MARMORARIA (opcional)</label>
-                  <SeletorPeca
-                    tipo_peca={novoItem.tipo_peca}
-                    tem_saia={novoItem.tem_saia}
-                    altura_saia={novoItem.altura_saia}
-                    tem_frontao={novoItem.tem_frontao}
-                    altura_frontao={novoItem.altura_frontao}
-                    dados_extras={novoItem.dados_extras}
-                    showErrors={mostrarErros}
-                    onChange={upPeca}
-                  />
-                </div>
-
-                {novoItem.tipo_peca && (
-                  <AcabamentosLaterais
-                    tipoPeca={novoItem.tipo_peca}
-                    esquerda={novoItem.acabamento_esquerda}
-                    direita={novoItem.acabamento_direita}
-                    frente={novoItem.acabamento_frente}
-                    fundo={novoItem.acabamento_fundo}
-                    dadosExtras={novoItem.dados_extras}
-                    showErrors={mostrarErros}
-                    onLateralChange={handleLateralChange}
-                    onRaioChange={handleRaioChange}
-                  />
-                )}
-
-                {/* Dimensões e cálculo de metragem */}
-                {novoItem.tipo_peca && (
-                  <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
-                    <div className="form-row form-row-2">
-                      <div className="form-group">
-                        <label className="form-label">LARGURA (m)</label>
-                        <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 2.00"
-                          value={novoItem.largura || ''}
-                          onChange={e => upItem({ largura: parseFloat(e.target.value) || 0 })} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">PROFUNDIDADE (m)</label>
-                        <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 0.60"
-                          value={novoItem.altura || ''}
-                          onChange={e => upItem({ altura: parseFloat(e.target.value) || 0 })} />
-                      </div>
+                {/* Material: seletor de peças, acabamentos e dimensões */}
+                {novoItem.tipo === 'material' && (
+                  <>
+                    <div className="form-group" style={{ marginBottom: 12 }}>
+                      <label className="form-label">PEÇA DE MARMORARIA (opcional)</label>
+                      <SeletorPeca
+                        tipo_peca={novoItem.tipo_peca}
+                        tem_saia={novoItem.tem_saia}
+                        altura_saia={novoItem.altura_saia}
+                        tem_frontao={novoItem.tem_frontao}
+                        altura_frontao={novoItem.altura_frontao}
+                        dados_extras={novoItem.dados_extras}
+                        showErrors={mostrarErros}
+                        onChange={upPeca}
+                      />
                     </div>
-                    {novoItem.largura > 0 && novoItem.altura > 0 && (() => {
-                      const d = (n: number) => n.toFixed(2).replace('.', ',')
-                      const tampo = novoItem.largura * novoItem.altura
-                      const frontao = novoItem.tem_frontao ? novoItem.largura * novoItem.altura_frontao : 0
-                      const saia = novoItem.tem_saia ? novoItem.largura * novoItem.altura_saia : 0
-                      const total = tampo + frontao + saia
-                      return (
-                        <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ color: '#555' }}>Tampo</span>
-                            <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura)} = <strong>{d(tampo)} m²</strong></span>
+                    {novoItem.tipo_peca && (
+                      <AcabamentosLaterais
+                        tipoPeca={novoItem.tipo_peca}
+                        esquerda={novoItem.acabamento_esquerda}
+                        direita={novoItem.acabamento_direita}
+                        frente={novoItem.acabamento_frente}
+                        fundo={novoItem.acabamento_fundo}
+                        dadosExtras={novoItem.dados_extras}
+                        showErrors={mostrarErros}
+                        onLateralChange={handleLateralChange}
+                        onRaioChange={handleRaioChange}
+                      />
+                    )}
+                    {novoItem.tipo_peca && (
+                      <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
+                        <div className="form-row form-row-2">
+                          <div className="form-group">
+                            <label className="form-label">LARGURA (m)</label>
+                            <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 2.00"
+                              value={novoItem.largura || ''}
+                              onChange={e => upItem({ largura: parseFloat(e.target.value) || 0 })} />
                           </div>
-                          {novoItem.tem_frontao && novoItem.altura_frontao > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                              <span>Frontão</span>
-                              <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_frontao)} = <strong>{d(frontao)} m²</strong></span>
-                            </div>
-                          )}
-                          {novoItem.tem_saia && novoItem.altura_saia > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                              <span>Saia</span>
-                              <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_saia)} = <strong>{d(saia)} m²</strong></span>
-                            </div>
-                          )}
-                          <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                            <span>Total</span>
-                            <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                          <div className="form-group">
+                            <label className="form-label">PROFUNDIDADE (m)</label>
+                            <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 0.60"
+                              value={novoItem.altura || ''}
+                              onChange={e => upItem({ altura: parseFloat(e.target.value) || 0 })} />
                           </div>
                         </div>
-                      )
-                    })()}
+                        {novoItem.largura > 0 && novoItem.altura > 0 && (() => {
+                          const d = (n: number) => n.toFixed(2).replace('.', ',')
+                          const tampo = novoItem.largura * novoItem.altura
+                          const frontao = novoItem.tem_frontao ? novoItem.largura * novoItem.altura_frontao : 0
+                          const saia = novoItem.tem_saia ? novoItem.largura * novoItem.altura_saia : 0
+                          const total = tampo + frontao + saia
+                          return (
+                            <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ color: '#555' }}>Tampo</span>
+                                <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura)} = <strong>{d(tampo)} m²</strong></span>
+                              </div>
+                              {novoItem.tem_frontao && novoItem.altura_frontao > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                                  <span>Frontão</span>
+                                  <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_frontao)} = <strong>{d(frontao)} m²</strong></span>
+                                </div>
+                              )}
+                              {novoItem.tem_saia && novoItem.altura_saia > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                                  <span>Saia</span>
+                                  <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_saia)} = <strong>{d(saia)} m²</strong></span>
+                                </div>
+                              )}
+                              <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                                <span>Total</span>
+                                <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Serviço: dropdown de serviços */}
+                {novoItem.tipo === 'servico' && (
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label className="form-label">SERVIÇO</label>
+                    <select className="form-select" value={servicoIdSel} onChange={e => preencherServico(e.target.value)}>
+                      <option value="">Selecionar serviço...</option>
+                      {servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                    </select>
                   </div>
                 )}
 
@@ -422,7 +436,7 @@ export default function EditarOrcamentoPage() {
 
                 <div className="form-row form-row-2">
                   <div className="form-group">
-                    <label className="form-label">QUANTIDADE</label>
+                    <label className="form-label">{novoItem.tipo === 'servico' && servicoUnit ? `QUANTIDADE (${servicoUnit})` : 'QUANTIDADE'}</label>
                     <input className="form-input" type="number" step="0.01" value={novoItem.quantidade} onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
                   </div>
                   <div className="form-group">
