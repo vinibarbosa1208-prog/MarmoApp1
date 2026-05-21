@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '@/contexts/AppContext'
 import { supabase } from '@/lib/supabase'
 import type { AgendaEventType, CreateAgendaEventInput } from '@/lib/agenda/types'
+
+interface Funcionario { id: string; nome: string; cargo: string; ativo: boolean }
 
 interface Props {
   tipos: AgendaEventType[]
@@ -15,6 +17,7 @@ interface Props {
 export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }: Props) {
   const { clientes, orcamentos, toast } = useApp()
   const [saving, setSaving] = useState(false)
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
   const [form, setForm] = useState<CreateAgendaEventInput>({
     titulo: '',
     tipo_id: tipos[0]?.id ?? '',
@@ -29,6 +32,12 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
 
   const set = (k: keyof CreateAgendaEventInput, v: string | boolean) =>
     setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    fetch('/api/funcionarios', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Funcionario[]) => setFuncionarios(data.filter(f => f.ativo)))
+  }, [])
 
   // Filter orcamentos by selected cliente
   const orcsDoCliente = form.cliente_id
@@ -135,6 +144,14 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
                   {o.descricao || `Orç. #${o.numero || o.id.slice(0, 6)}`} — {o.status}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Funcionário Responsável</label>
+            <select className="form-control" value={form.responsavel_id ?? ''} onChange={e => set('responsavel_id', e.target.value)}>
+              <option value="">— Nenhum —</option>
+              {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
             </select>
           </div>
 

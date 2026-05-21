@@ -7,6 +7,19 @@ import type { AgendaEventType } from '@/lib/agenda/types'
 import type { ProjectCostType } from '@/lib/projetos/types'
 import type { ProjectCustomStatus, ClientCustomField, FieldType } from '@/lib/configuracoes/types'
 
+// ── Funcionário type ──────────────────────────────────────────
+interface Funcionario {
+  id: string
+  nome: string
+  cargo: 'serrador' | 'acabador' | 'instalador' | 'outro'
+  tipo_pagamento: 'diaria' | 'metro_linear'
+  valor_diaria: number | null
+  valor_metro_linear: number | null
+  telefone: string | null
+  observacoes: string | null
+  ativo: boolean
+}
+
 // ── Fixed project statuses (read-only) ───────────────────────
 const FIXED_STATUSES = [
   { id: 'em_andamento', nome: 'Em andamento', cor: '#2980B9' },
@@ -296,6 +309,115 @@ function EmptyRow({ label }: { label: string }) {
   )
 }
 
+// ── Funcionário Modal ─────────────────────────────────────────
+function FuncionarioModal({
+  initial, onSave, onClose,
+}: {
+  initial: Partial<Funcionario>
+  onSave: (data: Partial<Funcionario>) => Promise<void>
+  onClose: () => void
+}) {
+  const [form, setForm] = useState({
+    nome: initial.nome ?? '',
+    cargo: initial.cargo ?? 'serrador' as Funcionario['cargo'],
+    valor_diaria: String(initial.valor_diaria ?? ''),
+    valor_metro_linear: String(initial.valor_metro_linear ?? ''),
+    telefone: initial.telefone ?? '',
+    observacoes: initial.observacoes ?? '',
+    ativo: initial.ativo ?? true,
+  })
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const isInstalador = form.cargo === 'instalador'
+
+  async function handleSave() {
+    if (!form.nome.trim()) { setErr('Nome é obrigatório'); return }
+    setSaving(true)
+    try {
+      await onSave({
+        nome: form.nome.trim(),
+        cargo: form.cargo,
+        valor_diaria: form.valor_diaria ? parseFloat(form.valor_diaria) : null,
+        valor_metro_linear: form.valor_metro_linear ? parseFloat(form.valor_metro_linear) : null,
+        telefone: form.telefone.trim() || null,
+        observacoes: form.observacoes.trim() || null,
+        ativo: form.ativo,
+      })
+      onClose()
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay open" style={{ zIndex: 9000 }}>
+      <div className="modal" style={{ maxWidth: 480 }}>
+        <div className="modal-header">
+          <div className="modal-title">{initial.id ? 'Editar Funcionário' : 'Novo Funcionário'}</div>
+          <button className="btn-close" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="form-row form-row-2">
+            <div className="form-group">
+              <label className="form-label">NOME *</label>
+              <input className="form-input" placeholder="Nome completo" value={form.nome} onChange={e => { setForm(f => ({ ...f, nome: e.target.value })); setErr('') }} autoFocus />
+            </div>
+            <div className="form-group">
+              <label className="form-label">CARGO *</label>
+              <select className="form-select" value={form.cargo} onChange={e => setForm(f => ({ ...f, cargo: e.target.value as Funcionario['cargo'] }))}>
+                <option value="serrador">Serrador</option>
+                <option value="acabador">Acabador</option>
+                <option value="instalador">Instalador</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-row form-row-2">
+            {!isInstalador && (
+              <div className="form-group">
+                <label className="form-label">VALOR DA DIÁRIA (R$)</label>
+                <input className="form-input" type="number" step="0.01" placeholder="0.00" value={form.valor_diaria} onChange={e => setForm(f => ({ ...f, valor_diaria: e.target.value }))} />
+              </div>
+            )}
+            {isInstalador && (
+              <div className="form-group">
+                <label className="form-label">VALOR POR METRO LINEAR (R$)</label>
+                <input className="form-input" type="number" step="0.01" placeholder="0.00" value={form.valor_metro_linear} onChange={e => setForm(f => ({ ...f, valor_metro_linear: e.target.value }))} />
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">TELEFONE</label>
+              <input className="form-input" placeholder="(11) 99999-0000" value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">OBSERVAÇÕES</label>
+            <input className="form-input" placeholder="Anotações..." value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />
+          </div>
+          {initial.id && (
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input type="checkbox" id="func-ativo" checked={form.ativo} onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))} style={{ width: 'auto' }} />
+              <label htmlFor="func-ativo" className="form-label" style={{ marginBottom: 0, cursor: 'pointer' }}>Funcionário ativo</label>
+            </div>
+          )}
+          {err && <div style={{ color: 'var(--red)', fontSize: 13 }}>{err}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-gold" onClick={handleSave} disabled={saving}>{saving ? 'Salvando...' : '💾 Salvar'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function ConfiguracoesPage() {
   const { toast, user } = useApp()
@@ -316,22 +438,28 @@ export default function ConfiguracoesPage() {
   const [campos, setCampos] = useState<ClientCustomField[]>([])
   const [campoModal, setCampoModal] = useState<{ open: boolean; item: ClientCustomField | null }>({ open: false, item: null })
 
+  // Section 5 — funcionários
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
+  const [funcModal, setFuncModal] = useState<{ open: boolean; item: Funcionario | null }>({ open: false, item: null })
+
   const [loading, setLoading] = useState(true)
 
   // ── Load all data ────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [t, c, s, f] = await Promise.all([
+      const [t, c, s, f, fn] = await Promise.all([
         apiFetch('/api/configuracoes/tipos-agendamento').then(r => r.json()),
         apiFetch('/api/configuracoes/categorias-custo').then(r => r.json()),
         apiFetch('/api/configuracoes/status-projetos').then(r => r.json()),
         apiFetch('/api/configuracoes/campos-clientes').then(r => r.json()),
+        apiFetch('/api/funcionarios').then(r => r.json()),
       ])
       setTipos(Array.isArray(t) ? t : [])
       setCategorias(Array.isArray(c) ? c : [])
       setStatuses(Array.isArray(s) ? s : [])
       setCampos(Array.isArray(f) ? f : [])
+      setFuncionarios(Array.isArray(fn) ? fn : [])
     } catch {
       toast('Erro ao carregar configurações', 'err')
     } finally {
@@ -425,6 +553,18 @@ export default function ConfiguracoesPage() {
     if (!res.ok) { toast(await extractError(res), 'err'); return }
     setCampos(prev => prev.filter(c => c.id !== id))
     toast('Campo excluído', 'ok')
+  }
+
+  // ── Section 5 handlers ───────────────────────────────────────
+  async function saveFuncionario(v: Partial<Funcionario>) {
+    const item = funcModal.item
+    const res = item
+      ? await apiFetch(`/api/funcionarios/${item.id}`, { method: 'PUT', body: JSON.stringify({ ...item, ...v }) })
+      : await apiFetch('/api/funcionarios', { method: 'POST', body: JSON.stringify(v) })
+
+    if (!res.ok) throw new Error(await extractError(res))
+    await loadAll()
+    toast(item ? 'Funcionário atualizado' : 'Funcionário cadastrado', 'ok2')
   }
 
   // ── Render ───────────────────────────────────────────────────
@@ -618,6 +758,55 @@ export default function ConfiguracoesPage() {
         )}
       </SectionCard>
 
+      {/* ── SEÇÃO 5: Funcionários ── */}
+      <SectionCard
+        title="Funcionários"
+        description="Gerencie a equipe da marmoraria. Cadastre serradores, acabadores e instaladores."
+        onAdd={() => setFuncModal({ open: true, item: null })}
+        addLabel="+ Novo Funcionário"
+      >
+        {funcionarios.length === 0 ? (
+          <EmptyRow label="Nenhum funcionário cadastrado. Clique em '+ Novo Funcionário' para começar." />
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Cargo</th>
+                  <th>Pagamento</th>
+                  <th style={{ textAlign: 'right' }}>Valor</th>
+                  <th style={{ width: 80 }}>Status</th>
+                  <th style={{ width: 100, textAlign: 'right' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funcionarios.map(f => (
+                  <tr key={f.id}>
+                    <td style={{ fontWeight: 500 }}>{f.nome}</td>
+                    <td>{{ serrador: 'Serrador', acabador: 'Acabador', instalador: 'Instalador', outro: 'Outro' }[f.cargo]}</td>
+                    <td className="text-sm text-gray">{f.tipo_pagamento === 'diaria' ? 'Diária' : 'Metro linear'}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {f.tipo_pagamento === 'diaria'
+                        ? (f.valor_diaria != null ? `R$ ${f.valor_diaria.toFixed(2)}` : '—')
+                        : (f.valor_metro_linear != null ? `R$ ${f.valor_metro_linear.toFixed(2)}/m` : '—')}
+                    </td>
+                    <td>
+                      <span className={`badge ${f.ativo ? 'badge-approved' : 'badge-rejected'}`} style={{ fontSize: 11 }}>
+                        {f.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <EditBtn onClick={() => setFuncModal({ open: true, item: f })} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+
       {/* ── Modals ── */}
       {tipoModal.open && (
         <NomeCorModal
@@ -651,6 +840,14 @@ export default function ConfiguracoesPage() {
           initial={campoModal.item ?? {}}
           onSave={saveCampo}
           onClose={() => setCampoModal({ open: false, item: null })}
+        />
+      )}
+
+      {funcModal.open && (
+        <FuncionarioModal
+          initial={funcModal.item ?? {}}
+          onSave={saveFuncionario}
+          onClose={() => setFuncModal({ open: false, item: null })}
         />
       )}
     </div>
