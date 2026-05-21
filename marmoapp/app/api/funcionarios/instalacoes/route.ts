@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('funcionario_instalacoes')
       .insert({
+        marmoraria_id,
         funcionario_id: body.funcionario_id,
         ordem_servico_id: body.ordem_servico_id || null,
         data: body.data || new Date().toISOString().split('T')[0],

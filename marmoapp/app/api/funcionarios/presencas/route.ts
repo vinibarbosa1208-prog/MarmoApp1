@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       .from('funcionario_presencas')
       .upsert(
         {
+          marmoraria_id,
           funcionario_id: body.funcionario_id,
           data: body.data,
           presente: body.presente,
