@@ -23,7 +23,7 @@ function ClienteModal({
     telefone: cliente?.telefone || '',
     email: cliente?.email || '',
     origem: cliente?.origem || 'indicação',
-    obs: cliente?.obs || '',
+    obs: cliente?.observacoes || '',
     cep: cliente?.cep || '',
     estado: cliente?.estado || '',
     cidade: cliente?.cidade || '',
@@ -56,7 +56,8 @@ function ClienteModal({
       const marmoraria_id = usuario?.marmoraria_id
       if (!marmoraria_id) throw new Error('Marmoraria não encontrada para este usuário')
 
-      const payload = { ...form, marmoraria_id }
+      const { obs, ...rest } = form
+      const payload = { ...rest, observacoes: obs, marmoraria_id }
       const { error: err } = cliente
         ? await supabase.from('clientes').update(payload).eq('id', cliente.id)
         : await supabase.from('clientes').insert(payload)

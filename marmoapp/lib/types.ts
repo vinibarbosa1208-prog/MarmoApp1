@@ -28,7 +28,7 @@ export interface Cliente {
   estado?: string
   cep?: string
   origem?: string
-  obs?: string
+  observacoes?: string
   created_at: string
 }
 
