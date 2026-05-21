@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import { fmt } from '@/lib/utils'
@@ -10,6 +10,7 @@ import AcabamentosLaterais from '@/components/orcamento/AcabamentosLaterais'
 
 interface ItemForm {
   tipo: 'material' | 'servico' | 'frete' | 'outro'
+  ambiente: string
   descricao: string
   largura: number
   altura: number
@@ -31,7 +32,7 @@ interface ItemForm {
 }
 
 const ITEM_DEFAULTS: ItemForm = {
-  tipo: 'material', descricao: '', largura: 0, altura: 0, area: 0,
+  tipo: 'material', ambiente: '', descricao: '', largura: 0, altura: 0, area: 0,
   quantidade: 1, preco_unitario: 0, custo_m2: 0, markup: 3,
   tipo_peca: '', acabamento_esquerda: '', acabamento_direita: '',
   acabamento_frente: '', acabamento_fundo: '',
@@ -40,11 +41,39 @@ const ITEM_DEFAULTS: ItemForm = {
 }
 
 function calcArea(item: ItemForm): number {
-  if (!item.largura || !item.altura) return 0
-  const tampo = item.largura * item.altura
-  const frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
-  const saia = item.tem_saia ? item.largura * item.altura_saia : 0
-  return tampo + frontao + saia
+  const ex = item.dados_extras
+  let base = 0
+  let saia = 0
+  let frontao = 0
+
+  if (item.tipo_peca === 'pia_l') {
+    base = ((ex.seg1_comprimento as number) || 0) * ((ex.seg1_profundidade as number) || 0)
+         + ((ex.seg2_comprimento as number) || 0) * ((ex.seg2_profundidade as number) || 0)
+  } else if (item.tipo_peca === 'pia_u') {
+    base = ((ex.seg1_comprimento as number) || 0) * ((ex.seg1_profundidade as number) || 0)
+         + ((ex.seg2_comprimento as number) || 0) * ((ex.seg2_profundidade as number) || 0)
+         + ((ex.seg3_comprimento as number) || 0) * ((ex.seg3_profundidade as number) || 0)
+  } else {
+    if (!item.largura || !item.altura) return 0
+    base = item.largura * item.altura
+    frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
+    saia = item.tem_saia ? item.largura * item.altura_saia : 0
+  }
+
+  const dimMap: Record<string, number> = {
+    frente: item.largura, fundo: item.largura,
+    esquerda: item.altura, direita: item.altura,
+    superior: item.largura, inferior: item.largura,
+  }
+  let lateralExtras = 0
+  for (const [lat, len] of Object.entries(dimMap)) {
+    const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+    const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+    if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+    if ((ex[`frontao_${lat}`] as boolean) && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+  }
+
+  return base + saia + frontao + lateralExtras
 }
 
 function calcTotal(item: ItemForm): number {
@@ -88,6 +117,20 @@ function validarItem(item: ItemForm): boolean {
     if (!((ex.altura_nicho as number) > 0)) return false
     if (!((ex.profundidade as number) > 0)) return false
   }
+  if (peca === 'pia_l') {
+    if (!((ex.seg1_comprimento as number) > 0)) return false
+    if (!((ex.seg1_profundidade as number) > 0)) return false
+    if (!((ex.seg2_comprimento as number) > 0)) return false
+    if (!((ex.seg2_profundidade as number) > 0)) return false
+  }
+  if (peca === 'pia_u') {
+    if (!((ex.seg1_comprimento as number) > 0)) return false
+    if (!((ex.seg1_profundidade as number) > 0)) return false
+    if (!((ex.seg2_comprimento as number) > 0)) return false
+    if (!((ex.seg2_profundidade as number) > 0)) return false
+    if (!((ex.seg3_comprimento as number) > 0)) return false
+    if (!((ex.seg3_profundidade as number) > 0)) return false
+  }
   if (item.tem_saia && !(item.altura_saia > 0)) return false
   if (item.tem_frontao && !(item.altura_frontao > 0)) return false
   return true
@@ -124,6 +167,10 @@ export default function NovoOrcamentoPage() {
 
   function handleRaioChange(lateral: string, raio: number) {
     setNovoItem(prev => ({ ...prev, dados_extras: { ...prev.dados_extras, [`raio_${lateral}`]: raio } }))
+  }
+
+  function handleLateralExtrasChange(lateral: string, key: string, value: unknown) {
+    setNovoItem(prev => ({ ...prev, dados_extras: { ...prev.dados_extras, [`${key}_${lateral}`]: value } }))
   }
 
   const itemValido = useMemo(() => validarItem(novoItem), [novoItem])
@@ -199,6 +246,7 @@ export default function NovoOrcamentoPage() {
           orcamento_id: orc.id,
           marmoraria_id: marmoraria.id,
           tipo: i.tipo,
+          ambiente: i.ambiente || null,
           descricao: i.descricao,
           largura: i.largura || null,
           altura: i.altura || null,
@@ -291,6 +339,16 @@ export default function NovoOrcamentoPage() {
               <div style={{ background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Adicionar Item</div>
 
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label className="form-label">AMBIENTE</label>
+                  <input
+                    className="form-input"
+                    placeholder="Ex: Cozinha, Banheiro, Lavabo"
+                    value={novoItem.ambiente}
+                    onChange={e => upItem({ ambiente: e.target.value })}
+                  />
+                </div>
+
                 {/* Tipo de item */}
                 <div className="form-row form-row-2" style={{ marginBottom: 12 }}>
                   <div className="form-group">
@@ -346,6 +404,7 @@ export default function NovoOrcamentoPage() {
                         showErrors={mostrarErros}
                         onLateralChange={handleLateralChange}
                         onRaioChange={handleRaioChange}
+                        onLateralExtrasChange={handleLateralExtrasChange}
                       />
                     )}
                     {novoItem.tipo_peca && (
@@ -513,25 +572,40 @@ export default function NovoOrcamentoPage() {
                     <tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {itens.map((item, idx) => (
-                      <tr key={idx}>
-                        <td><span className="badge badge-draft">{item.tipo}</span></td>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{item.descricao}</div>
-                          {item.tipo_peca && (
-                            <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
-                              {PECA_LABELS[item.tipo_peca]}
-                              {(item.acabamento_frente || item.acabamento_esquerda) && ` · acabamentos selecionados`}
-                            </div>
-                          )}
-                        </td>
-                        <td>{item.quantidade}</td>
-                        <td>{fmt(item.preco_unitario)}</td>
-                        <td className="font-bold">{fmt(calcTotal(item))}</td>
-                        <td>
-                          <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)}>🗑️</button>
-                        </td>
-                      </tr>
+                    {Object.entries(
+                      itens.reduce<Record<string, { item: ItemForm; idx: number }[]>>((acc, item, i) => {
+                        const key = item.ambiente || 'Sem ambiente'
+                        ;(acc[key] = acc[key] || []).push({ item, idx: i })
+                        return acc
+                      }, {})
+                    ).map(([amb, group]) => (
+                      <Fragment key={amb}>
+                        <tr>
+                          <td colSpan={6} style={{ background: '#f5f3ef', fontWeight: 700, fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '6px 12px', borderBottom: '1px solid #EDE9E2' }}>
+                            {amb}
+                          </td>
+                        </tr>
+                        {group.map(({ item, idx }) => (
+                          <tr key={idx}>
+                            <td><span className="badge badge-draft">{item.tipo}</span></td>
+                            <td>
+                              <div style={{ fontWeight: 500 }}>{item.descricao}</div>
+                              {item.tipo_peca && (
+                                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
+                                  {PECA_LABELS[item.tipo_peca]}
+                                  {(item.acabamento_frente || item.acabamento_esquerda) && ` · acabamentos selecionados`}
+                                </div>
+                              )}
+                            </td>
+                            <td>{item.quantidade}</td>
+                            <td>{fmt(item.preco_unitario)}</td>
+                            <td className="font-bold">{fmt(calcTotal(item))}</td>
+                            <td>
+                              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)}>🗑️</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>

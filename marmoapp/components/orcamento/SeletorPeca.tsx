@@ -3,6 +3,7 @@
 export type TipoPeca =
   | 'bancada_simples' | 'bancada_cuba' | 'bancada_saia' | 'bancada_frontao'
   | 'ilha_cozinha' | 'escada' | 'soleira' | 'nicho'
+  | 'pia_l' | 'pia_u'
 
 export const PECA_LABELS: Record<string, string> = {
   bancada_simples: 'Bancada Simples',
@@ -13,6 +14,8 @@ export const PECA_LABELS: Record<string, string> = {
   escada: 'Escada',
   soleira: 'Soleira / Peitoril',
   nicho: 'Nicho',
+  pia_l: 'Pia em L',
+  pia_u: 'Pia em U',
 }
 
 export function getLateraisDaPeca(tipo: string): string[] {
@@ -23,6 +26,8 @@ export function getLateraisDaPeca(tipo: string): string[] {
       return ['esquerda', 'direita', 'frente', 'fundo']
     case 'nicho':
       return ['esquerda', 'direita', 'superior', 'inferior']
+    case 'pia_l': case 'pia_u':
+      return ['esquerda', 'direita', 'frente', 'fundo']
     default:
       return []
   }
@@ -156,6 +161,27 @@ function SvgNicho() {
   )
 }
 
+function SvgPiaL() {
+  return (
+    <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 18 L110 18 L110 52 L46 52 L46 80 L10 80 Z" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="2" strokeLinejoin="miter"/>
+      <text x="60" y="38" textAnchor="middle" fontSize="7" fill="#888">seg1</text>
+      <text x="28" y="68" textAnchor="middle" fontSize="7" fill="#888">seg2</text>
+    </svg>
+  )
+}
+
+function SvgPiaU() {
+  return (
+    <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 10 L40 10 L40 62 L120 62 L120 10 L150 10 L150 80 L10 80 Z" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="2" strokeLinejoin="miter"/>
+      <text x="25" y="50" textAnchor="middle" fontSize="7" fill="#888">seg1</text>
+      <text x="80" y="75" textAnchor="middle" fontSize="7" fill="#888">seg2</text>
+      <text x="135" y="50" textAnchor="middle" fontSize="7" fill="#888">seg3</text>
+    </svg>
+  )
+}
+
 const SVG_MAP: Record<string, React.ReactNode> = {
   bancada_simples: <SvgBancadaSimples />,
   bancada_cuba: <SvgBancadaCuba />,
@@ -165,6 +191,8 @@ const SVG_MAP: Record<string, React.ReactNode> = {
   escada: <SvgEscada />,
   soleira: <SvgSoleira />,
   nicho: <SvgNicho />,
+  pia_l: <SvgPiaL />,
+  pia_u: <SvgPiaU />,
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -334,6 +362,88 @@ export default function SeletorPeca(props: Props) {
                   value={(dados_extras.profundidade as number) || ''}
                   onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+            </div>
+          )}
+
+          {/* Pia em L */}
+          {peca === 'pia_l' && (
+            <div className="form-row form-row-2">
+              <div className="form-group">
+                <label className="form-label">SEG1 — COMPRIMENTO (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 2.00"
+                  value={(dados_extras.seg1_comprimento as number) || ''}
+                  onChange={e => setExtra('seg1_comprimento', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg1_comprimento as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG1 — PROFUNDIDADE (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  value={(dados_extras.seg1_profundidade as number) || ''}
+                  onChange={e => setExtra('seg1_profundidade', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg1_profundidade as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG2 — COMPRIMENTO (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.20"
+                  value={(dados_extras.seg2_comprimento as number) || ''}
+                  onChange={e => setExtra('seg2_comprimento', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg2_comprimento as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG2 — PROFUNDIDADE (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  value={(dados_extras.seg2_profundidade as number) || ''}
+                  onChange={e => setExtra('seg2_profundidade', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg2_profundidade as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+            </div>
+          )}
+
+          {/* Pia em U */}
+          {peca === 'pia_u' && (
+            <div className="form-row form-row-2">
+              <div className="form-group">
+                <label className="form-label">SEG1 — COMPRIMENTO (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.00"
+                  value={(dados_extras.seg1_comprimento as number) || ''}
+                  onChange={e => setExtra('seg1_comprimento', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg1_comprimento as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG1 — PROFUNDIDADE (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  value={(dados_extras.seg1_profundidade as number) || ''}
+                  onChange={e => setExtra('seg1_profundidade', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg1_profundidade as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG2 — COMPRIMENTO (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 2.00"
+                  value={(dados_extras.seg2_comprimento as number) || ''}
+                  onChange={e => setExtra('seg2_comprimento', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg2_comprimento as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG2 — PROFUNDIDADE (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  value={(dados_extras.seg2_profundidade as number) || ''}
+                  onChange={e => setExtra('seg2_profundidade', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg2_profundidade as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG3 — COMPRIMENTO (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.00"
+                  value={(dados_extras.seg3_comprimento as number) || ''}
+                  onChange={e => setExtra('seg3_comprimento', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg3_comprimento as number) > 0) && <Err msg="Obrigatório." />}
+              </div>
+              <div className="form-group">
+                <label className="form-label">SEG3 — PROFUNDIDADE (m)</label>
+                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  value={(dados_extras.seg3_profundidade as number) || ''}
+                  onChange={e => setExtra('seg3_profundidade', parseFloat(e.target.value) || 0)} />
+                {showErrors && !((dados_extras.seg3_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
           )}

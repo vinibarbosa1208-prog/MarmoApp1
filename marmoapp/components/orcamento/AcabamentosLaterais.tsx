@@ -61,11 +61,12 @@ interface Props {
   showErrors: boolean
   onLateralChange: (lateral: string, acabamento: string) => void
   onRaioChange: (lateral: string, raio: number) => void
+  onLateralExtrasChange: (lateral: string, key: string, value: unknown) => void
 }
 
 export default function AcabamentosLaterais({
   tipoPeca, esquerda, direita, frente, fundo, dadosExtras, showErrors,
-  onLateralChange, onRaioChange,
+  onLateralChange, onRaioChange, onLateralExtrasChange,
 }: Props) {
   const laterais = getLateraisDaPeca(tipoPeca)
 
@@ -147,6 +148,64 @@ export default function AcabamentosLaterais({
                 </div>
               )}
 
+              {current && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!(dadosExtras[`saia_${lateral}`] as boolean)}
+                      onChange={e => {
+                        onLateralExtrasChange(lateral, 'saia', e.target.checked)
+                        if (e.target.checked && !dadosExtras[`altura_saia_${lateral}`]) {
+                          onLateralExtrasChange(lateral, 'altura_saia', 0.10)
+                        }
+                      }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--gray)' }}>Saia</span>
+                    {!!(dadosExtras[`saia_${lateral}`] as boolean) && (
+                      <>
+                        <input
+                          className="form-input"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={Math.round(((dadosExtras[`altura_saia_${lateral}`] as number) || 0.10) * 100)}
+                          onChange={e => onLateralExtrasChange(lateral, 'altura_saia', (parseInt(e.target.value) || 10) / 100)}
+                          style={{ width: 60 }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--gray)' }}>cm</span>
+                      </>
+                    )}
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!(dadosExtras[`frontao_${lateral}`] as boolean)}
+                      onChange={e => {
+                        onLateralExtrasChange(lateral, 'frontao', e.target.checked)
+                        if (e.target.checked && !dadosExtras[`altura_frontao_${lateral}`]) {
+                          onLateralExtrasChange(lateral, 'altura_frontao', 0.10)
+                        }
+                      }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--gray)' }}>Frontão</span>
+                    {!!(dadosExtras[`frontao_${lateral}`] as boolean) && (
+                      <>
+                        <input
+                          className="form-input"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={Math.round(((dadosExtras[`altura_frontao_${lateral}`] as number) || 0.10) * 100)}
+                          onChange={e => onLateralExtrasChange(lateral, 'altura_frontao', (parseInt(e.target.value) || 10) / 100)}
+                          style={{ width: 60 }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--gray)' }}>cm</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              )}
               {hasError && (
                 <p style={{ color: '#c0392b', fontSize: 11, marginTop: 4 }}>
                   Selecione o acabamento para esta lateral.
