@@ -20,9 +20,10 @@ interface Insumo {
 interface Pedido {
   id: string
   numero_pedido: string | null
-  status: 'pendente' | 'recebido' | 'cancelado'
+  status: 'pendente' | 'recebido' | 'pago' | 'cancelado'
   data_pedido: string
   data_recebimento: string | null
+  data_pagamento: string | null
   observacoes: string | null
   valor_total: number | null
   fornecedoras: { nome: string } | null
@@ -45,6 +46,7 @@ function apiFetch(url: string, init?: RequestInit) {
 }
 
 function statusBadge(status: string) {
+  if (status === 'pago') return <span className="badge" style={{ background: '#dbeafe', color: '#1d4ed8' }}>Pago</span>
   const map: Record<string, { label: string; cls: string }> = {
     pendente: { label: 'Pendente', cls: 'badge-pending' },
     recebido: { label: 'Recebido', cls: 'badge-approved' },
@@ -52,6 +54,12 @@ function statusBadge(status: string) {
   }
   const s = map[status] || { label: status, cls: '' }
   return <span className={`badge ${s.cls}`}>{s.label}</span>
+}
+
+function pagamentoBadge(status: string) {
+  if (status === 'recebido') return <span className="badge badge-rejected">Em aberto</span>
+  if (status === 'pago') return <span className="badge badge-approved">Pago</span>
+  return null
 }
 
 function fmtDate(d: string | null) {
@@ -449,6 +457,7 @@ function AbaPedidos() {
   const [insumos, setInsumos] = useState<Insumo[]>([])
   const [loading, setLoading] = useState(true)
   const [modalNovo, setModalNovo] = useState(false)
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -467,42 +476,93 @@ function AbaPedidos() {
     if (!confirm('Marcar este pedido como recebido? O estoque será atualizado automaticamente.')) return
     const res = await apiFetch(`/api/insumos/pedidos/${id}/receber`, { method: 'POST' })
     if (res.ok) { toast('Pedido recebido — estoque atualizado', 'ok2'); load() }
-    else {
-      const d = await res.json()
-      toast(d.error || 'Erro ao receber pedido', 'err')
-    }
+    else { const d = await res.json(); toast(d.error || 'Erro ao receber pedido', 'err') }
   }
 
-  const totalEmAberto = pedidos
-    .filter(p => p.status === 'pendente')
-    .reduce((acc, p) => acc + (p.valor_total ?? 0), 0)
+  async function pagar(p: Pedido) {
+    const label = p.numero_pedido ? `#${p.numero_pedido}` : 'este pedido'
+    const valorStr = p.valor_total != null ? `\nEsta ação registrará o pagamento de ${fmt(p.valor_total)} ao fornecedor.` : ''
+    if (!confirm(`Confirmar pagamento do pedido ${label}?${valorStr}`)) return
+    const res = await apiFetch(`/api/insumos/pedidos/${p.id}/pagar`, { method: 'POST' })
+    if (res.ok) { toast('Pagamento registrado', 'ok2'); load() }
+    else { const d = await res.json(); toast(d.error || 'Erro ao registrar pagamento', 'err') }
+  }
+
+  async function pagarLote() {
+    const ids = Array.from(selecionados)
+    const total = pedidos.filter(p => ids.includes(p.id)).reduce((acc, p) => acc + (p.valor_total ?? 0), 0)
+    if (!confirm(`Confirmar pagamento de ${ids.length} pedido(s)?\nValor total: ${fmt(total)}`)) return
+    await Promise.all(ids.map(id => apiFetch(`/api/insumos/pedidos/${id}/pagar`, { method: 'POST' })))
+    toast(`${ids.length} pedido(s) marcado(s) como pago`, 'ok2')
+    setSelecionados(new Set())
+    load()
+  }
+
+  function toggleSel(id: string) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const recebidosPendPagto = pedidos.filter(p => p.status === 'recebido')
+  const totalPendente = pedidos.filter(p => p.status === 'pendente').reduce((acc, p) => acc + (p.valor_total ?? 0), 0)
+  const totalAPagar   = recebidosPendPagto.reduce((acc, p) => acc + (p.valor_total ?? 0), 0)
+  const totalGeral    = totalPendente + totalAPagar
+  const totalSelecionados = pedidos.filter(p => selecionados.has(p.id)).reduce((acc, p) => acc + (p.valor_total ?? 0), 0)
+  const COLS = 10
 
   return (
     <div>
+      {/* Card de resumo */}
       {!loading && (
         <div style={{ marginBottom: 24 }}>
           <div style={{
             background: 'linear-gradient(135deg, var(--gold) 0%, #b8860b 100%)',
             borderRadius: 12,
             padding: '20px 28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             boxShadow: '0 4px 16px rgba(212,175,55,0.25)',
           }}>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(0,0,0,0.6)', textTransform: 'uppercase' }}>
-                Total em Aberto
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: '#000', marginTop: 4, letterSpacing: '-0.5px' }}>
-                {fmt(totalEmAberto)}
-              </div>
-              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)', marginTop: 4 }}>
-                {pedidos.filter(p => p.status === 'pendente').length} pedido(s) pendente(s)
-              </div>
+            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(0,0,0,0.55)', textTransform: 'uppercase', marginBottom: 14 }}>
+              Total em Aberto
             </div>
-            <div style={{ fontSize: 40, opacity: 0.35 }}>🧾</div>
+            <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.55)', marginBottom: 2 }}>A receber</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#000' }}>{fmt(totalPendente)}</div>
+                <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', marginTop: 2 }}>
+                  {pedidos.filter(p => p.status === 'pendente').length} pedido(s) a chegar
+                </div>
+              </div>
+              <div style={{ width: 1, background: 'rgba(0,0,0,0.18)', alignSelf: 'stretch', minHeight: 48 }} />
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.55)', marginBottom: 2 }}>A pagar</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#000' }}>{fmt(totalAPagar)}</div>
+                <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', marginTop: 2 }}>
+                  {recebidosPendPagto.length} recebido(s) não pago(s)
+                </div>
+              </div>
+              <div style={{ width: 1, background: 'rgba(0,0,0,0.18)', alignSelf: 'stretch', minHeight: 48 }} />
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.55)', marginBottom: 2 }}>Total</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#000', letterSpacing: '-0.5px' }}>{fmt(totalGeral)}</div>
+              </div>
+              <div style={{ marginLeft: 'auto', fontSize: 40, opacity: 0.3, alignSelf: 'center' }}>🧾</div>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Barra de ação em lote */}
+      {selecionados.size > 0 && (
+        <div style={{
+          background: '#1e293b', color: '#fff', borderRadius: 10, padding: '12px 20px',
+          display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12,
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{selecionados.size} pedido(s) selecionado(s) — {fmt(totalSelecionados)}</span>
+          <button className="btn btn-gold btn-sm" onClick={pagarLote}>💰 Marcar como Pago</button>
+          <button className="btn btn-ghost btn-sm" style={{ color: '#fff' }} onClick={() => setSelecionados(new Set())}>Cancelar</button>
         </div>
       )}
 
@@ -514,28 +574,53 @@ function AbaPedidos() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Nº Pedido</th><th>Fornecedora</th><th>Status</th><th>Data pedido</th><th>Data recebimento</th><th>Itens</th><th>Valor Total</th><th>Ações</th></tr>
+              <tr>
+                <th style={{ width: 36 }}></th>
+                <th>Nº Pedido</th>
+                <th>Fornecedora</th>
+                <th>Status</th>
+                <th>Pagamento</th>
+                <th>Data pedido</th>
+                <th>Data recebimento</th>
+                <th>Itens</th>
+                <th>Valor Total</th>
+                <th>Ações</th>
+              </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8}><div className="empty-state"><p>Carregando...</p></div></td></tr>
+                <tr><td colSpan={COLS}><div className="empty-state"><p>Carregando...</p></div></td></tr>
               ) : pedidos.length === 0 ? (
-                <tr><td colSpan={8}><div className="empty-state"><h3>Nenhum pedido</h3></div></td></tr>
+                <tr><td colSpan={COLS}><div className="empty-state"><h3>Nenhum pedido</h3></div></td></tr>
               ) : pedidos.map(p => (
                 <tr key={p.id}>
+                  <td>
+                    {p.status === 'recebido' && (
+                      <input
+                        type="checkbox"
+                        checked={selecionados.has(p.id)}
+                        onChange={() => toggleSel(p.id)}
+                        style={{ cursor: 'pointer', accentColor: 'var(--gold)' }}
+                      />
+                    )}
+                  </td>
                   <td style={{ fontWeight: 500 }}>{p.numero_pedido || '—'}</td>
                   <td className="text-sm">{p.fornecedoras?.nome || '—'}</td>
                   <td>{statusBadge(p.status)}</td>
+                  <td>{pagamentoBadge(p.status)}</td>
                   <td className="text-sm">{fmtDate(p.data_pedido)}</td>
                   <td className="text-sm">{fmtDate(p.data_recebimento)}</td>
                   <td className="text-sm">{(p.insumo_pedido_itens || []).length} iten(s)</td>
                   <td className="font-bold">{p.valor_total != null ? fmt(p.valor_total) : '—'}</td>
                   <td>
-                    {p.status === 'pendente' && (
-                      <button className="btn btn-ghost btn-sm" onClick={() => receber(p.id)}>
-                        ✅ Receber
-                      </button>
-                    )}
+                    <div className="flex gap-2">
+                      {p.status === 'pendente' && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => receber(p.id)}>✅ Receber</button>
+                      )}
+                      {p.status === 'recebido' && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => pagar(p)}>💰 Pagar</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
