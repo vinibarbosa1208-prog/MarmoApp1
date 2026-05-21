@@ -16,6 +16,8 @@ interface ItemForm {
   area: number
   quantidade: number
   preco_unitario: number
+  custo_m2: number
+  markup: number
   tipo_peca: string
   acabamento_esquerda: string
   acabamento_direita: string
@@ -30,7 +32,7 @@ interface ItemForm {
 
 const ITEM_DEFAULTS: ItemForm = {
   tipo: 'material', descricao: '', largura: 0, altura: 0, area: 0,
-  quantidade: 1, preco_unitario: 0,
+  quantidade: 1, preco_unitario: 0, custo_m2: 0, markup: 3,
   tipo_peca: '', acabamento_esquerda: '', acabamento_direita: '',
   acabamento_frente: '', acabamento_fundo: '',
   tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0,
@@ -51,10 +53,15 @@ function calcTotal(item: ItemForm): number {
   return item.quantidade * item.preco_unitario
 }
 
+function calcCusto(item: ItemForm): number {
+  const area = calcArea(item)
+  return area > 0 ? area * item.quantidade * item.custo_m2 : 0
+}
+
 function validarItem(item: ItemForm): boolean {
   if (!item.descricao) return false
   if (item.quantidade <= 0) return false
-  if (!item.tipo_peca) return true // generic item — valid
+  if (!item.tipo_peca) return true
 
   const peca = item.tipo_peca
   const laterais = getLateraisDaPeca(peca)
@@ -137,7 +144,14 @@ export default function NovoOrcamentoPage() {
 
   function preencherMaterial(id: string) {
     const m = materiais.find(x => x.id === id)
-    if (m) upItem({ descricao: m.nome, preco_unitario: m.preco_padrao || m.preco || m.preco_unitario || 0 })
+    if (!m) return
+    const custo = (m as unknown as Record<string, number>).custo_unitario || 0
+    const markup = novoItem.markup || 3
+    upItem({
+      descricao: m.nome,
+      custo_m2: custo,
+      preco_unitario: custo > 0 ? custo * markup : (m.preco_padrao || m.preco || m.preco_unitario || 0),
+    })
   }
 
   function preencherServico(id: string) {
@@ -152,6 +166,8 @@ export default function NovoOrcamentoPage() {
   const desconto = parseFloat(form.desconto_rs) || 0
   const totalFinal = subtotal + maoObra - desconto
   const descontoExcede = desconto > 0 && desconto > subtotal + maoObra
+
+  const isMaterialComPeca = novoItem.tipo === 'material' && !!novoItem.tipo_peca
 
   async function salvar() {
     if (!marmoraria) return
@@ -189,7 +205,10 @@ export default function NovoOrcamentoPage() {
           area: calcArea(i) || null,
           quantidade: i.quantidade,
           preco_unitario: i.preco_unitario,
+          custo_m2: i.custo_m2 || null,
+          markup: i.markup || null,
           total_item: calcTotal(i),
+          custo_item: calcCusto(i) || null,
           tipo_peca: i.tipo_peca || null,
           acabamento_esquerda: i.acabamento_esquerda || null,
           acabamento_direita: i.acabamento_direita || null,
@@ -352,6 +371,8 @@ export default function NovoOrcamentoPage() {
                           const frontao = novoItem.tem_frontao ? novoItem.largura * novoItem.altura_frontao : 0
                           const saia = novoItem.tem_saia ? novoItem.largura * novoItem.altura_saia : 0
                           const total = tampo + frontao + saia
+                          const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
+                          const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
                           return (
                             <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -374,6 +395,18 @@ export default function NovoOrcamentoPage() {
                                 <span>Total</span>
                                 <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
                               </div>
+                              {novoItem.custo_m2 > 0 && (
+                                <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                                    <span>Custo</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--gold)' }}>
+                                    <span>Venda</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.preco_unitario.toFixed(2)} = <strong>{fmt(totalVenda)}</strong></span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )
                         })()}
@@ -403,18 +436,63 @@ export default function NovoOrcamentoPage() {
                   )}
                 </div>
 
-                <div className="form-row form-row-2">
-                  <div className="form-group">
-                    <label className="form-label">{novoItem.tipo === 'servico' && servicoUnit ? `QUANTIDADE (${servicoUnit})` : 'QUANTIDADE'}</label>
-                    <input className="form-input" type="number" min="0" step="0.01" value={novoItem.quantidade}
-                      onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
+                {/* Preços: 3 campos quando material+peça, campo único caso contrário */}
+                {isMaterialComPeca ? (
+                  <>
+                    <div className="form-group" style={{ marginTop: 10 }}>
+                      <label className="form-label">{novoItem.tipo === 'servico' && servicoUnit ? `QUANTIDADE (${servicoUnit})` : 'QUANTIDADE'}</label>
+                      <input className="form-input" type="number" min="0" step="0.01" value={novoItem.quantidade}
+                        onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
+                      <div className="form-group">
+                        <label className="form-label">CUSTO DE COMPRA (R$/m²)</label>
+                        <input className="form-input" type="number" min="0" step="0.01" placeholder="0,00"
+                          value={novoItem.custo_m2 || ''}
+                          onChange={e => {
+                            const custo = parseFloat(e.target.value) || 0
+                            upItem({ custo_m2: custo, preco_unitario: custo * (novoItem.markup || 3) })
+                          }} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">FATOR (×)</label>
+                        <input className="form-input" type="number" min="0.1" step="0.5" placeholder="3"
+                          value={novoItem.markup || ''}
+                          onChange={e => {
+                            const markup = parseFloat(e.target.value) || 1
+                            upItem({ markup, preco_unitario: (novoItem.custo_m2 || 0) * markup })
+                          }} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">PREÇO DE VENDA (R$/m²)</label>
+                        <input className="form-input" type="number" min="0" step="0.01" placeholder="0,00"
+                          value={novoItem.preco_unitario || ''}
+                          style={{ color: 'var(--gold)', fontWeight: 700 }}
+                          onChange={e => {
+                            const venda = parseFloat(e.target.value) || 0
+                            const markup = novoItem.custo_m2 > 0
+                              ? Math.round((venda / novoItem.custo_m2) * 100) / 100
+                              : novoItem.markup
+                            upItem({ preco_unitario: venda, markup })
+                          }} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="form-row form-row-2" style={{ marginTop: 10 }}>
+                    <div className="form-group">
+                      <label className="form-label">{novoItem.tipo === 'servico' && servicoUnit ? `QUANTIDADE (${servicoUnit})` : 'QUANTIDADE'}</label>
+                      <input className="form-input" type="number" min="0" step="0.01" value={novoItem.quantidade}
+                        onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">{calcArea(novoItem) > 0 ? 'PREÇO POR M² (R$)' : 'PREÇO UNITÁRIO (R$)'}</label>
+                      <input className="form-input" type="number" min="0" step="0.01" value={novoItem.preco_unitario}
+                        onChange={e => upItem({ preco_unitario: parseFloat(e.target.value) || 0 })} />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">{calcArea(novoItem) > 0 ? 'PREÇO POR M² (R$)' : 'PREÇO UNITÁRIO (R$)'}</label>
-                    <input className="form-input" type="number" min="0" step="0.01" value={novoItem.preco_unitario}
-                      onChange={e => upItem({ preco_unitario: parseFloat(e.target.value) || 0 })} />
-                  </div>
-                </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                   <span style={{ fontWeight: 700, color: 'var(--dark)' }}>Total: {fmt(calcTotal(novoItem))}</span>
                   <button
