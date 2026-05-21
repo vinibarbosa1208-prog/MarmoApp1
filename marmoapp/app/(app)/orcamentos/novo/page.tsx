@@ -11,6 +11,9 @@ import AcabamentosLaterais from '@/components/orcamento/AcabamentosLaterais'
 interface ItemForm {
   tipo: 'material' | 'servico' | 'frete' | 'outro'
   descricao: string
+  largura: number
+  altura: number
+  area: number
   quantidade: number
   preco_unitario: number
   tipo_peca: string
@@ -26,14 +29,25 @@ interface ItemForm {
 }
 
 const ITEM_DEFAULTS: ItemForm = {
-  tipo: 'material', descricao: '', quantidade: 1, preco_unitario: 0,
+  tipo: 'material', descricao: '', largura: 0, altura: 0, area: 0,
+  quantidade: 1, preco_unitario: 0,
   tipo_peca: '', acabamento_esquerda: '', acabamento_direita: '',
   acabamento_frente: '', acabamento_fundo: '',
   tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0,
   dados_extras: {},
 }
 
+function calcArea(item: ItemForm): number {
+  if (!item.largura || !item.altura) return 0
+  const tampo = item.largura * item.altura
+  const frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
+  const saia = item.tem_saia ? item.largura * item.altura_saia : 0
+  return tampo + frontao + saia
+}
+
 function calcTotal(item: ItemForm): number {
+  const area = calcArea(item)
+  if (area > 0) return area * item.quantidade * item.preco_unitario
   return item.quantidade * item.preco_unitario
 }
 
@@ -166,6 +180,9 @@ export default function NovoOrcamentoPage() {
           marmoraria_id: marmoraria.id,
           tipo: i.tipo,
           descricao: i.descricao,
+          largura: i.largura || null,
+          altura: i.altura || null,
+          area: calcArea(i) || null,
           quantidade: i.quantidade,
           preco_unitario: i.preco_unitario,
           total_item: calcTotal(i),
@@ -312,6 +329,58 @@ export default function NovoOrcamentoPage() {
                   />
                 )}
 
+                {/* Dimensões e cálculo de metragem */}
+                {novoItem.tipo_peca && (
+                  <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
+                    <div className="form-row form-row-2">
+                      <div className="form-group">
+                        <label className="form-label">LARGURA (m)</label>
+                        <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 2.00"
+                          value={novoItem.largura || ''}
+                          onChange={e => upItem({ largura: parseFloat(e.target.value) || 0 })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">PROFUNDIDADE (m)</label>
+                        <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 0.60"
+                          value={novoItem.altura || ''}
+                          onChange={e => upItem({ altura: parseFloat(e.target.value) || 0 })} />
+                      </div>
+                    </div>
+                    {novoItem.largura > 0 && novoItem.altura > 0 && (() => {
+                      const d = (n: number) => n.toFixed(2).replace('.', ',')
+                      const tampo = novoItem.largura * novoItem.altura
+                      const frontao = novoItem.tem_frontao ? novoItem.largura * novoItem.altura_frontao : 0
+                      const saia = novoItem.tem_saia ? novoItem.largura * novoItem.altura_saia : 0
+                      const total = tampo + frontao + saia
+                      return (
+                        <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ color: '#555' }}>Tampo</span>
+                            <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura)} = <strong>{d(tampo)} m²</strong></span>
+                          </div>
+                          {novoItem.tem_frontao && novoItem.altura_frontao > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                              <span>Frontão</span>
+                              <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_frontao)} = <strong>{d(frontao)} m²</strong></span>
+                            </div>
+                          )}
+                          {novoItem.tem_saia && novoItem.altura_saia > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                              <span>Saia</span>
+                              <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_saia)} = <strong>{d(saia)} m²</strong></span>
+                            </div>
+                          )}
+                          <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                            <span>Total</span>
+                            <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+
                 {/* Descrição */}
                 <div className="form-group" style={{ marginTop: 12 }}>
                   <label className="form-label">DESCRIÇÃO</label>
@@ -329,7 +398,7 @@ export default function NovoOrcamentoPage() {
                       onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">PREÇO UNITÁRIO (R$)</label>
+                    <label className="form-label">{calcArea(novoItem) > 0 ? 'PREÇO POR M² (R$)' : 'PREÇO UNITÁRIO (R$)'}</label>
                     <input className="form-input" type="number" min="0" step="0.01" value={novoItem.preco_unitario}
                       onChange={e => upItem({ preco_unitario: parseFloat(e.target.value) || 0 })} />
                   </div>

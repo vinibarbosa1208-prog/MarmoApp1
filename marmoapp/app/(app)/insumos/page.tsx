@@ -473,8 +473,39 @@ function AbaPedidos() {
     }
   }
 
+  const totalEmAberto = pedidos
+    .filter(p => p.status === 'pendente')
+    .reduce((acc, p) => acc + (p.valor_total ?? 0), 0)
+
   return (
     <div>
+      {!loading && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{
+            background: 'linear-gradient(135deg, var(--gold) 0%, #b8860b 100%)',
+            borderRadius: 12,
+            padding: '20px 28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 16px rgba(212,175,55,0.25)',
+          }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(0,0,0,0.6)', textTransform: 'uppercase' }}>
+                Total em Aberto
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#000', marginTop: 4, letterSpacing: '-0.5px' }}>
+                {fmt(totalEmAberto)}
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.55)', marginTop: 4 }}>
+                {pedidos.filter(p => p.status === 'pendente').length} pedido(s) pendente(s)
+              </div>
+            </div>
+            <div style={{ fontSize: 40, opacity: 0.35 }}>🧾</div>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <div className="card-header">
           <span className="card-title">Pedidos de Compra</span>

@@ -342,13 +342,13 @@ export default function SeletorPeca(props: Props) {
           {['bancada_simples', 'bancada_cuba', 'bancada_frontao', 'ilha_cozinha'].includes(peca) && (
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                <Toggle on={tem_saia} onToggle={() => onChange({ tem_saia: !tem_saia, altura_saia: 0 })} />
+                <Toggle on={tem_saia} onToggle={() => onChange({ tem_saia: !tem_saia, altura_saia: !tem_saia ? 0.10 : 0 })} />
                 <span style={{ fontSize: 13, fontWeight: 600 }}>Possui saia?</span>
               </label>
               {tem_saia && (
                 <div className="form-group" style={{ marginTop: 8 }}>
-                  <label className="form-label">ALTURA DA SAIA (cm)</label>
-                  <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 60"
+                  <label className="form-label">ALTURA DA SAIA (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.10"
                     value={altura_saia || ''}
                     onChange={e => onChange({ altura_saia: parseFloat(e.target.value) || 0 })} />
                   {showErrors && !(altura_saia > 0) && <Err msg="Informe a altura da saia." />}
@@ -361,13 +361,13 @@ export default function SeletorPeca(props: Props) {
           {['bancada_simples', 'bancada_cuba', 'bancada_saia', 'ilha_cozinha'].includes(peca) && (
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                <Toggle on={tem_frontao} onToggle={() => onChange({ tem_frontao: !tem_frontao, altura_frontao: 0 })} />
+                <Toggle on={tem_frontao} onToggle={() => onChange({ tem_frontao: !tem_frontao, altura_frontao: !tem_frontao ? 0.10 : 0 })} />
                 <span style={{ fontSize: 13, fontWeight: 600 }}>Possui frontão?</span>
               </label>
               {tem_frontao && (
                 <div className="form-group" style={{ marginTop: 8 }}>
-                  <label className="form-label">ALTURA DO FRONTÃO (cm)</label>
-                  <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 60"
+                  <label className="form-label">ALTURA DO FRONTÃO (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.10"
                     value={altura_frontao || ''}
                     onChange={e => onChange({ altura_frontao: parseFloat(e.target.value) || 0 })} />
                   {showErrors && !(altura_frontao > 0) && <Err msg="Informe a altura do frontão." />}
