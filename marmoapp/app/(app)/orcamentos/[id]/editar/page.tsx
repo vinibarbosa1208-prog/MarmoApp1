@@ -169,6 +169,10 @@ export default function EditarOrcamentoPage() {
     setNovoItem(prev => ({ ...prev, dados_extras: { ...prev.dados_extras, [`raio_${lateral}`]: raio } }))
   }
 
+  function handleLateralExtrasChange(lateral: string, key: string, value: unknown) {
+    setNovoItem(prev => ({ ...prev, dados_extras: { ...prev.dados_extras, [`${key}_${lateral}`]: value } }))
+  }
+
   const itemValido = useMemo(() => validarItem(novoItem), [novoItem])
 
   function adicionarItem() {
@@ -381,6 +385,7 @@ export default function EditarOrcamentoPage() {
                         showErrors={mostrarErros}
                         onLateralChange={handleLateralChange}
                         onRaioChange={handleRaioChange}
+                        onLateralExtrasChange={handleLateralExtrasChange}
                       />
                     )}
                     {novoItem.tipo_peca && (
