@@ -6,6 +6,7 @@ export const ACABAMENTO_LABELS: Record<string, string> = {
   reto: 'Reto',
   boleado: 'Boleado',
   meia_esquadria: 'Meia Esquadria',
+  frontao: 'Frontão',
 }
 
 const LATERAL_LABELS: Record<string, string> = {
@@ -45,10 +46,20 @@ function SvgMeiaEsquadria() {
   )
 }
 
+function SvgFrontao() {
+  return (
+    <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+      <rect x="8" y="8" width="34" height="34" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="1.8"/>
+      <rect x="8" y="8" width="10" height="34" fill="#c8dff0" stroke="#1a1a1a" strokeWidth="1.8"/>
+    </svg>
+  )
+}
+
 const ACABAMENTO_SVG: Record<string, React.ReactNode> = {
   reto: <SvgReto />,
   boleado: <SvgBoleado />,
   meia_esquadria: <SvgMeiaEsquadria />,
+  frontao: <SvgFrontao />,
 }
 
 interface Props {
@@ -72,7 +83,22 @@ export default function AcabamentosLaterais({
 
   if (laterais.length === 0) return null
 
-  const values: Record<string, string> = { esquerda, direita, frente, fundo }
+  // Laterais padrão vêm por prop; laterais extras (superior, inferior) são lidas/escritas em dadosExtras
+  const PROP_LATERAIS = ['esquerda', 'direita', 'frente', 'fundo']
+  const propValues: Record<string, string> = { esquerda, direita, frente, fundo }
+
+  function getAcabamento(lateral: string): string {
+    if (PROP_LATERAIS.includes(lateral)) return propValues[lateral] || ''
+    return (dadosExtras[`acabamento_${lateral}`] as string) || ''
+  }
+
+  function setAcabamento(lateral: string, tipo: string) {
+    if (PROP_LATERAIS.includes(lateral)) {
+      onLateralChange(lateral, tipo)
+    } else {
+      onLateralExtrasChange(lateral, 'acabamento', tipo)
+    }
+  }
 
   return (
     <div style={{ marginTop: 14 }}>
@@ -81,7 +107,7 @@ export default function AcabamentosLaterais({
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {laterais.map(lateral => {
-          const current = values[lateral] || ''
+          const current = getAcabamento(lateral)
           const hasError = showErrors && !current
           const raioKey = `raio_${lateral}`
           const raio = (dadosExtras[raioKey] as number) || 20
@@ -105,9 +131,12 @@ export default function AcabamentosLaterais({
                         key={tipo}
                         type="button"
                         onClick={() => {
-                          onLateralChange(lateral, tipo)
+                          setAcabamento(lateral, tipo)
                           if (tipo === 'boleado' && !dadosExtras[raioKey]) {
                             onRaioChange(lateral, 20)
+                          }
+                          if (tipo === 'frontao' && !dadosExtras[`altura_frontao_${lateral}`]) {
+                            onLateralExtrasChange(lateral, 'altura_frontao', 0.10)
                           }
                         }}
                         title={ACABAMENTO_LABELS[tipo]}
@@ -148,8 +177,23 @@ export default function AcabamentosLaterais({
                 </div>
               )}
 
-              {current && (
-                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {current === 'frontao' && (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ fontSize: 11, color: 'var(--gray)' }}>Altura (cm):</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={Math.round(((dadosExtras[`altura_frontao_${lateral}`] as number) || 0.10) * 100)}
+                    onChange={e => onLateralExtrasChange(lateral, 'altura_frontao', (parseInt(e.target.value) || 10) / 100)}
+                    style={{ width: 70 }}
+                  />
+                </div>
+              )}
+
+              {['reto', 'boleado', 'meia_esquadria'].includes(current) && (
+                <div style={{ marginTop: 8 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
                     <input
                       type="checkbox"
@@ -177,35 +221,9 @@ export default function AcabamentosLaterais({
                       </>
                     )}
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!(dadosExtras[`frontao_${lateral}`] as boolean)}
-                      onChange={e => {
-                        onLateralExtrasChange(lateral, 'frontao', e.target.checked)
-                        if (e.target.checked && !dadosExtras[`altura_frontao_${lateral}`]) {
-                          onLateralExtrasChange(lateral, 'altura_frontao', 0.10)
-                        }
-                      }}
-                    />
-                    <span style={{ fontSize: 11, color: 'var(--gray)' }}>Frontão</span>
-                    {!!(dadosExtras[`frontao_${lateral}`] as boolean) && (
-                      <>
-                        <input
-                          className="form-input"
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={Math.round(((dadosExtras[`altura_frontao_${lateral}`] as number) || 0.10) * 100)}
-                          onChange={e => onLateralExtrasChange(lateral, 'altura_frontao', (parseInt(e.target.value) || 10) / 100)}
-                          style={{ width: 60 }}
-                        />
-                        <span style={{ fontSize: 11, color: 'var(--gray)' }}>cm</span>
-                      </>
-                    )}
-                  </label>
                 </div>
               )}
+
               {hasError && (
                 <p style={{ color: '#c0392b', fontSize: 11, marginTop: 4 }}>
                   Selecione o acabamento para esta lateral.
