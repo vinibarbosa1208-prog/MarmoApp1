@@ -103,20 +103,44 @@ function dataValidade(orc: OrcamentoPDF): string {
   return d.toLocaleDateString('pt-BR')
 }
 
-async function loadLogoDataUrl(): Promise<string | null> {
+type LogoResult = { dataUrl: string; format: 'PNG' | 'JPEG' }
+
+async function detectFormat(blob: Blob): Promise<'PNG' | 'JPEG'> {
   try {
-    const res = await fetch('/logo-marmoapp.jpg')
+    const buf = await blob.slice(0, 4).arrayBuffer()
+    const bytes = new Uint8Array(buf)
+    if (bytes[0] === 0x89 && bytes[1] === 0x50) return 'PNG'
+  } catch { /* fall through */ }
+  return 'JPEG'
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function fetchLogo(url: string): Promise<LogoResult | null> {
+  try {
+    const res = await fetch(url)
     if (!res.ok) return null
     const blob = await res.blob()
-    return new Promise<string>((resolve) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = () => resolve(null as unknown as string)
-      reader.readAsDataURL(blob)
-    })
+    const [dataUrl, format] = await Promise.all([blobToDataUrl(blob), detectFormat(blob)])
+    return { dataUrl, format }
   } catch {
     return null
   }
+}
+
+async function loadLogo(logoUrl?: string | null): Promise<LogoResult | null> {
+  if (logoUrl) {
+    const custom = await fetchLogo(logoUrl)
+    if (custom) return custom
+  }
+  return fetchLogo('/logo-marmoapp.jpg')
 }
 
 export async function gerarOrcamentoPDF(
@@ -124,7 +148,7 @@ export async function gerarOrcamentoPDF(
   marmoraria: Marmoraria,
   cliente: Cliente | null
 ): Promise<jsPDF> {
-  const logoDataUrl = await loadLogoDataUrl()
+  const logoResult = await loadLogo(marmoraria.logo_url)
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const W = 210
@@ -140,8 +164,19 @@ export async function gerarOrcamentoPDF(
   doc.rect(0, 0, W, 42, 'F')
 
   // Logo or company name
-  if (logoDataUrl) {
-    doc.addImage(logoDataUrl, 'JPEG', 16, 6, 54, 18)
+  if (logoResult) {
+    try {
+      const props = doc.getImageProperties(logoResult.dataUrl)
+      const ratio = props.width / props.height
+      const maxW = 56
+      const maxH = 18
+      let dW = maxW
+      let dH = dW / ratio
+      if (dH > maxH) { dH = maxH; dW = dH * ratio }
+      doc.addImage(logoResult.dataUrl, logoResult.format, 16, 6, dW, dH)
+    } catch {
+      doc.addImage(logoResult.dataUrl, logoResult.format, 16, 6, 54, 18)
+    }
   } else {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(22)

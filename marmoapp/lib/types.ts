@@ -10,6 +10,7 @@ export interface Marmoraria {
   cidade?: string
   estado?: string
   cep?: string
+  logo_url?: string | null
   plano: Plan
   owner_id: string
   created_at: string
