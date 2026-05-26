@@ -55,21 +55,22 @@ const NAV = [
   },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname()
   const { marmoraria, user } = useApp()
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="sidebar-logo">
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
           <img
             src="/logo-marmoapp.jpg"
             alt="MarmoApp"
             style={{ width: 120, height: 40, objectFit: 'contain' }}
           />
+          <button className="sidebar-close-btn" onClick={onClose} aria-label="Fechar menu">✕</button>
         </div>
         <small id="company-name-sidebar">{marmoraria?.nome || 'Marmoraria'}</small>
       </div>

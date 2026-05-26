@@ -222,7 +222,7 @@ export default function SeletorPeca(props: Props) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+      <div className="peca-grid">
         {Object.entries(PECA_LABELS).map(([id, nome]) => {
           const selected = tipo_peca === id
           return (

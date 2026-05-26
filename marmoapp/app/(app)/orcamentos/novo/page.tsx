@@ -315,7 +315,7 @@ export default function NovoOrcamentoPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
+      <div className="orcamento-form-grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Dados gerais */}
           <div className="card">

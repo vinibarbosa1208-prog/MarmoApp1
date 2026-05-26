@@ -213,7 +213,7 @@ export default function VerOrcamentoPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
+      <div className="orcamento-view-grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="card">
             <div className="card-header"><span className="card-title">Informações</span></div>
