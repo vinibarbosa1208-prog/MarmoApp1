@@ -196,8 +196,10 @@ export async function gerarOrcamentoPDF(
   const subParts: string[] = []
   if (marmoraria.cnpj) subParts.push(`CNPJ: ${marmoraria.cnpj}`)
   if (marmoraria.telefone) subParts.push(`Tel: ${marmoraria.telefone}`)
-  if (marmoraria.cidade && marmoraria.estado) subParts.push(`${marmoraria.cidade} — ${marmoraria.estado}`)
-  else if (marmoraria.cidade) subParts.push(marmoraria.cidade)
+  const cidadeEstado = marmoraria.cidade && marmoraria.estado
+    ? `${marmoraria.cidade} — ${marmoraria.estado}`
+    : marmoraria.cidade || marmoraria.estado || ''
+  if (cidadeEstado) subParts.push(cidadeEstado)
   if (subParts.length) doc.text(subParts.join('   ·   '), 16, subY)
 
   if (marmoraria.endereco) {
@@ -250,7 +252,7 @@ export async function gerarOrcamentoPDF(
   if (cliente?.cpf_cnpj) { doc.text(`CPF/CNPJ: ${cliente.cpf_cnpj}`, col1x, y); y += 4 }
 
   // Column 2: Orcamento info
-  const infoY = 52
+  const infoY = HEADER_H + 4
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...GRAY)
