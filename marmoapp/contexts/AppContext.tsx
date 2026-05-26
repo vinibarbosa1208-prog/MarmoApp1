@@ -102,11 +102,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [loadClientes, loadOrcamentos, loadMateriais, loadServicos])
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return
+    // Single source of truth: onAuthStateChange handles initial session + all changes.
+    // Using getUser() or getSession() in parallel across components risks concurrent
+    // refresh-token use, which Supabase revokes immediately on mobile.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!session) {
+        setState(s => ({ ...s, user: null, marmoraria: null }))
+        return
+      }
+
+      // TOKEN_REFRESHED: Supabase already handled the refresh internally.
+      // No need to re-fetch marmoraria — just keep current state.
+      if (event === 'TOKEN_REFRESHED') return
+
       const user = { id: session.user.id, email: session.user.email! }
 
-      // usuarios.id = auth.users.id; get marmoraria via the junction table
       const { data: usuario } = await supabase
         .from('usuarios')
         .select('marmoraria_id')
@@ -128,6 +138,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setState(s => ({ ...s, user, marmoraria: marm as Marmoraria | null }))
     })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {

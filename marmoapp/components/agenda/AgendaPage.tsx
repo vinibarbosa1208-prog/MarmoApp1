@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useApp } from '@/contexts/AppContext'
 import type { AgendaEvent, AgendaEventType } from '@/lib/agenda/types'
 import EventCard from './EventCard'
 import NovoEventoModal from './NovoEventoModal'
@@ -23,6 +24,7 @@ function isoDate(d: Date): string {
 }
 
 export default function AgendaPage() {
+  const { marmoraria } = useApp()
   const [monday, setMonday] = useState<Date>(() => getMondayOf(new Date()))
   const [events, setEvents] = useState<AgendaEvent[]>([])
   const [tipos, setTipos] = useState<AgendaEventType[]>([])
@@ -32,14 +34,12 @@ export default function AgendaPage() {
   const [filterTipo, setFilterTipo] = useState<string>('')
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null)
 
-  const loadTipos = useCallback(async (token: string) => {
-    const { data: { user } } = await supabase.auth.getUser(token)
-    if (!user) return
-    const { data: usr } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).maybeSingle()
-    if (!usr?.marmoraria_id) return
-    const { data } = await supabase.from('agenda_event_types').select('*').eq('marmoraria_id', usr.marmoraria_id).order('nome')
+  // Uses marmoraria from AppContext — no getUser() network call needed
+  const loadTipos = useCallback(async () => {
+    if (!marmoraria?.id) return
+    const { data } = await supabase.from('agenda_event_types').select('*').eq('marmoraria_id', marmoraria.id).order('nome')
     setTipos(data || [])
-  }, [])
+  }, [marmoraria?.id])
 
   const loadEvents = useCallback(async () => {
     setLoading(true)
@@ -47,7 +47,7 @@ export default function AgendaPage() {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
       if (!token) return
-      if (tipos.length === 0) await loadTipos(token)
+      if (tipos.length === 0) await loadTipos()
       const res = await fetch(`/api/agenda/events?semana=${isoDate(monday)}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
