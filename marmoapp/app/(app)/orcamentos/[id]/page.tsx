@@ -79,8 +79,13 @@ export default function VerOrcamentoPage() {
     if (!orcPDF) return null
     setGeneratingPdf(true)
     try {
+      const { data: marmFresh } = await supabase
+        .from('marmorarias')
+        .select('*')
+        .eq('id', marmoraria.id)
+        .single()
       const { gerarOrcamentoPDF } = await import('@/lib/pdf/gerar-orcamento-pdf')
-      return await gerarOrcamentoPDF(orcPDF, marmoraria, cliente)
+      return await gerarOrcamentoPDF(orcPDF, marmFresh ?? marmoraria, cliente)
     } finally {
       setGeneratingPdf(false)
     }

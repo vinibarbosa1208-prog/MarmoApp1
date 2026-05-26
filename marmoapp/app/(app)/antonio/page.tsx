@@ -54,7 +54,10 @@ function OrcamentoActions({ orcamentoId }: { orcamentoId: string }) {
     setBusy(true)
     try {
       const { supabase } = await import('@/lib/supabase')
-      const { data: itensData } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcamentoId)
+      const [{ data: itensData }, { data: marmFresh }] = await Promise.all([
+        supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcamentoId),
+        supabase.from('marmorarias').select('*').eq('id', marmoraria.id).single(),
+      ])
       const { gerarOrcamentoPDF } = await import('@/lib/pdf/gerar-orcamento-pdf')
       const doc = await gerarOrcamentoPDF({
         id: orc.id, numero: orc.numero, descricao: orc.descricao, status: orc.status,
@@ -65,7 +68,7 @@ function OrcamentoActions({ orcamentoId }: { orcamentoId: string }) {
           preco_unitario: i.preco_unitario, total_item: i.total_item || i.preco_unitario * i.quantidade,
           largura: i.largura, altura: i.altura, area: i.area,
         })),
-      }, marmoraria, cliente)
+      }, marmFresh ?? marmoraria, cliente)
       const year = new Date(orc.created_at).getFullYear()
       const num = String(orc.numero ?? 0).padStart(4, '0')
       doc.save(`ORC-${year}-${num}.pdf`)
