@@ -158,24 +158,28 @@ export async function gerarOrcamentoPDF(
   const WHITE = [255, 255, 255] as [number, number, number]
 
   let y = 0
+  const HEADER_H = 48
 
   // ── Header background ─────────────────────────────────────
   doc.setFillColor(...DARK)
-  doc.rect(0, 0, W, 42, 'F')
+  doc.rect(0, 0, W, HEADER_H, 'F')
 
-  // Logo or company name
+  // Logo or company name — track where the logo ends to position subtitle
+  let logoEndY = 24
   if (logoResult) {
     try {
       const props = doc.getImageProperties(logoResult.dataUrl)
       const ratio = props.width / props.height
       const maxW = 56
-      const maxH = 18
+      const maxH = 28
       let dW = maxW
       let dH = dW / ratio
       if (dH > maxH) { dH = maxH; dW = dH * ratio }
       doc.addImage(logoResult.dataUrl, logoResult.format, 16, 6, dW, dH)
+      logoEndY = 6 + dH
     } catch {
-      doc.addImage(logoResult.dataUrl, logoResult.format, 16, 6, 54, 18)
+      doc.addImage(logoResult.dataUrl, logoResult.format, 16, 6, 28, 28)
+      logoEndY = 34
     }
   } else {
     doc.setFont('helvetica', 'bold')
@@ -184,7 +188,8 @@ export async function gerarOrcamentoPDF(
     doc.text(marmoraria.nome, 16, 18)
   }
 
-  // Subtitle
+  // Subtitle positioned below logo
+  const subY = logoEndY + 4
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(180, 160, 100)
@@ -193,11 +198,11 @@ export async function gerarOrcamentoPDF(
   if (marmoraria.telefone) subParts.push(`Tel: ${marmoraria.telefone}`)
   if (marmoraria.cidade && marmoraria.estado) subParts.push(`${marmoraria.cidade} — ${marmoraria.estado}`)
   else if (marmoraria.cidade) subParts.push(marmoraria.cidade)
-  if (subParts.length) doc.text(subParts.join('   ·   '), 16, 26)
+  if (subParts.length) doc.text(subParts.join('   ·   '), 16, subY)
 
   if (marmoraria.endereco) {
     doc.setTextColor(150, 140, 110)
-    doc.text(marmoraria.endereco, 16, 32)
+    doc.text(marmoraria.endereco, 16, subY + 6)
   }
 
   // Orcamento number (right side)
@@ -215,9 +220,9 @@ export async function gerarOrcamentoPDF(
 
   // Gold accent line
   doc.setFillColor(...GOLD)
-  doc.rect(0, 42, W, 1.5, 'F')
+  doc.rect(0, HEADER_H, W, 1.5, 'F')
 
-  y = 52
+  y = HEADER_H + 10
 
   // ── Client + Orcamento info ───────────────────────────────
   // Two columns
