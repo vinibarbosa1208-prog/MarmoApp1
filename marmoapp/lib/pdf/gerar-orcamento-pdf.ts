@@ -21,6 +21,8 @@ export interface ItemPDF {
   tem_frontao?: boolean
   altura_frontao?: number
   dados_extras?: Record<string, unknown>
+  variante?: string
+  nome_variante?: string
 }
 
 export interface OrcamentoPDF {
@@ -35,6 +37,13 @@ export interface OrcamentoPDF {
   validade?: string
   created_at: string
   itens: ItemPDF[]
+  tem_variantes?: boolean
+  total_variante_a?: number
+  total_variante_b?: number
+  total_variante_c?: number
+  nome_variante_a?: string
+  nome_variante_b?: string
+  nome_variante_c?: string
 }
 
 function fmt(v: number): string {
@@ -300,103 +309,133 @@ export async function gerarOrcamentoPDF(
     y += lines.length * 5 + 4
   }
 
-  // ── Items table ───────────────────────────────────────────
-  doc.setFontSize(8)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...GRAY)
-  doc.text('ITENS DO ORÇAMENTO', 16, y)
-  y += 3
+  // ── Items section ────────────────────────────────────────
+  const hasVariants = !!(orc.tem_variantes && orc.itens.some(i => i.variante && i.variante !== 'base'))
 
-  const hasArea = orc.itens.some(i => i.area || (i.largura && i.altura))
+  // Helper: render an items table, return finalY
+  const drawItemsTable = (items: ItemPDF[], startY: number): number => {
+    const ha = items.some(i => i.area || (i.largura && i.altura))
+    const hd = ha
+      ? [['Tipo', 'Descrição', 'Dimensões', 'Qtd', 'Preço/Un', 'Total']]
+      : [['Tipo', 'Descrição', 'Qtd', 'Preço/Un', 'Total']]
+    const bd = items.map(i => {
+      const dim = i.area
+        ? `${fmtNum(i.area)} m²`
+        : i.largura && i.altura ? `${fmtNum(i.largura, 2)} × ${fmtNum(i.altura, 2)} m` : '—'
+      const detalhe = pecaDetalhe(i)
+      const descFull = detalhe ? `${i.descricao}\n${detalhe}` : i.descricao
+      return ha
+        ? [i.tipo, descFull, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+        : [i.tipo, descFull, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+    })
+    autoTable(doc, {
+      startY, head: hd, body: bd, theme: 'grid',
+      headStyles: { fillColor: DARK, textColor: WHITE, fontSize: 8, fontStyle: 'bold', cellPadding: { top: 4, bottom: 4, left: 4, right: 4 } },
+      bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, overflow: 'linebreak' as const },
+      alternateRowStyles: { fillColor: [248, 248, 248] as [number, number, number] },
+      columnStyles: ha
+        ? { 0: { cellWidth: 18 }, 2: { cellWidth: 24, halign: 'center' }, 3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 26, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' } }
+        : { 0: { cellWidth: 18 }, 2: { cellWidth: 14, halign: 'center' }, 3: { cellWidth: 26, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' } },
+      margin: { left: 16, right: 16 },
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (doc as any).lastAutoTable.finalY
+  }
 
-  const head = hasArea
-    ? [['Tipo', 'Descrição', 'Dimensões', 'Qtd', 'Preço/Un', 'Total']]
-    : [['Tipo', 'Descrição', 'Qtd', 'Preço/Un', 'Total']]
+  // Helper: render a totals box, return new Y after box
+  const drawTotalsBox = (lines: [string, string, boolean][], startY: number): number => {
+    const boxW = 90
+    const boxX = W - 16 - boxW
+    const lineH = 7
+    const boxH = lines.length * lineH + 8
+    doc.setFillColor(245, 243, 238)
+    doc.roundedRect(boxX, startY, boxW, boxH, 2, 2, 'F')
+    doc.setDrawColor(...GOLD)
+    doc.setLineWidth(0.5)
+    doc.roundedRect(boxX, startY, boxW, boxH, 2, 2, 'S')
+    lines.forEach(([label, val, isFinal], idx) => {
+      const ry = startY + 5 + idx * lineH
+      if (isFinal) {
+        doc.setFillColor(...GOLD)
+        doc.rect(boxX, ry - 4, boxW, lineH + 1, 'F')
+        doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK)
+        doc.text(label, boxX + 5, ry + 1)
+        doc.text(val, boxX + boxW - 5, ry + 1, { align: 'right' })
+      } else {
+        doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY)
+        doc.text(label, boxX + 5, ry)
+        doc.setTextColor(...DARK)
+        doc.text(val, boxX + boxW - 5, ry, { align: 'right' })
+      }
+    })
+    return startY + boxH + 8
+  }
 
-  const body = orc.itens.map(i => {
-    const dim = i.area
-      ? `${fmtNum(i.area)} m²`
-      : i.largura && i.altura
-        ? `${fmtNum(i.largura, 2)} × ${fmtNum(i.altura, 2)} m`
-        : '—'
-    const detalhe = pecaDetalhe(i)
-    const descFull = detalhe ? `${i.descricao}\n${detalhe}` : i.descricao
+  if (hasVariants) {
+    const baseItems = orc.itens.filter(i => !i.variante || i.variante === 'base')
+    const baseSubtotal = baseItems.reduce((s, i) => s + i.total_item, 0)
 
-    return hasArea
-      ? [i.tipo, descFull, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
-      : [i.tipo, descFull, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
-  })
-
-  autoTable(doc, {
-    startY: y,
-    head,
-    body,
-    theme: 'grid',
-    headStyles: {
-      fillColor: DARK,
-      textColor: WHITE,
-      fontSize: 8,
-      fontStyle: 'bold',
-      cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
-    },
-    bodyStyles: {
-      fontSize: 8,
-      textColor: DARK,
-      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 },
-      overflow: 'linebreak' as const,
-    },
-    alternateRowStyles: { fillColor: [248, 248, 248] as [number, number, number] },
-    columnStyles: hasArea
-      ? { 0: { cellWidth: 18 }, 2: { cellWidth: 24, halign: 'center' }, 3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 26, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' } }
-      : { 0: { cellWidth: 18 }, 2: { cellWidth: 14, halign: 'center' }, 3: { cellWidth: 26, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' } },
-    margin: { left: 16, right: 16 },
-  })
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable.finalY + 6
-
-  // ── Totals box ───────────────────────────────────────────
-  const subtotal = orc.itens.reduce((s, i) => s + i.total_item, 0)
-  const totalLines: [string, string, boolean][] = [
-    ['Subtotal dos itens', fmt(subtotal), false],
-  ]
-  if (orc.mao_obra > 0) totalLines.push(['Mão de obra', fmt(orc.mao_obra), false])
-  if (orc.desconto_rs > 0) totalLines.push([`Desconto`, `– ${fmt(orc.desconto_rs)}`, false])
-  totalLines.push(['TOTAL GERAL', fmt(orc.total), true])
-
-  const boxW = 90
-  const boxX = W - 16 - boxW
-  const lineH = 7
-  const boxH = totalLines.length * lineH + 8
-
-  // Box background
-  doc.setFillColor(245, 243, 238)
-  doc.roundedRect(boxX, y, boxW, boxH, 2, 2, 'F')
-  doc.setDrawColor(...GOLD)
-  doc.setLineWidth(0.5)
-  doc.roundedRect(boxX, y, boxW, boxH, 2, 2, 'S')
-
-  totalLines.forEach(([label, val, isFinal], idx) => {
-    const ry = y + 5 + idx * lineH
-    if (isFinal) {
-      doc.setFillColor(...GOLD)
-      doc.rect(boxX, ry - 4, boxW, lineH + 1, 'F')
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...DARK)
-      doc.text(label, boxX + 5, ry + 1)
-      doc.text(val, boxX + boxW - 5, ry + 1, { align: 'right' })
-    } else {
-      doc.setFontSize(8.5)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(...GRAY)
-      doc.text(label, boxX + 5, ry)
-      doc.setTextColor(...DARK)
-      doc.text(val, boxX + boxW - 5, ry, { align: 'right' })
+    // Base items section
+    if (baseItems.length > 0) {
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GRAY)
+      doc.text('ITENS COMUNS (TODAS AS OPÇÕES)', 16, y)
+      y += 3
+      y = drawItemsTable(baseItems, y) + 6
     }
-  })
 
-  y += boxH + 8
+    // Per-variant sections
+    const VCOLS: Record<string, [number, number, number]> = {
+      A: [41, 128, 185], B: [39, 174, 96], C: [230, 126, 34],
+    }
+    const vNames: Record<string, string> = {
+      A: orc.nome_variante_a || 'Opção A',
+      B: orc.nome_variante_b || 'Opção B',
+      C: orc.nome_variante_c || 'Opção C',
+    }
+    const vTotals: Record<string, number | undefined> = {
+      A: orc.total_variante_a, B: orc.total_variante_b, C: orc.total_variante_c,
+    }
+
+    for (const vk of ['A', 'B', 'C']) {
+      const vItems = orc.itens.filter(i => i.variante === vk)
+      if (vItems.length === 0) continue
+      const vName = vNames[vk]
+      const vColor = VCOLS[vk]
+      const vSubtotal = vItems.reduce((s, i) => s + i.total_item, 0)
+      const vTotal = vTotals[vk] ?? (baseSubtotal + vSubtotal + orc.mao_obra - orc.desconto_rs)
+
+      // Variant colored header bar
+      doc.setFillColor(...vColor)
+      doc.rect(16, y, W - 32, 7, 'F')
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE)
+      doc.text(vName.toUpperCase(), 20, y + 4.8)
+      y += 10
+
+      y = drawItemsTable(vItems, y) + 6
+
+      // Variant totals box
+      const tLines: [string, string, boolean][] = []
+      if (baseItems.length > 0) tLines.push(['Itens comuns', fmt(baseSubtotal), false])
+      tLines.push([vName, fmt(vSubtotal), false])
+      if (orc.mao_obra > 0) tLines.push(['Mão de obra', fmt(orc.mao_obra), false])
+      if (orc.desconto_rs > 0) tLines.push(['Desconto', `– ${fmt(orc.desconto_rs)}`, false])
+      tLines.push([`TOTAL ${vName.toUpperCase()}`, fmt(vTotal), true])
+      y = drawTotalsBox(tLines, y)
+    }
+  } else {
+    // Single items table + totals box
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GRAY)
+    doc.text('ITENS DO ORÇAMENTO', 16, y)
+    y += 3
+    y = drawItemsTable(orc.itens, y) + 6
+
+    const subtotal = orc.itens.reduce((s, i) => s + i.total_item, 0)
+    const totalLines: [string, string, boolean][] = [['Subtotal dos itens', fmt(subtotal), false]]
+    if (orc.mao_obra > 0) totalLines.push(['Mão de obra', fmt(orc.mao_obra), false])
+    if (orc.desconto_rs > 0) totalLines.push(['Desconto', `– ${fmt(orc.desconto_rs)}`, false])
+    totalLines.push(['TOTAL GERAL', fmt(orc.total), true])
+    y = drawTotalsBox(totalLines, y)
+  }
 
   // ── Observações ──────────────────────────────────────────
   if (orc.observacoes) {

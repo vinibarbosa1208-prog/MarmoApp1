@@ -28,6 +28,7 @@ interface ItemForm {
   altura_saia: number
   tem_frontao: boolean
   altura_frontao: number
+  variante: 'base' | 'A' | 'B' | 'C'
   dados_extras: Record<string, unknown>
 }
 
@@ -37,6 +38,7 @@ const ITEM_DEFAULTS: ItemForm = {
   tipo_peca: '', acabamento_esquerda: '', acabamento_direita: '',
   acabamento_frente: '', acabamento_fundo: '',
   tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0,
+  variante: 'base',
   dados_extras: {},
 }
 
@@ -150,6 +152,8 @@ export default function NovoOrcamentoPage() {
   const [itens, setItens] = useState<ItemForm[]>([])
   const [novoItem, setNovoItem] = useState<ItemForm>({ ...ITEM_DEFAULTS })
   const [servicoIdSel, setServicodeIdSel] = useState('')
+  const [temVariantes, setTemVariantes] = useState(false)
+  const [varianteNomes, setVarianteNomes] = useState({ A: 'Opção A', B: 'Opção B', C: 'Opção C' })
 
   function up(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -220,6 +224,14 @@ export default function NovoOrcamentoPage() {
     if (!marmoraria) return
     setLoading(true)
     try {
+      const useVariantes = temVariantes && itens.some(i => i.variante !== 'base')
+      const baseSubtotal = itens.filter(i => i.variante === 'base').reduce((s, i) => s + calcTotal(i), 0)
+      const calcVarTotal = (v: 'A' | 'B' | 'C') => {
+        const vItems = itens.filter(i => i.variante === v)
+        if (!vItems.length) return null
+        return baseSubtotal + vItems.reduce((s, i) => s + calcTotal(i), 0) + maoObra - desconto
+      }
+
       const { data: orc, error: orcErr } = await supabase
         .from('orcamentos')
         .insert({
@@ -235,6 +247,15 @@ export default function NovoOrcamentoPage() {
           data_validade: form.validade || null,
           crm_status: 'novo',
           producao_status: 'comercial',
+          tem_variantes: useVariantes,
+          ...(useVariantes ? {
+            nome_variante_a: varianteNomes.A || 'Opção A',
+            nome_variante_b: varianteNomes.B || 'Opção B',
+            nome_variante_c: varianteNomes.C || 'Opção C',
+            total_variante_a: calcVarTotal('A'),
+            total_variante_b: calcVarTotal('B'),
+            total_variante_c: calcVarTotal('C'),
+          } : {}),
         })
         .select()
         .single()
@@ -267,6 +288,8 @@ export default function NovoOrcamentoPage() {
           tem_frontao: i.tem_frontao,
           altura_frontao: i.altura_frontao || null,
           dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
+          variante: useVariantes && i.variante !== 'base' ? i.variante : null,
+          nome_variante: useVariantes && i.variante !== 'base' ? (varianteNomes[i.variante as 'A' | 'B' | 'C'] || `Opção ${i.variante}`) : null,
         }))
         const { error: itensErr } = await supabase.from('orcamento_itens').insert(payload)
         if (itensErr) throw itensErr
@@ -334,10 +357,69 @@ export default function NovoOrcamentoPage() {
 
           {/* Itens */}
           <div className="card">
-            <div className="card-header"><span className="card-title">Itens do Orçamento</span></div>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="card-title">Itens do Orçamento</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (temVariantes) setItens(itens.map(i => ({ ...i, variante: 'base' as const })))
+                  setTemVariantes(v => !v)
+                }}
+                style={{
+                  padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  border: `1.5px solid ${temVariantes ? 'var(--gold)' : '#ccc'}`,
+                  background: temVariantes ? 'var(--gold)' : 'transparent',
+                  color: temVariantes ? '#fff' : '#888',
+                }}
+              >
+                {temVariantes ? '✦ Variantes Ativas' : '✦ Ativar Variantes'}
+              </button>
+            </div>
             <div className="card-body">
+              {temVariantes && (
+                <div style={{ background: '#f0f4ff', border: '1px solid #c5d4f0', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nomes das Variantes</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    {(['A', 'B', 'C'] as const).map(v => {
+                      const c = { A: '#2980b9', B: '#27ae60', C: '#e67e22' }[v]
+                      return (
+                        <div key={v} className="form-group">
+                          <label className="form-label" style={{ color: c }}>OPÇÃO {v}</label>
+                          <input
+                            className="form-input"
+                            placeholder={`Opção ${v}`}
+                            value={varianteNomes[v]}
+                            onChange={e => setVarianteNomes(prev => ({ ...prev, [v]: e.target.value }))}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div style={{ background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Adicionar Item</div>
+
+                {temVariantes && (
+                  <div className="form-group" style={{ marginBottom: 12 }}>
+                    <label className="form-label">VARIANTE</label>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {(['base', 'A', 'B', 'C'] as const).map(v => {
+                        const c = v === 'base' ? '#888' : { A: '#2980b9', B: '#27ae60', C: '#e67e22' }[v]
+                        const lbl = v === 'base' ? 'Comum' : (varianteNomes[v] || `Opção ${v}`)
+                        const sel = novoItem.variante === v
+                        return (
+                          <button key={v} type="button" onClick={() => upItem({ variante: v })} style={{
+                            padding: '4px 14px', borderRadius: 20, border: `1.5px solid ${c}`,
+                            background: sel ? c : 'transparent', color: sel ? '#fff' : c,
+                            fontWeight: 600, fontSize: 12, cursor: 'pointer',
+                          }}>{lbl}</button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label className="form-label">AMBIENTE</label>
@@ -569,7 +651,10 @@ export default function NovoOrcamentoPage() {
               {itens.length > 0 && (
                 <table>
                   <thead>
-                    <tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th></tr>
+                    <tr>
+                      {temVariantes && <th style={{ width: 90 }}>Variante</th>}
+                      <th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th>
+                    </tr>
                   </thead>
                   <tbody>
                     {Object.entries(
@@ -581,30 +666,47 @@ export default function NovoOrcamentoPage() {
                     ).map(([amb, group]) => (
                       <Fragment key={amb}>
                         <tr>
-                          <td colSpan={6} style={{ background: '#f5f3ef', fontWeight: 700, fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '6px 12px', borderBottom: '1px solid #EDE9E2' }}>
+                          <td colSpan={temVariantes ? 7 : 6} style={{ background: '#f5f3ef', fontWeight: 700, fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '6px 12px', borderBottom: '1px solid #EDE9E2' }}>
                             {amb}
                           </td>
                         </tr>
-                        {group.map(({ item, idx }) => (
-                          <tr key={idx}>
-                            <td><span className="badge badge-draft">{item.tipo}</span></td>
-                            <td>
-                              <div style={{ fontWeight: 500 }}>{item.descricao}</div>
-                              {item.tipo_peca && (
-                                <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
-                                  {PECA_LABELS[item.tipo_peca]}
-                                  {(item.acabamento_frente || item.acabamento_esquerda) && ` · acabamentos selecionados`}
-                                </div>
+                        {group.map(({ item, idx }) => {
+                          const vColor = item.variante && item.variante !== 'base'
+                            ? { A: '#2980b9', B: '#27ae60', C: '#e67e22' }[item.variante] : null
+                          const vName = item.variante && item.variante !== 'base'
+                            ? (varianteNomes[item.variante as 'A'|'B'|'C'] || `Opção ${item.variante}`) : null
+                          return (
+                            <tr key={idx}>
+                              {temVariantes && (
+                                <td>
+                                  {vColor ? (
+                                    <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: `${vColor}20`, color: vColor, border: `1px solid ${vColor}40` }}>
+                                      {vName}
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: 11, color: '#aaa' }}>Comum</span>
+                                  )}
+                                </td>
                               )}
-                            </td>
-                            <td>{item.quantidade}</td>
-                            <td>{fmt(item.preco_unitario)}</td>
-                            <td className="font-bold">{fmt(calcTotal(item))}</td>
-                            <td>
-                              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)}>🗑️</button>
-                            </td>
-                          </tr>
-                        ))}
+                              <td><span className="badge badge-draft">{item.tipo}</span></td>
+                              <td>
+                                <div style={{ fontWeight: 500 }}>{item.descricao}</div>
+                                {item.tipo_peca && (
+                                  <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
+                                    {PECA_LABELS[item.tipo_peca]}
+                                    {(item.acabamento_frente || item.acabamento_esquerda) && ` · acabamentos selecionados`}
+                                  </div>
+                                )}
+                              </td>
+                              <td>{item.quantidade}</td>
+                              <td>{fmt(item.preco_unitario)}</td>
+                              <td className="font-bold">{fmt(calcTotal(item))}</td>
+                              <td>
+                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)}>🗑️</button>
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </Fragment>
                     ))}
                   </tbody>
@@ -640,10 +742,32 @@ export default function NovoOrcamentoPage() {
                   )}
                 </div>
                 <hr style={{ border: 'none', borderTop: '2px solid var(--gold)', margin: '4px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700 }}>
-                  <span>TOTAL</span>
-                  <span style={{ color: descontoExcede ? '#c0392b' : 'var(--gold)' }}>{fmt(Math.max(0, totalFinal))}</span>
-                </div>
+                {(() => {
+                  const activeVars = (['A', 'B', 'C'] as const).filter(v => itens.some(i => i.variante === v))
+                  if (temVariantes && activeVars.length > 0) {
+                    const baseTotal = itens.filter(i => !i.variante || i.variante === 'base').reduce((s, i) => s + calcTotal(i), 0)
+                    const VCOLS: Record<string, string> = { A: '#2980b9', B: '#27ae60', C: '#e67e22' }
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {activeVars.map(v => {
+                          const vTotal = baseTotal + itens.filter(i => i.variante === v).reduce((s, i) => s + calcTotal(i), 0) + maoObra - desconto
+                          return (
+                            <div key={v} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700 }}>
+                              <span style={{ color: VCOLS[v] }}>{varianteNomes[v] || `Opção ${v}`}</span>
+                              <span style={{ color: VCOLS[v] }}>{fmt(Math.max(0, vTotal))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  }
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700 }}>
+                      <span>TOTAL</span>
+                      <span style={{ color: descontoExcede ? '#c0392b' : 'var(--gold)' }}>{fmt(Math.max(0, totalFinal))}</span>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>

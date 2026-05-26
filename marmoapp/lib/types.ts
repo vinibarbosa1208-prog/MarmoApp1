@@ -55,6 +55,8 @@ export interface OrcamentoItem {
   tem_frontao?: boolean
   altura_frontao?: number
   dados_extras?: Record<string, unknown>
+  variante?: string
+  nome_variante?: string
 }
 
 export type ProducaoStatus =
@@ -86,6 +88,13 @@ export interface Orcamento {
   validade?: string
   observacoes?: string
   itens?: OrcamentoItem[]
+  tem_variantes?: boolean
+  total_variante_a?: number
+  total_variante_b?: number
+  total_variante_c?: number
+  nome_variante_a?: string
+  nome_variante_b?: string
+  nome_variante_c?: string
   created_at: string
 }
 

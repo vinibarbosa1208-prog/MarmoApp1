@@ -50,6 +50,13 @@ export default function VerOrcamentoPage() {
       observacoes: orc.observacoes,
       validade: orc.validade,
       created_at: orc.created_at,
+      tem_variantes: orc.tem_variantes,
+      total_variante_a: orc.total_variante_a,
+      total_variante_b: orc.total_variante_b,
+      total_variante_c: orc.total_variante_c,
+      nome_variante_a: orc.nome_variante_a,
+      nome_variante_b: orc.nome_variante_b,
+      nome_variante_c: orc.nome_variante_c,
       itens: itens.map((i): ItemPDF => ({
         tipo: i.tipo,
         descricao: i.descricao,
@@ -69,6 +76,8 @@ export default function VerOrcamentoPage() {
         tem_frontao: i.tem_frontao,
         altura_frontao: i.altura_frontao,
         dados_extras: i.dados_extras ?? undefined,
+        variante: i.variante ?? undefined,
+        nome_variante: i.nome_variante ?? undefined,
       })),
     }
   }, [orc, itens])
