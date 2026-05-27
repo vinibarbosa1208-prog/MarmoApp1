@@ -41,6 +41,14 @@ const ITEM_DEFAULTS: ItemForm = {
 }
 
 function calcArea(item: ItemForm): number {
+  const ex = item.dados_extras
+  if (item.tipo_peca === 'escada') {
+    const n = (ex.num_degraus as number) || 0
+    const lp = (ex.largura_piso as number) || 0
+    const ae = (ex.altura_espelho as number) || 0
+    const w = item.largura || 0
+    return w * (lp / 100) * n + w * (ae / 100) * n
+  }
   if (!item.largura || !item.altura) return 0
   const tampo = item.largura * item.altura
   const frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
@@ -398,14 +406,57 @@ export default function EditarOrcamentoPage() {
                               value={novoItem.largura || ''}
                               onChange={e => upItem({ largura: parseFloat(e.target.value) || 0 })} />
                           </div>
-                          <div className="form-group">
-                            <label className="form-label">PROFUNDIDADE (m)</label>
-                            <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 0.60"
-                              value={novoItem.altura || ''}
-                              onChange={e => upItem({ altura: parseFloat(e.target.value) || 0 })} />
-                          </div>
+                          {novoItem.tipo_peca !== 'escada' && (
+                            <div className="form-group">
+                              <label className="form-label">PROFUNDIDADE (m)</label>
+                              <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 0.60"
+                                value={novoItem.altura || ''}
+                                onChange={e => upItem({ altura: parseFloat(e.target.value) || 0 })} />
+                            </div>
+                          )}
                         </div>
-                        {novoItem.largura > 0 && novoItem.altura > 0 && (() => {
+                        {novoItem.tipo_peca === 'escada' ? (() => {
+                          const ex = novoItem.dados_extras
+                          const n = (ex.num_degraus as number) || 0
+                          const lp = (ex.largura_piso as number) || 0
+                          const ae = (ex.altura_espelho as number) || 0
+                          const w = novoItem.largura
+                          if (!w || !n || !lp || !ae) return null
+                          const d = (v: number) => v.toFixed(2).replace('.', ',')
+                          const piso = w * (lp / 100) * n
+                          const espelho = w * (ae / 100) * n
+                          const total = piso + espelho
+                          const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
+                          const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
+                          return (
+                            <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ color: '#555' }}>Piso</span>
+                                <span style={{ fontFamily: 'monospace' }}>{d(w)} × {d(lp / 100)} × {n} degraus = <strong>{d(piso)} m²</strong></span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                                <span>Espelho</span>
+                                <span style={{ fontFamily: 'monospace' }}>{d(w)} × {d(ae / 100)} × {n} degraus = <strong>{d(espelho)} m²</strong></span>
+                              </div>
+                              <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                                <span>Total</span>
+                                <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                              </div>
+                              {novoItem.custo_m2 > 0 && (
+                                <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                                    <span>Custo</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--gold)' }}>
+                                    <span>Venda</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.preco_unitario.toFixed(2)} = <strong>{fmt(totalVenda)}</strong></span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })() : novoItem.largura > 0 && novoItem.altura > 0 && (() => {
                           const d = (n: number) => n.toFixed(2).replace('.', ',')
                           const tampo = novoItem.largura * novoItem.altura
                           const frontao = novoItem.tem_frontao ? novoItem.largura * novoItem.altura_frontao : 0
