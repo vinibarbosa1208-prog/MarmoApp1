@@ -65,7 +65,9 @@ function ClienteModal({
       onSaved()
       onClose()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao salvar')
+      console.error('Erro ao salvar cliente:', e)
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message || 'Erro desconhecido'
+      setError('Erro ao salvar: ' + msg)
     } finally {
       setLoading(false)
     }
