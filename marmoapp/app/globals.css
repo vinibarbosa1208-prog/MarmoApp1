@@ -1242,3 +1242,164 @@
     background:#1A1A2E;border-radius:10px;padding:14px 16px;margin-top:12px;
   }
 
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVIDADE MOBILE — MarmoApp  (breakpoint: 767px)
+   ══════════════════════════════════════════════════════════════ */
+
+/* Estrutura de página — classes usadas nas páginas mas sem CSS anterior */
+.page-inner { padding: 28px; }
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 24px; gap: 12px; flex-wrap: wrap;
+}
+.page-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--dark); }
+
+/* Grids de formulários de orçamento */
+.orcamento-form-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+.orcamento-view-grid { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+
+/* SeletorPeca — substitui inline style repeat(4,1fr) */
+.peca-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+/* Elementos exclusivos do mobile — ocultos no desktop */
+.mobile-topbar { display: none; }
+.hamburger-btn { display: none; }
+.sidebar-close-btn { display: none; }
+.sidebar-backdrop { display: none; }
+.bottom-nav { display: none; }
+
+/* ─── MOBILE ≤ 767px ──────────────────────────────────────── */
+@media (max-width: 767px) {
+
+  /* Sidebar: oculto por padrão, aparece como overlay ao deslizar */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 300;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 40px rgba(0,0,0,0.22);
+  }
+
+  /* Botão de fechar dentro do sidebar */
+  .sidebar-close-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; font-size: 18px; cursor: pointer;
+    color: var(--gray); padding: 6px; border-radius: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidebar-close-btn:hover { color: var(--dark); background: var(--marble2); }
+
+  /* Backdrop ao abrir sidebar */
+  .sidebar-backdrop {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 299;
+    animation: bdIn 0.2s ease;
+  }
+  @keyframes bdIn { from { opacity: 0 } to { opacity: 1 } }
+
+  /* Main: largura total, sem margem lateral */
+  .main { margin-left: 0 !important; padding-bottom: 68px; }
+
+  /* Topbar mobile (hamburger + logo) */
+  .mobile-topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px; height: 52px;
+    background: var(--white); border-bottom: 1px solid var(--marble2);
+    position: sticky; top: 0; z-index: 50;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); flex-shrink: 0;
+  }
+  .hamburger-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; font-size: 22px; line-height: 1;
+    cursor: pointer; color: var(--dark); padding: 6px; border-radius: 6px;
+    flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+  }
+  .hamburger-btn:hover { background: var(--marble2); }
+
+  /* Padding do conteúdo */
+  .content { padding: 14px; }
+  .page-inner { padding: 14px; }
+
+  /* Cabeçalho de página */
+  .page-header { flex-direction: column; margin-bottom: 16px; }
+  .page-title { font-size: 22px; }
+
+  /* Stats grid: 2 colunas */
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 18px; }
+  .stat-icon { width: 38px; height: 38px; }
+
+  /* Dashboard e Kanban */
+  .dash-grid { grid-template-columns: 1fr; }
+  .kanban { grid-template-columns: 1fr; }
+
+  /* Formulários: 1 coluna */
+  .form-row-2, .form-row-3, .form-row-4,
+  .form-row-inline, .field-row-2, .field-row-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Cards */
+  .card-body { padding: 14px; }
+  .card-header { padding: 12px 16px; }
+
+  /* Tabelas → cards empilhados */
+  .table-wrap { overflow-x: visible; }
+  .table-wrap table { display: block; }
+  .table-wrap thead { display: none; }
+  .table-wrap tbody { display: flex; flex-direction: column; gap: 10px; }
+  .table-wrap tr {
+    display: block; background: var(--white);
+    border: 1px solid var(--marble2); border-radius: 10px;
+    padding: 12px 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .table-wrap tr:hover td { background: transparent; }
+  .table-wrap td {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border: none; font-size: 13px; gap: 8px; min-height: 26px;
+  }
+  .table-wrap td:empty { display: none; }
+  .table-wrap td:last-child {
+    margin-top: 6px; padding-top: 10px;
+    border-top: 1px solid var(--marble2);
+    justify-content: flex-end; gap: 6px;
+  }
+
+  /* Modais → bottom sheet */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { border-radius: 18px 18px 0 0; max-height: 92vh; max-width: 100%; margin: 0; }
+
+  /* Grids de peças / serviços / desenhos: 2 colunas */
+  .peca-grid { grid-template-columns: repeat(2, 1fr); }
+  .servico-grid { grid-template-columns: repeat(2, 1fr); }
+  .desenho-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Grids de formulário de orçamento: 1 coluna */
+  .orcamento-form-grid, .orcamento-view-grid { grid-template-columns: 1fr; }
+
+  /* Agent toggle e toast acima do bottom nav */
+  .agent-toggle { bottom: 72px; }
+  #toast { bottom: 72px; right: 14px; }
+
+  /* Barra de navegação inferior (mobile-only) */
+  .bottom-nav {
+    display: flex; position: fixed; bottom: 0; left: 0; right: 0;
+    height: 60px; background: var(--white);
+    border-top: 1px solid var(--marble2); z-index: 200;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  }
+  .bottom-nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+    color: var(--gray); text-decoration: none;
+    font-size: 10px; font-weight: 500; transition: color 0.15s;
+    border: none; background: none; font-family: 'DM Sans', sans-serif;
+    padding: 6px 0; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav-item.active { color: var(--gold); }
+}
+
