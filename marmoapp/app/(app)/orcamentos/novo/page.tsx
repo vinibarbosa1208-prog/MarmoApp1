@@ -149,6 +149,7 @@ export default function NovoOrcamentoPage() {
   const { clientes, materiais, servicos, marmoraria, loadOrcamentos, toast } = useApp()
   const [loading, setLoading] = useState(false)
   const [mostrarErros, setMostrarErros] = useState(false)
+  const [erro, setErro] = useState('')
 
   const [form, setForm] = useState({
     cliente_id: '', descricao: '', status: 'rascunho',
@@ -228,8 +229,19 @@ export default function NovoOrcamentoPage() {
 
   async function salvar() {
     if (!marmoraria) return
-    setLoading(true)
     try {
+      setLoading(true)
+      setErro('')
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+      const { data: usuarioData } = await supabase
+        .from('usuarios')
+        .select('marmoraria_id')
+        .eq('id', user.id)
+        .single()
+      if (!usuarioData?.marmoraria_id) throw new Error('Marmoraria não encontrada para este usuário')
+
       const useVariantes = temVariantes && itens.some(i => i.variante !== 'base')
       const baseSubtotal = itens.filter(i => i.variante === 'base').reduce((s, i) => s + calcTotal(i), 0)
       const calcVarTotal = (v: 'A' | 'B' | 'C') => {
@@ -241,7 +253,7 @@ export default function NovoOrcamentoPage() {
       const { data: orc, error: orcErr } = await supabase
         .from('orcamentos')
         .insert({
-          marmoraria_id: marmoraria.id,
+          marmoraria_id: usuarioData.marmoraria_id,
           cliente_id: form.cliente_id || null,
           titulo: form.descricao || 'Orçamento',
           status: form.status,
@@ -271,7 +283,7 @@ export default function NovoOrcamentoPage() {
       if (itens.length > 0) {
         const payload = itens.map(i => ({
           orcamento_id: orc.id,
-          marmoraria_id: marmoraria.id,
+          marmoraria_id: usuarioData.marmoraria_id,
           tipo: i.tipo,
           ambiente: i.ambiente || null,
           descricao: i.descricao,
@@ -304,8 +316,9 @@ export default function NovoOrcamentoPage() {
       await loadOrcamentos()
       toast('Orçamento salvo!', 'ok2')
       router.push('/orcamentos/' + orc.id)
-    } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Erro ao salvar', 'err')
+    } catch (err: any) {
+      console.error('Erro ao salvar orçamento:', err)
+      setErro(err?.message || err?.details || 'Erro ao salvar orçamento')
     } finally {
       setLoading(false)
     }
@@ -315,9 +328,12 @@ export default function NovoOrcamentoPage() {
     <div className="page-inner">
       <div className="page-header">
         <h1 className="page-title">Novo Orçamento</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-outline" onClick={() => router.push('/orcamentos')}>Cancelar</button>
-          <button className="btn btn-gold" onClick={salvar} disabled={loading}>{loading ? 'Salvando...' : '💾 Salvar Orçamento'}</button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline" onClick={() => router.push('/orcamentos')}>Cancelar</button>
+            <button className="btn btn-gold" onClick={salvar} disabled={loading}>{loading ? 'Salvando...' : '💾 Salvar Orçamento'}</button>
+          </div>
+          {erro && <div style={{ color: 'var(--red)', fontSize: 13 }}>{erro}</div>}
         </div>
       </div>
 
