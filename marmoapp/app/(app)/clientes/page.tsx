@@ -41,9 +41,9 @@ function ClienteModal({
 
   async function save() {
     if (!form.nome) { setError('Nome é obrigatório'); return }
-    setLoading(true)
-    setError('')
     try {
+      setLoading(true)
+      setError('')
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Não autenticado')
 
@@ -64,10 +64,9 @@ function ClienteModal({
       if (err) throw err
       onSaved()
       onClose()
-    } catch (e: unknown) {
-      console.error('Erro ao salvar cliente:', e)
-      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message || 'Erro desconhecido'
-      setError('Erro ao salvar: ' + msg)
+    } catch (err: any) {
+      console.error('Erro ao salvar cliente:', err)
+      setError(err?.message || err?.details || 'Erro ao salvar cliente')
     } finally {
       setLoading(false)
     }
