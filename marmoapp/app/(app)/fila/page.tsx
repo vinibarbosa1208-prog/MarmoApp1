@@ -159,6 +159,14 @@ export default function FilaPage() {
     toast('Pedido avançado!', 'ok2')
   }
 
+  async function voltar(orcId: string, statusAnterior: string, labelAnterior: string) {
+    if (!confirm(`Voltar para ${labelAnterior}?`)) return
+    const { error } = await supabase.from('orcamentos').update({ producao_status: statusAnterior }).eq('id', orcId)
+    if (error) { toast('Erro: ' + error.message, 'err'); return }
+    await loadOrcamentos()
+    toast(`Voltou para ${labelAnterior}`, 'ok2')
+  }
+
   return (
     <div className="page-inner">
       <div className="page-header">
@@ -169,6 +177,7 @@ export default function FilaPage() {
         {PIPELINE.map((etapa, idx) => {
           const cards = ativos.filter(o => (o.producao_status || 'comercial') === etapa.id)
           const proxEtapa = idx < PIPELINE.length - 1 ? PIPELINE[idx + 1] : null
+          const etapaAnterior = idx > 0 ? PIPELINE[idx - 1] : null
 
           return (
             <div key={etapa.id} style={{ minWidth: 200, flex: 1, background: '#f7f7f7', borderRadius: 10, overflow: 'hidden' }}>
@@ -198,6 +207,14 @@ export default function FilaPage() {
                           style={{ width: '100%', background: '#16A085', border: 'none', borderRadius: 6, padding: 6, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}
                         >
                           👷 Atribuir Instalador
+                        </button>
+                      )}
+                      {etapaAnterior && (
+                        <button
+                          onClick={() => voltar(o.id, etapaAnterior.id, etapaAnterior.label)}
+                          style={{ width: '100%', background: '#fff', border: '1px solid #ddd', borderRadius: 6, padding: 6, color: '#666', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}
+                        >
+                          ← {etapaAnterior.label}
                         </button>
                       )}
                       {proxEtapa ? (
