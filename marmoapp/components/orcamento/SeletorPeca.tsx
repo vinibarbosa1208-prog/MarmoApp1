@@ -3,7 +3,7 @@
 export type TipoPeca =
   | 'bancada_simples' | 'bancada_cuba' | 'bancada_saia' | 'bancada_frontao'
   | 'ilha_cozinha' | 'escada' | 'soleira' | 'nicho'
-  | 'pia_l' | 'pia_u'
+  | 'pia_l' | 'pia_u' | 'lavatorio_extensao'
 
 export const PECA_LABELS: Record<string, string> = {
   bancada_simples: 'Bancada Simples',
@@ -16,9 +16,10 @@ export const PECA_LABELS: Record<string, string> = {
   nicho: 'Nicho',
   pia_l: 'Pia em L',
   pia_u: 'Pia em U',
+  lavatorio_extensao: 'Lavatório c/ Extensão',
 }
 
-export function getLateraisDaPeca(tipo: string): string[] {
+export function getLateraisDaPeca(tipo: string, dadosExtras?: Record<string, unknown>): string[] {
   switch (tipo) {
     case 'bancada_simples': case 'bancada_cuba': case 'bancada_saia': case 'bancada_frontao':
       return ['esquerda', 'direita', 'frente']
@@ -28,6 +29,10 @@ export function getLateraisDaPeca(tipo: string): string[] {
       return ['esquerda', 'direita', 'superior', 'inferior']
     case 'pia_l': case 'pia_u':
       return ['esquerda', 'direita', 'frente', 'fundo']
+    case 'lavatorio_extensao': {
+      const lado = (dadosExtras?.extensao_lado as string) || 'direita'
+      return ['esquerda', 'direita', 'frente', 'fundo'].filter(l => l !== lado)
+    }
     default:
       return []
   }
@@ -182,6 +187,18 @@ function SvgPiaU() {
   )
 }
 
+function SvgLavatorioExtensao() {
+  return (
+    <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="18" width="96" height="54" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="2"/>
+      <ellipse cx="56" cy="45" rx="28" ry="17" fill="none" stroke="#3498db" strokeWidth="1.5" strokeDasharray="4 2"/>
+      <text x="56" y="49" textAnchor="middle" fontSize="7" fill="#3498db">cuba</text>
+      <rect x="104" y="18" width="48" height="54" fill="#fef0e6" stroke="#e67e22" strokeWidth="1.5" strokeDasharray="5 3"/>
+      <text x="128" y="48" textAnchor="middle" fontSize="7" fill="#e67e22">ext</text>
+    </svg>
+  )
+}
+
 const SVG_MAP: Record<string, React.ReactNode> = {
   bancada_simples: <SvgBancadaSimples />,
   bancada_cuba: <SvgBancadaCuba />,
@@ -193,6 +210,7 @@ const SVG_MAP: Record<string, React.ReactNode> = {
   nicho: <SvgNicho />,
   pia_l: <SvgPiaL />,
   pia_u: <SvgPiaU />,
+  lavatorio_extensao: <SvgLavatorioExtensao />,
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -446,6 +464,66 @@ export default function SeletorPeca(props: Props) {
                 {showErrors && !((dados_extras.seg3_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
+          )}
+
+          {/* Lavatório c/ Extensão */}
+          {peca === 'lavatorio_extensao' && (
+            <>
+              <div className="form-group">
+                <label className="form-label">EXTENSÃO</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['esquerda', 'direita'] as const).map(lado => {
+                    const sel = ((dados_extras.extensao_lado as string) || 'direita') === lado
+                    return (
+                      <button key={lado} type="button"
+                        onClick={() => setExtra('extensao_lado', lado)}
+                        style={{
+                          padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          border: `2px solid ${sel ? 'var(--gold)' : '#EDE9E2'}`,
+                          background: sel ? '#fef8ec' : '#fff',
+                          color: sel ? 'var(--dark)' : '#888',
+                        }}>
+                        {lado === 'esquerda' ? '← Esquerda' : 'Direita →'}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">COMPRIMENTO DO TAMPO (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.20"
+                    value={(dados_extras.comp_tampo as number) || ''}
+                    onChange={e => setExtra('comp_tampo', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.comp_tampo as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">PROFUNDIDADE (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.55"
+                    value={(dados_extras.profundidade as number) || ''}
+                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">COMPRIMENTO DA EXTENSÃO (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                    value={(dados_extras.comp_extensao as number) || ''}
+                    onChange={e => setExtra('comp_extensao', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.comp_extensao as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                <input type="checkbox"
+                  checked={!!(dados_extras.cuba_pedra as boolean)}
+                  onChange={e => {
+                    setExtra('cuba_pedra', e.target.checked)
+                    setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
+                  }} />
+                <span style={{ fontSize: 13, fontWeight: 600 }}>
+                  Cuba de pedra <span style={{ color: '#888', fontWeight: 400 }}>(+ R$ 350,00)</span>
+                </span>
+              </label>
+            </>
           )}
 
           {/* Toggle saia (optional, for pieces that allow it) */}

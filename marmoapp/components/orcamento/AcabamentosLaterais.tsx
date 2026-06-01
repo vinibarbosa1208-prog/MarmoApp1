@@ -79,7 +79,7 @@ export default function AcabamentosLaterais({
   tipoPeca, esquerda, direita, frente, fundo, dadosExtras, showErrors,
   onLateralChange, onRaioChange, onLateralExtrasChange,
 }: Props) {
-  const laterais = getLateraisDaPeca(tipoPeca)
+  const laterais = getLateraisDaPeca(tipoPeca, dadosExtras)
 
   if (laterais.length === 0) return null
 
