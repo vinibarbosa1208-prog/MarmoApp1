@@ -258,15 +258,6 @@ export default function NovoOrcamentoPage() {
       setLoading(true)
       setErro('')
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-      const { data: usuarioData } = await supabase
-        .from('usuarios')
-        .select('marmoraria_id')
-        .eq('id', user.id)
-        .single()
-      if (!usuarioData?.marmoraria_id) throw new Error('Marmoraria não encontrada para este usuário')
-
       const useVariantes = temVariantes && itens.some(i => i.variante !== 'base')
       const baseSubtotal = itens.filter(i => i.variante === 'base').reduce((s, i) => s + calcTotal(i), 0)
       const calcVarTotal = (v: 'A' | 'B' | 'C') => {
@@ -278,7 +269,7 @@ export default function NovoOrcamentoPage() {
       const { data: orc, error: orcErr } = await supabase
         .from('orcamentos')
         .insert({
-          marmoraria_id: usuarioData.marmoraria_id,
+          marmoraria_id: marmoraria.id,
           cliente_id: form.cliente_id || null,
           titulo: form.descricao || 'Orçamento',
           status: form.status,
@@ -308,7 +299,7 @@ export default function NovoOrcamentoPage() {
       if (itens.length > 0) {
         const payload = itens.map(i => ({
           orcamento_id: orc.id,
-          marmoraria_id: usuarioData.marmoraria_id,
+          marmoraria_id: marmoraria.id,
           tipo: i.tipo,
           ambiente: i.ambiente || null,
           descricao: i.descricao,

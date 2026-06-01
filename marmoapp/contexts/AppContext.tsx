@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth/AuthContext'
 import type { AppState, Cliente, Orcamento, OrdemServico, Material, Servico, Marmoraria, OrcamentoItem } from '@/lib/types'
 
 interface AppContextValue extends AppState {
@@ -19,6 +20,7 @@ interface AppContextValue extends AppState {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { user: authUser, marmorariaId } = useAuth()
   const [state, setState] = useState<AppState>({
     user: null,
     marmoraria: null,
@@ -101,46 +103,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await Promise.all([loadClientes(), loadOrcamentos(), loadMateriais(), loadServicos()])
   }, [loadClientes, loadOrcamentos, loadMateriais, loadServicos])
 
+  // Sincroniza user do AuthContext (única fonte de verdade de autenticação)
   useEffect(() => {
-    // Single source of truth: onAuthStateChange handles initial session + all changes.
-    // Using getUser() or getSession() in parallel across components risks concurrent
-    // refresh-token use, which Supabase revokes immediately on mobile.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!session) {
-        setState(s => ({ ...s, user: null, marmoraria: null }))
-        return
-      }
+    setState(s => ({
+      ...s,
+      user: authUser ? { id: authUser.id, email: authUser.email! } : null,
+    }))
+  }, [authUser?.id])
 
-      // TOKEN_REFRESHED: Supabase already handled the refresh internally.
-      // No need to re-fetch marmoraria — just keep current state.
-      if (event === 'TOKEN_REFRESHED') return
-
-      const user = { id: session.user.id, email: session.user.email! }
-
-      const { data: usuario } = await supabase
-        .from('usuarios')
-        .select('marmoraria_id')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      const marmoraria_id = usuario?.marmoraria_id
-
-      if (!marmoraria_id) {
-        setState(s => ({ ...s, user, marmoraria: null }))
-        return
-      }
-
-      const { data: marm } = await supabase
-        .from('marmorarias')
-        .select('*')
-        .eq('id', marmoraria_id)
-        .single()
-
-      setState(s => ({ ...s, user, marmoraria: marm as Marmoraria | null }))
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  // Carrega marmoraria completa quando marmorariaId muda
+  useEffect(() => {
+    if (!marmorariaId) {
+      setState(s => ({ ...s, marmoraria: null }))
+      return
+    }
+    supabase
+      .from('marmorarias')
+      .select('*')
+      .eq('id', marmorariaId)
+      .single()
+      .then(({ data }) => setState(s => ({ ...s, marmoraria: data as Marmoraria | null })))
+  }, [marmorariaId])
 
   useEffect(() => {
     if (state.marmoraria?.id) loadAll()
