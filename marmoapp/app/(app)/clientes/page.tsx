@@ -40,45 +40,17 @@ function ClienteModal({
   }
 
   async function save() {
-    if (!form.nome.trim()) { setError('Nome é obrigatório'); return }
-    setLoading(true)
-    setError('')
-
+    if (!form.nome) { setError('Nome é obrigatório'); return }
+    if (!marmorariaId) { setError('Sessão inválida — recarregue a página'); return }
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Usuário não autenticado')
-
-      const { data: usuarioData, error: userError } = await supabase
-        .from('usuarios')
-        .select('marmoraria_id')
-        .eq('id', user.id)
-        .single()
-
-      if (userError || !usuarioData?.marmoraria_id) {
-        throw new Error('Marmoraria não encontrada')
-      }
-
-      const payload = {
-        nome: form.nome,
-        tipo: form.tipo,
-        cpf_cnpj: form.cpf_cnpj || null,
-        telefone: form.telefone || null,
-        email: form.email || null,
-        origem: form.origem || null,
-        cep: form.cep || null,
-        estado: form.estado || null,
-        cidade: form.cidade || null,
-        endereco: form.endereco || null,
-        observacoes: form.obs || null,
-        marmoraria_id: usuarioData.marmoraria_id,
-      }
-
+      setLoading(true)
+      setError('')
+      const { obs, ...rest } = form
+      const payload = { ...rest, observacoes: obs, marmoraria_id: marmorariaId }
       const { error: err } = cliente
         ? await supabase.from('clientes').update(payload).eq('id', cliente.id)
         : await supabase.from('clientes').insert(payload)
-
       if (err) throw err
-
       onSaved()
       onClose()
     } catch (err: any) {

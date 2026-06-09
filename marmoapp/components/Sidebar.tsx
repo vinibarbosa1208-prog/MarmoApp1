@@ -77,7 +77,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
       <nav className="sidebar-nav">
         {/* Dashboard — sempre primeiro */}
-        <Link href="/dashboard" prefetch={false} className={`nav-item${isActive('/dashboard') ? ' active' : ''}`}>
+        <Link href="/dashboard" className={`nav-item${isActive('/dashboard') ? ' active' : ''}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           Dashboard
         </Link>
@@ -85,7 +85,6 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         {/* Antonio — sempre segundo, destaque enterprise */}
         <Link
           href="/antonio"
-          prefetch={false}
           className={`nav-item${isActive('/antonio') ? ' active' : ''}`}
           style={{ background: isActive('/antonio') ? undefined : 'linear-gradient(90deg, #FDF8F0 0%, transparent 100%)', borderLeft: '2px solid var(--gold)' }}
         >
@@ -99,7 +98,6 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
           <Link
             key={item.href}
             href={item.href}
-            prefetch={false}
             className={`nav-item${isActive(item.href) ? ' active' : ''}`}
           >
             {item.icon}
@@ -111,21 +109,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
       <div className="sidebar-user">
         <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--dark)' }}>{marmoraria?.nome || 'Minha Empresa'}</div>
         <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>{user?.email}</div>
-        <div style={{ marginTop: 8 }}>
-          <Link
-            href="/planos"
-            prefetch={false}
-            style={{
-              display: 'block', textAlign: 'center', fontSize: 11, fontWeight: 600,
-              background: 'var(--gold)', color: '#2C2922', borderRadius: 6,
-              padding: '5px 10px', textDecoration: 'none', marginBottom: 8,
-            }}
-          >
-            {marmoraria?.plano === 'trial' ? '🚀 Assinar plano' : '💎 ' + (marmoraria?.plano ?? 'trial').charAt(0).toUpperCase() + (marmoraria?.plano ?? 'trial').slice(1)}
-          </Link>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Link href="/precos" prefetch={false} style={{ fontSize: 11, color: 'var(--gold)', textDecoration: 'none' }}>Configurações</Link>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <Link href="/precos" style={{ fontSize: 11, color: 'var(--gold)', textDecoration: 'none' }}>Configurações</Link>
           <span style={{ color: 'var(--gray2)' }}>·</span>
           <button
             onClick={async () => {
