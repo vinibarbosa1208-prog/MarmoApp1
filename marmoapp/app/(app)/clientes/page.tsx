@@ -46,10 +46,11 @@ function ClienteModal({
       setLoading(true)
       setError('')
       const { obs, ...rest } = form
-      const payload = { ...rest, observacoes: obs, marmoraria_id: marmorariaId }
+      const payloadUpdate = { ...rest, observacoes: obs }
+      const payloadInsert = { ...rest, observacoes: obs, marmoraria_id: marmorariaId }
       const { error: err } = cliente
-        ? await supabase.from('clientes').update(payload).eq('id', cliente.id)
-        : await supabase.from('clientes').insert(payload)
+        ? await supabase.from('clientes').update(payloadUpdate).eq('id', cliente.id)
+        : await supabase.from('clientes').insert(payloadInsert)
       if (err) throw err
       onSaved()
       onClose()
