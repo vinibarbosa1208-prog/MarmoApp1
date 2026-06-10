@@ -62,7 +62,6 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
         dia_inteiro: form.dia_inteiro,
         cliente_id: form.cliente_id || undefined,
         orcamento_id: form.orcamento_id || undefined,
-        responsavel_id: form.responsavel_id || undefined,
         descricao: form.descricao || undefined,
         marmoraria_id: u.marmoraria_id,
         status: 'agendado',
