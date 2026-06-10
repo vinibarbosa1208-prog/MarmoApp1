@@ -49,9 +49,12 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
     if (!form.data_inicio) { toast('Data de início obrigatória', 'err'); return }
     setSaving(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-      const payload: CreateAgendaEventInput = {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
+      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
+
+      const payload: CreateAgendaEventInput & { marmoraria_id: string; status: string } = {
         titulo: form.titulo.trim(),
         tipo_id: form.tipo_id || undefined,
         data_inicio: new Date(form.data_inicio).toISOString(),
@@ -61,13 +64,12 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
         orcamento_id: form.orcamento_id || undefined,
         responsavel_id: form.responsavel_id || undefined,
         descricao: form.descricao || undefined,
+        marmoraria_id: u.marmoraria_id,
+        status: 'agendado',
       }
-      const res = await fetch('/api/agenda/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error((await res.json()).error)
+
+      const { error } = await supabase.from('agenda_events').insert(payload)
+      if (error) throw error
       toast('Evento criado', 'ok')
       onSaved()
       onClose()
