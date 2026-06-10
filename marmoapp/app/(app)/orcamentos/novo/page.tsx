@@ -115,6 +115,26 @@ function calcCusto(item: ItemForm): number {
   return area > 0 ? area * item.quantidade * item.custo_m2 : 0
 }
 
+function calcAcabamentoLinear(item: ItemForm): number {
+  if (item.tipo_peca !== 'bancada_simples') return 0
+  const ex = item.dados_extras
+  const dimMap: Record<string, number> = {
+    frente: item.largura,
+    fundo: item.largura,
+    esquerda: item.altura,
+    direita: item.altura,
+  }
+  let ml = 0
+  for (const [lat, len] of Object.entries(dimMap)) {
+    if (len <= 0) continue
+    const ladoOpcao = (ex[`lado_${lat}`] as string) || 'nenhum'
+    const temSaia = !!(ex[`saia_${lat}`] as boolean)
+    const temFrontao = !!(ex[`frontao_${lat}`] as boolean)
+    if (ladoOpcao === 'saia' || ladoOpcao === 'frontao' || temSaia || temFrontao) ml += len
+  }
+  return ml
+}
+
 function validarItem(item: ItemForm): boolean {
   if (!item.descricao) return false
   if (item.quantidade <= 0) return false
@@ -186,6 +206,7 @@ export default function NovoOrcamentoPage() {
   const [servicoIdSel, setServicodeIdSel] = useState('')
   const [temVariantes, setTemVariantes] = useState(false)
   const [varianteNomes, setVarianteNomes] = useState({ A: 'Opção A', B: 'Opção B', C: 'Opção C' })
+  const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
 
   function up(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -215,13 +236,39 @@ export default function NovoOrcamentoPage() {
     setMostrarErros(true)
     if (!novoItem.descricao) { toast('Descrição do item é obrigatória', 'err'); return }
     if (!itemValido) { toast('Preencha todos os campos obrigatórios do item', 'err'); return }
-    setItens(prev => [...prev, { ...novoItem }])
+    if (editandoIdx !== null) {
+      setItens(prev => prev.map((item, i) => i === editandoIdx ? { ...novoItem } : item))
+      setEditandoIdx(null)
+    } else {
+      setItens(prev => [...prev, { ...novoItem }])
+    }
     setNovoItem({ ...ITEM_DEFAULTS })
     setServicodeIdSel('')
     setMostrarErros(false)
   }
 
+  function editarItem(idx: number) {
+    setNovoItem({ ...itens[idx] })
+    setEditandoIdx(idx)
+    setServicodeIdSel('')
+    setMostrarErros(false)
+  }
+
+  function cancelarEdicao() {
+    setNovoItem({ ...ITEM_DEFAULTS })
+    setEditandoIdx(null)
+    setServicodeIdSel('')
+    setMostrarErros(false)
+  }
+
   function removerItem(idx: number) {
+    if (editandoIdx === idx) {
+      setNovoItem({ ...ITEM_DEFAULTS })
+      setEditandoIdx(null)
+      setMostrarErros(false)
+    } else if (editandoIdx !== null && idx < editandoIdx) {
+      setEditandoIdx(editandoIdx - 1)
+    }
     setItens(prev => prev.filter((_, i) => i !== idx))
   }
 
@@ -437,7 +484,9 @@ export default function NovoOrcamentoPage() {
               )}
 
               <div style={{ background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Adicionar Item</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: editandoIdx !== null ? 'var(--gold)' : '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {editandoIdx !== null ? '✏️ Editando Item' : 'Adicionar Item'}
+                </div>
 
                 {temVariantes && (
                   <div className="form-group" style={{ marginBottom: 12 }}>
@@ -617,6 +666,15 @@ export default function NovoOrcamentoPage() {
                                 <span>Total</span>
                                 <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
                               </div>
+                              {(() => {
+                                const ml = calcAcabamentoLinear(novoItem)
+                                return ml > 0 ? (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: '#7A6A4A', background: '#FDF8F0', border: '1px solid #E8D9B0', borderRadius: 6, padding: '5px 10px' }}>
+                                    <span>Acabamento necessário</span>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{d(ml)} ml (meia esquadria)</span>
+                                  </div>
+                                ) : null
+                              })()}
                               {novoItem.custo_m2 > 0 && (
                                 <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
@@ -717,14 +775,19 @@ export default function NovoOrcamentoPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                   <span style={{ fontWeight: 700, color: 'var(--dark)' }}>Total: {fmt(calcTotal(novoItem))}</span>
-                  <button
-                    className="btn btn-gold"
-                    onClick={adicionarItem}
-                    disabled={mostrarErros && !itemValido}
-                    title={mostrarErros && !itemValido ? 'Preencha todos os campos obrigatórios' : ''}
-                  >
-                    + Adicionar Item
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {editandoIdx !== null && (
+                      <button type="button" className="btn btn-outline" onClick={cancelarEdicao}>Cancelar</button>
+                    )}
+                    <button
+                      className="btn btn-gold"
+                      onClick={adicionarItem}
+                      disabled={mostrarErros && !itemValido}
+                      title={mostrarErros && !itemValido ? 'Preencha todos os campos obrigatórios' : ''}
+                    >
+                      {editandoIdx !== null ? '💾 Salvar Alterações' : '+ Adicionar Item'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -783,7 +846,10 @@ export default function NovoOrcamentoPage() {
                               <td>{fmt(item.preco_unitario)}</td>
                               <td className="font-bold">{fmt(calcTotal(item))}</td>
                               <td>
-                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)}>🗑️</button>
+                                <div className="flex gap-2">
+                                  <button className="btn btn-ghost btn-sm btn-icon" onClick={() => editarItem(idx)} disabled={editandoIdx === idx} title="Editar item">✏️</button>
+                                  <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)} title="Excluir item">🗑️</button>
+                                </div>
                               </td>
                             </tr>
                           )
