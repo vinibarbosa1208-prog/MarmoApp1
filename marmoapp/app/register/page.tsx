@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { formatPhone, formatCEP, formatCNPJ, fetchCEP } from '@/lib/utils'
@@ -15,10 +15,14 @@ const PLANS = {
   enterprise: { nome: 'Plano Enterprise', preco: 'R$ 497/mês' },
 }
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>(1)
-  const [plan] = useState<Plan>('basic')
+  const [plan, setPlan] = useState<Plan>(() => {
+    const p = searchParams.get('plano')
+    return (p === 'pro' || p === 'enterprise') ? p : 'basic'
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -67,6 +71,7 @@ export default function RegisterPage() {
       if (signUpErr) throw signUpErr
       if (!data.user) throw new Error('Usuário não criado')
 
+      const trialExpira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       const { error: marmErr } = await supabase.from('marmorarias').insert({
         owner_id: data.user.id,
         nome: form.marmoraria,
@@ -78,6 +83,7 @@ export default function RegisterPage() {
         endereco: form.endereco,
         plano: plan,
         email: form.email,
+        trial_expira: trialExpira,
       })
       if (marmErr) throw marmErr
 
@@ -177,24 +183,43 @@ export default function RegisterPage() {
           {step === 3 && (
             <div>
               <div className="step-title">Escolha seu Plano</div>
-              <div className="step-subtitle">Comece com 14 dias grátis</div>
+              <div className="step-subtitle">Comece com 7 dias grátis</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '16px 0' }}>
                 {(Object.entries(PLANS) as [Plan, typeof PLANS[Plan]][]).map(([key, p]) => (
-                  <div key={key} style={{ background: key === plan ? 'var(--sidebar-active-bg)' : '#f8f8f8', border: key === plan ? '1.5px solid var(--gold)' : '1.5px solid #e8e8e8', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPlan(key)}
+                    style={{
+                      background: key === plan ? 'var(--sidebar-active-bg)' : '#f8f8f8',
+                      border: key === plan ? '1.5px solid var(--gold)' : '1.5px solid #e8e8e8',
+                      borderRadius: 10, padding: '12px 16px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      cursor: 'pointer', width: '100%', textAlign: 'left',
+                    }}
+                  >
                     <span style={{ fontWeight: 600, fontSize: 14 }}>{p.nome}</span>
                     <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 14 }}>{p.preco}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
               {error && <div style={{ color: '#e74c3c', fontSize: 12, marginBottom: 10 }}>{error}</div>}
-              <button className="btn-primary" style={{ width: '100%', marginBottom: 12 }} onClick={handleRegister} disabled={loading}>
+              <button type="button" className="btn-primary" style={{ width: '100%', marginBottom: 12 }} onClick={handleRegister} disabled={loading}>
                 {loading ? 'Criando conta...' : 'Criar conta e começar →'}
               </button>
-              <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: 'var(--gray)', cursor: 'pointer', fontSize: 13 }}>← Voltar</button>
+              <button type="button" onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: 'var(--gray)', cursor: 'pointer', fontSize: 13 }}>← Voltar</button>
             </div>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }

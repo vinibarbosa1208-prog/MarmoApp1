@@ -3,40 +3,35 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY!
+const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Service role client — used by route handlers for all DB operations
+if (!SERVICE_KEY) {
+  throw new Error('SUPABASE_SERVICE_KEY não configurada. Verifique as variáveis de ambiente.')
+}
+
 export const apiSupabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-// Reads the Supabase session from cookies (set by createBrowserClient on the client)
-// The _ignored param keeps callers that still pass the auth header working unchanged
 export async function getMarmorariaId(_ignored?: string | null): Promise<string | null> {
   const cookieStore = await cookies()
 
-  const authClient = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Route handlers cannot set cookies after the response has started
-          }
-        },
+  const authClient = createServerClient(SUPABASE_URL, ANON_KEY, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // Route handlers não podem definir cookies após o início da resposta
+        }
       },
-    }
-  )
+    },
+  })
 
-  // getSession() lê o JWT dos cookies localmente — sem network call ao Supabase Auth.
-  // getUser() validava o token no servidor a cada request, causando 50+ chamadas simultâneas.
-  const { data: { session } } = await authClient.auth.getSession()
-  if (!session?.user) return null
-  const user = session.user
+  const { data: { user }, error: authError } = await authClient.auth.getUser()
+  if (authError || !user) return null
 
   const { data, error: dbErr } = await authClient
     .from('usuarios')
@@ -45,5 +40,14 @@ export async function getMarmorariaId(_ignored?: string | null): Promise<string 
     .maybeSingle()
 
   if (dbErr) throw new Error(`auth_db: ${dbErr.message}`)
-  return data?.marmoraria_id ?? null
+  if (data?.marmoraria_id) return data.marmoraria_id
+
+  // Fallback: owner lookup (register flow only inserts into marmorarias, not usuarios)
+  const { data: marmoraria } = await apiSupabase
+    .from('marmorarias')
+    .select('id')
+    .eq('owner_id', user.id)
+    .maybeSingle()
+
+  return marmoraria?.id ?? null
 }
