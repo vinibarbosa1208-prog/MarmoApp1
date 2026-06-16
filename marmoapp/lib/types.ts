@@ -1,4 +1,4 @@
-export type Plan = 'trial' | 'basic' | 'pro' | 'enterprise'
+export type Plan = 'basic' | 'pro' | 'enterprise'
 
 export interface Marmoraria {
   id: string
@@ -12,13 +12,8 @@ export interface Marmoraria {
   cep?: string
   logo_url?: string | null
   plano: Plan
-  trial_expira?: string | null
-  ativo: boolean
   owner_id: string
-  setup_concluido?: boolean
-  markup_padrao?: number
   created_at: string
-  updated_at?: string
 }
 
 export interface Cliente {

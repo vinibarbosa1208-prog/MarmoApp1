@@ -6,7 +6,6 @@ import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import Toast from '@/components/Toast'
 import { useApp } from '@/contexts/AppContext'
-import { usePlano } from '@/hooks/usePlano'
 
 const BOTTOM_NAV = [
   {
@@ -32,28 +31,17 @@ const BOTTOM_NAV = [
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, marmoraria } = useApp()
-  const { plano, trialExpirado, diasParaExpirar } = usePlano()
+  const { user } = useApp()
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const mostrarBannerTrial =
-    plano === 'trial' && !trialExpirado && diasParaExpirar >= 0 && diasParaExpirar <= 3
-
   useEffect(() => {
-    if (user === null && pathname !== '/planos') {
-      router.replace('/login')
-      return
-    }
-    if (user !== null && marmoraria !== null) {
-      if (!marmoraria.setup_concluido && pathname !== '/onboarding') {
-        router.replace('/onboarding')
-      } else if (marmoraria.setup_concluido && pathname === '/onboarding') {
-        router.replace('/dashboard')
-      }
-    }
-  }, [user, marmoraria, router, pathname])
+    const t = setTimeout(() => {
+      if (user === null) router.push('/login')
+    }, 800)
+    return () => clearTimeout(t)
+  }, [user, router])
 
   // Close sidebar on route change
   useEffect(() => {
@@ -61,16 +49,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
-
-  if (user === null) {
-    if (pathname === '/planos') return <>{children}</>
-    return null
-  }
-
-  if (pathname === '/onboarding') {
-    if (marmoraria !== null && marmoraria.setup_concluido) return null
-    return <>{children}</>
-  }
 
   return (
     <>
@@ -94,18 +72,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main">
-        {mostrarBannerTrial && (
-          <div style={{
-            background: '#FFF8E1', borderBottom: '1px solid #FFD54F',
-            padding: '10px 20px', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: 12, fontSize: 13, color: '#7A6A00',
-          }}>
-            <span>⚠️ Seu trial expira em {diasParaExpirar} dia{diasParaExpirar !== 1 ? 's' : ''}.</span>
-            <Link href="/planos" style={{ color: 'var(--gold)', fontWeight: 600, textDecoration: 'underline' }}>
-              Assine agora para não perder o acesso →
-            </Link>
-          </div>
-        )}
         <div id="page-content">
           {children}
         </div>

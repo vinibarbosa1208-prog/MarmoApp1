@@ -1,35 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createHmac, timingSafeEqual } from 'crypto'
 import { runAgent } from '@/lib/antonio/agent'
-import { sendWhatsAppText } from '@/lib/antonio/whatsapp'
+import { sendWhatsAppText, jidToPhone } from '@/lib/antonio/whatsapp'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
-
-function verifyWebhookSignature(body: string, signature: string | null): boolean {
-  const secret = process.env.EVOLUTION_WEBHOOK_SECRET
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[webhook] EVOLUTION_WEBHOOK_SECRET não configurado — bloqueando')
-      return false
-    }
-    console.warn('[webhook] EVOLUTION_WEBHOOK_SECRET não configurado — modo dev')
-    return true
-  }
-  if (!signature) return false
-  try {
-    const expected = createHmac('sha256', secret).update(body).digest('hex')
-    const expectedBuf = Buffer.from(expected, 'hex')
-    const receivedBuf = Buffer.from(signature.replace('sha256=', ''), 'hex')
-    if (expectedBuf.length !== receivedBuf.length) return false
-    return timingSafeEqual(expectedBuf, receivedBuf)
-  } catch {
-    return false
-  }
-}
 
 export async function GET() {
   return NextResponse.json({ status: 'Agente Antônio webhook ativo' })
@@ -37,24 +14,18 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const rawBody = await req.text()
-    const signature = req.headers.get('x-evolution-signature')
+    const body = await req.json()
 
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      console.warn('[webhook] Assinatura inválida rejeitada')
-      return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 })
+    if (body.event !== 'messages.upsert') {
+      return NextResponse.json({ ok: true })
     }
-
-    const body = JSON.parse(rawBody)
-
-    if (body.event !== 'messages.upsert') return NextResponse.json({ ok: true })
 
     const msg = body.data?.message
     const from: string = body.data?.key?.remoteJid
     const instance: string = body.instance
     const fromMe: boolean = body.data?.key?.fromMe
 
-    if (!msg || !from || fromMe || !instance?.trim()) return NextResponse.json({ ok: true })
+    if (!msg || !from || fromMe) return NextResponse.json({ ok: true })
 
     const textContent: string =
       msg.conversation ||
@@ -64,13 +35,17 @@ export async function POST(req: NextRequest) {
 
     if (!textContent.trim()) return NextResponse.json({ ok: true })
 
+    const phone = jidToPhone(from)
+
     const { data: marmoraria } = await supabase
       .from('marmorarias')
-      .select('id, nome, plano')
-      .eq('evolution_instance_name', instance)
+      .select('*')
+      .ilike('nome', `%${instance}%`)
       .maybeSingle()
 
-    if (!marmoraria || marmoraria.plano !== 'enterprise') return NextResponse.json({ ok: true })
+    if (!marmoraria || marmoraria.plano !== 'enterprise') {
+      return NextResponse.json({ ok: true })
+    }
 
     const [{ data: materiais }, { data: servicos }, { data: clientes }] = await Promise.all([
       supabase.from('materiais').select('*').eq('marmoraria_id', marmoraria.id),
