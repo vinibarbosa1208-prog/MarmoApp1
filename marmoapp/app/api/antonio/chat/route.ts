@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiSupabase as supabase } from '@/lib/api-auth'
+import { getMarmorariaId, apiSupabase as supabase } from '@/lib/api-auth'
 import { runAgent, type AgentMessage } from '@/lib/antonio/agent'
 import type { Catalogo } from '@/lib/antonio/knowledge-base'
 
 export async function POST(req: NextRequest) {
   try {
+    const marmoraria_id = await getMarmorariaId()
+    if (!marmoraria_id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
     const body = await req.json()
-    const { messages, marmoraria, catalogo } = body as {
+    const { messages, catalogo } = body as {
       messages: AgentMessage[]
       marmoraria: { id: string; nome: string }
       catalogo: Catalogo['materiais'] extends infer M ? {
@@ -16,9 +21,21 @@ export async function POST(req: NextRequest) {
       } : never
     }
 
-    if (!messages || !marmoraria) {
+    if (!messages) {
       return NextResponse.json({ error: 'Parâmetros inválidos' }, { status: 400 })
     }
+
+    const { data: marmorariaData } = await supabase
+      .from('marmorarias')
+      .select('id, nome')
+      .eq('id', marmoraria_id)
+      .single()
+
+    if (!marmorariaData) {
+      return NextResponse.json({ error: 'Marmoraria não encontrada' }, { status: 404 })
+    }
+
+    const marmoraria = { id: marmoraria_id, nome: marmorariaData.nome }
 
     const result = await runAgent(messages, {
       marmoraria,
@@ -41,7 +58,7 @@ export async function POST(req: NextRequest) {
       const { data: orc, error: orcErr } = await supabase
         .from('orcamentos')
         .insert({
-          marmoraria_id: marmoraria.id,
+          marmoraria_id,
           cliente_id: clienteMatch?.id || null,
           descricao,
           status: 'rascunho',
@@ -67,10 +84,9 @@ export async function POST(req: NextRequest) {
           }))
         )
 
-        // Log no antonio_quotes
         await supabase.from('antonio_quotes').insert({
           orcamento_id: orc.id,
-          marmoraria_id: marmoraria.id,
+          marmoraria_id,
           input_text: messages[messages.length - 1]?.content || null,
           raw_json: result.orcamento as unknown as Record<string, unknown>,
           status: 'criado',

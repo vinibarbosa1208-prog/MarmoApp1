@@ -7,6 +7,7 @@ import type { AppState, Cliente, Orcamento, OrdemServico, Material, Servico, Mar
 
 interface AppContextValue extends AppState {
   loadAll: () => Promise<void>
+  loadMarmoraria: () => Promise<void>
   loadClientes: () => Promise<void>
   loadOrcamentos: () => Promise<void>
   loadMateriais: () => Promise<void>
@@ -99,6 +100,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (data) setState(s => ({ ...s, servicos: data as Servico[] }))
   }, [state.marmoraria?.id])
 
+  const loadMarmoraria = useCallback(async () => {
+    if (!marmorariaId) return
+    const { data } = await supabase
+      .from('marmorarias')
+      .select('*')
+      .eq('id', marmorariaId)
+      .single()
+    setState(s => ({ ...s, marmoraria: data as Marmoraria | null }))
+  }, [marmorariaId])
+
   const loadAll = useCallback(async () => {
     await Promise.all([loadClientes(), loadOrcamentos(), loadMateriais(), loadServicos()])
   }, [loadClientes, loadOrcamentos, loadMateriais, loadServicos])
@@ -133,6 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{
       ...state,
       loadAll,
+      loadMarmoraria,
       loadClientes,
       loadOrcamentos,
       loadMateriais,
