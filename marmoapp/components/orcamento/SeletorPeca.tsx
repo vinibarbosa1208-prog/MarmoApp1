@@ -3,7 +3,7 @@
 export type TipoPeca =
   | 'bancada_simples'
   | 'escada' | 'soleira' | 'nicho'
-  | 'pia_l' | 'pia_u' | 'lavatorio_extensao'
+  | 'pia_l' | 'pia_u' | 'lavatorio_simples' | 'lavatorio_extensao'
   | 'servico'
 
 export const PECA_LABELS: Record<string, string> = {
@@ -13,6 +13,7 @@ export const PECA_LABELS: Record<string, string> = {
   nicho:              'Nicho',
   pia_l:              'Pia em L',
   pia_u:              'Pia em U',
+  lavatorio_simples:  'Lavatório Simples',
   lavatorio_extensao: 'Lavatório c/ Extensão',
   servico:            'Serviço',
 }
@@ -23,7 +24,7 @@ export function getLateraisDaPeca(tipo: string, dadosExtras?: Record<string, unk
       return ['esquerda', 'direita', 'frente', 'fundo']
     case 'nicho':
       return ['esquerda', 'direita', 'superior', 'inferior']
-    case 'pia_l': case 'pia_u':
+    case 'pia_l': case 'pia_u': case 'lavatorio_simples':
       return ['esquerda', 'direita', 'frente', 'fundo']
     case 'lavatorio_extensao': {
       const lado = (dadosExtras?.extensao_lado as string) || 'direita'
@@ -233,6 +234,16 @@ function SvgPiaU() {
   )
 }
 
+function SvgLavatorioSimples() {
+  return (
+    <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="18" width="144" height="54" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="2"/>
+      <ellipse cx="80" cy="45" rx="34" ry="18" fill="none" stroke="#3498db" strokeWidth="1.5" strokeDasharray="4 2"/>
+      <text x="80" y="49" textAnchor="middle" fontSize="7" fill="#3498db">cuba</text>
+    </svg>
+  )
+}
+
 function SvgLavatorioExtensao() {
   return (
     <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
@@ -267,6 +278,7 @@ const SVG_MAP: Record<string, React.ReactNode> = {
   nicho:              <SvgNicho />,
   pia_l:              <SvgPiaL />,
   pia_u:              <SvgPiaU />,
+  lavatorio_simples:  <SvgLavatorioSimples />,
   lavatorio_extensao: <SvgLavatorioExtensao />,
   servico:            <SvgServico />,
 }
@@ -558,6 +570,39 @@ export default function SeletorPeca(props: Props) {
                 {showErrors && !((dados_extras.seg3_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
+          )}
+
+          {/* ── Lavatório Simples ── */}
+          {peca === 'lavatorio_simples' && (
+            <>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">COMPRIMENTO (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.80"
+                    value={(dados_extras.comprimento as number) || ''}
+                    onChange={e => setExtra('comprimento', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.comprimento as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">PROFUNDIDADE (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.55"
+                    value={(dados_extras.profundidade as number) || ''}
+                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                <input type="checkbox"
+                  checked={!!(dados_extras.cuba_pedra as boolean)}
+                  onChange={e => {
+                    setExtra('cuba_pedra', e.target.checked)
+                    setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
+                  }} />
+                <span style={{ fontSize: 13, fontWeight: 600 }}>
+                  Cuba de pedra <span style={{ color: '#888', fontWeight: 400 }}>(+ R$ 350,00)</span>
+                </span>
+              </label>
+            </>
           )}
 
           {/* ── Lavatório c/ Extensão ── */}

@@ -47,6 +47,22 @@ const ETAPAS = ['Cliente', 'Ambientes', 'Itens', 'Revisão']
 function calcArea(item: ItemForm): number {
   const ex = item.dados_extras
 
+  if (item.tipo_peca === 'lavatorio_simples') {
+    const comprimento = (ex.comprimento as number) || 0
+    const profundidade = (ex.profundidade as number) || 0
+    if (!comprimento || !profundidade) return 0
+    const base = comprimento * profundidade
+    const dimMap: Record<string, number> = { frente: comprimento, fundo: comprimento, esquerda: profundidade, direita: profundidade }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if ((ex[`frontao_${lat}`] as boolean) && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
+  }
+
   if (item.tipo_peca === 'lavatorio_extensao') {
     const compTampo = (ex.comp_tampo as number) || 0
     const compExtensao = (ex.comp_extensao as number) || 0
@@ -107,7 +123,8 @@ function calcArea(item: ItemForm): number {
 
 function calcTotal(item: ItemForm): number {
   const area = calcArea(item)
-  const cubaExtra = item.tipo_peca === 'lavatorio_extensao' && (item.dados_extras.cuba_pedra as boolean) ? 350 : 0
+  const temCubaExtra = item.tipo_peca === 'lavatorio_extensao' || item.tipo_peca === 'lavatorio_simples'
+  const cubaExtra = temCubaExtra && (item.dados_extras.cuba_pedra as boolean) ? 350 : 0
   if (area > 0) return area * item.quantidade * item.preco_unitario + cubaExtra
   return item.quantidade * item.preco_unitario + cubaExtra
 }
@@ -154,6 +171,10 @@ function validarItem(item: ItemForm): boolean {
     if (!((ex.comp_tampo as number) > 0)) return false
     if (!((ex.profundidade as number) > 0)) return false
     if (!((ex.comp_extensao as number) > 0)) return false
+  }
+  if (peca === 'lavatorio_simples') {
+    if (!((ex.comprimento as number) > 0)) return false
+    if (!((ex.profundidade as number) > 0)) return false
   }
   if (peca === 'bancada_cuba' && !ex.tipo_cuba) return false
   if (peca === 'bancada_saia' && !((ex.altura_saia as number) > 0)) return false
@@ -672,7 +693,7 @@ export default function NovoOrcamentoPage() {
                 onLateralExtrasChange={handleLateralExtrasChange}
               />
             )}
-            {novoItem.tipo_peca && novoItem.tipo_peca !== 'lavatorio_extensao' && (
+            {novoItem.tipo_peca && novoItem.tipo_peca !== 'lavatorio_extensao' && novoItem.tipo_peca !== 'lavatorio_simples' && (
               <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
                 <div className="form-row form-row-2">
