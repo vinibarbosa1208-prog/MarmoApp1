@@ -124,7 +124,9 @@ function calcArea(item: ItemForm): number {
 function calcTotal(item: ItemForm): number {
   const area = calcArea(item)
   const temCubaExtra = item.tipo_peca === 'lavatorio_extensao' || item.tipo_peca === 'lavatorio_simples'
-  const cubaExtra = temCubaExtra && (item.dados_extras.cuba_pedra as boolean) ? 350 : 0
+  const cubaExtra = temCubaExtra && (item.dados_extras.cuba_pedra as boolean)
+    ? ((item.dados_extras.valor_cuba_pedra as number) || 350)
+    : 0
   if (area > 0) return area * item.quantidade * item.preco_unitario + cubaExtra
   return item.quantidade * item.preco_unitario + cubaExtra
 }

@@ -591,17 +591,39 @@ export default function SeletorPeca(props: Props) {
                   {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
-                <input type="checkbox"
-                  checked={!!(dados_extras.cuba_pedra as boolean)}
-                  onChange={e => {
-                    setExtra('cuba_pedra', e.target.checked)
-                    setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
-                  }} />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>
-                  Cuba de pedra <span style={{ color: '#888', fontWeight: 400 }}>(+ R$ 350,00)</span>
-                </span>
-              </label>
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox"
+                    checked={!!(dados_extras.cuba_pedra as boolean)}
+                    onChange={e => {
+                      setExtra('cuba_pedra', e.target.checked)
+                      setExtra('qtd_cuba_pedra', e.target.checked ? 1 : 0)
+                      setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
+                    }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Cuba de pedra</span>
+                </label>
+                {!!(dados_extras.cuba_pedra as boolean) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, paddingLeft: 26 }}>
+                    <label style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>Quantidade:</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={(dados_extras.qtd_cuba_pedra as number) || 1}
+                      onChange={e => {
+                        const qtd = Math.max(1, parseInt(e.target.value) || 1)
+                        setExtra('qtd_cuba_pedra', qtd)
+                        setExtra('valor_cuba_pedra', qtd * 350)
+                      }}
+                      style={{ width: 70 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--dark)', fontWeight: 600 }}>
+                      {(dados_extras.qtd_cuba_pedra as number) || 1}× Cuba de pedra: R$ {(((dados_extras.qtd_cuba_pedra as number) || 1) * 350).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
@@ -651,17 +673,39 @@ export default function SeletorPeca(props: Props) {
                   {showErrors && !((dados_extras.comp_extensao as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
-                <input type="checkbox"
-                  checked={!!(dados_extras.cuba_pedra as boolean)}
-                  onChange={e => {
-                    setExtra('cuba_pedra', e.target.checked)
-                    setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
-                  }} />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>
-                  Cuba de pedra <span style={{ color: '#888', fontWeight: 400 }}>(+ R$ 350,00)</span>
-                </span>
-              </label>
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox"
+                    checked={!!(dados_extras.cuba_pedra as boolean)}
+                    onChange={e => {
+                      setExtra('cuba_pedra', e.target.checked)
+                      setExtra('qtd_cuba_pedra', e.target.checked ? 1 : 0)
+                      setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
+                    }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Cuba de pedra</span>
+                </label>
+                {!!(dados_extras.cuba_pedra as boolean) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, paddingLeft: 26 }}>
+                    <label style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>Quantidade:</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={(dados_extras.qtd_cuba_pedra as number) || 1}
+                      onChange={e => {
+                        const qtd = Math.max(1, parseInt(e.target.value) || 1)
+                        setExtra('qtd_cuba_pedra', qtd)
+                        setExtra('valor_cuba_pedra', qtd * 350)
+                      }}
+                      style={{ width: 70 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--dark)', fontWeight: 600 }}>
+                      {(dados_extras.qtd_cuba_pedra as number) || 1}× Cuba de pedra: R$ {(((dados_extras.qtd_cuba_pedra as number) || 1) * 350).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+              </div>
             </>
           )}
 
