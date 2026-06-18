@@ -81,6 +81,19 @@ function calcArea(item: ItemForm): number {
     return base + lateralExtras
   }
 
+  if (item.tipo_peca === 'nicho') {
+    const l = (ex.largura as number) || 0
+    const a = (ex.altura as number) || 0
+    const p = (ex.profundidade as number) || 0
+    if (!l || !a || !p) return 0
+    const aLat = 2 * p * a
+    const aTB = 2 * l * p
+    const aFundo = (ex.tem_fundo as boolean) ? l * a : 0
+    const altSaia = ((ex.altura_saia_nicho as number) || 0) / 100
+    const aSaia = (ex.tem_saia_nicho as boolean) && altSaia > 0 ? l * altSaia : 0
+    return aLat + aTB + aFundo + aSaia
+  }
+
   let base = 0
   let saia = 0
   let frontao = 0
@@ -192,8 +205,9 @@ function validarItem(item: ItemForm): boolean {
   }
   if (peca === 'nicho') {
     if (!((ex.largura as number) > 0)) return false
-    if (!((ex.altura_nicho as number) > 0)) return false
+    if (!((ex.altura as number) > 0)) return false
     if (!((ex.profundidade as number) > 0)) return false
+    if ((ex.tem_saia_nicho as boolean) && !((ex.altura_saia_nicho as number) > 0)) return false
   }
   if (peca === 'pia_l') {
     if (!((ex.seg1_comprimento as number) > 0)) return false

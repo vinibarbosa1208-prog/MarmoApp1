@@ -465,28 +465,97 @@ export default function SeletorPeca(props: Props) {
 
           {/* ── Nicho ── */}
           {peca === 'nicho' && (
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label">LARGURA (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 60"
-                  value={(dados_extras.largura as number) || ''}
-                  onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
-                {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">LARGURA (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                    value={(dados_extras.largura as number) || ''}
+                    onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ALTURA (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.30"
+                    value={(dados_extras.altura as number) || ''}
+                    onChange={e => setExtra('altura', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.altura as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">PROFUNDIDADE (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.20"
+                    value={(dados_extras.profundidade as number) || ''}
+                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">ALTURA (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 30"
-                  value={(dados_extras.altura_nicho as number) || ''}
-                  onChange={e => setExtra('altura_nicho', parseFloat(e.target.value) || 0)} />
-                {showErrors && !((dados_extras.altura_nicho as number) > 0) && <Err msg="Obrigatório." />}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox"
+                    checked={!!(dados_extras.tem_fundo as boolean)}
+                    onChange={e => setExtra('tem_fundo', e.target.checked)} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Tem fundo?</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox"
+                    checked={!!(dados_extras.tem_saia_nicho as boolean)}
+                    onChange={e => {
+                      setExtra('tem_saia_nicho', e.target.checked)
+                      if (!e.target.checked) setExtra('altura_saia_nicho', 0)
+                    }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Tem saia?</span>
+                </label>
+                {!!(dados_extras.tem_saia_nicho as boolean) && (
+                  <div className="form-group" style={{ paddingLeft: 26, marginBottom: 0 }}>
+                    <label className="form-label">ALTURA DA SAIA (cm)</label>
+                    <input className="form-input" type="number" min="1" step="1" placeholder="Ex: 10"
+                      value={(dados_extras.altura_saia_nicho as number) || ''}
+                      onChange={e => setExtra('altura_saia_nicho', parseFloat(e.target.value) || 0)} />
+                    {showErrors && !((dados_extras.altura_saia_nicho as number) > 0) && <Err msg="Informe a altura da saia." />}
+                  </div>
+                )}
               </div>
-              <div className="form-group">
-                <label className="form-label">PROFUNDIDADE (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 20"
-                  value={(dados_extras.profundidade as number) || ''}
-                  onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
-                {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
-              </div>
+              {(() => {
+                const l = (dados_extras.largura as number) || 0
+                const a = (dados_extras.altura as number) || 0
+                const p = (dados_extras.profundidade as number) || 0
+                if (!l || !a || !p) return null
+                const aLat = 2 * p * a
+                const aTB = 2 * l * p
+                const aFundo = (dados_extras.tem_fundo as boolean) ? l * a : 0
+                const altSaia = ((dados_extras.altura_saia_nicho as number) || 0) / 100
+                const aSaia = (dados_extras.tem_saia_nicho as boolean) && altSaia > 0 ? l * altSaia : 0
+                const total = aLat + aTB + aFundo + aSaia
+                const d = (v: number) => v.toFixed(2).replace('.', ',')
+                return (
+                  <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ color: '#555' }}>2 Laterais</span>
+                      <span style={{ fontFamily: 'monospace' }}>2 × {d(p)} × {d(a)} = <strong>{d(aLat)} m²</strong></span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                      <span>Topo + Base</span>
+                      <span style={{ fontFamily: 'monospace' }}>2 × {d(l)} × {d(p)} = <strong>{d(aTB)} m²</strong></span>
+                    </div>
+                    {aFundo > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                        <span>Fundo</span>
+                        <span style={{ fontFamily: 'monospace' }}>{d(l)} × {d(a)} = <strong>{d(aFundo)} m²</strong></span>
+                      </div>
+                    )}
+                    {aSaia > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                        <span>Saia</span>
+                        <span style={{ fontFamily: 'monospace' }}>{d(l)} × {d(altSaia)} = <strong>{d(aSaia)} m²</strong></span>
+                      </div>
+                    )}
+                    <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                      <span>Total</span>
+                      <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
 
