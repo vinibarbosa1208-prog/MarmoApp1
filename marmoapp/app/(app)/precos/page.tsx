@@ -20,6 +20,7 @@ export default function PrecosPage() {
   const [showNovoSrv, setShowNovoSrv] = useState(false)
   const [novoMat, setNovoMat] = useState({ nome: '', unidade: 'm²', preco_padrao: '' })
   const [novoSrv, setNovoSrv] = useState({ nome: '', descricao: '', preco_padrao: '' })
+  const [savingMat, setSavingMat] = useState(false)
 
   const mats = materiais.filter(m => !query || m.nome.toLowerCase().includes(query.toLowerCase()))
   const srvs = servicos.filter(s => !query || s.nome.toLowerCase().includes(query.toLowerCase()))
@@ -41,17 +42,29 @@ export default function PrecosPage() {
   }
 
   async function adicionarMaterial() {
-    if (!novoMat.nome || !marmoraria) return
-    await supabase.from('materiais').insert({
-      marmoraria_id: marmoraria.id,
-      nome: novoMat.nome,
-      unidade: novoMat.unidade,
-      preco_padrao: parseFloat(novoMat.preco_padrao) || 0,
-    })
-    setNovoMat({ nome: '', unidade: 'm²', preco_padrao: '' })
-    setShowNovoMat(false)
-    await loadMateriais()
-    toast('Material adicionado', 'ok2')
+    if (!novoMat.nome) return
+    try {
+      setSavingMat(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
+      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
+      const { error } = await supabase.from('materiais').insert({
+        marmoraria_id: u.marmoraria_id,
+        nome: novoMat.nome,
+        unidade: novoMat.unidade,
+        preco_padrao: parseFloat(novoMat.preco_padrao) || 0,
+      })
+      if (error) throw error
+      setNovoMat({ nome: '', unidade: 'm²', preco_padrao: '' })
+      setShowNovoMat(false)
+      await loadMateriais()
+      toast('Material adicionado', 'ok2')
+    } catch (err: unknown) {
+      toast((err as Error)?.message || 'Erro ao salvar material', 'err')
+    } finally {
+      setSavingMat(false)
+    }
   }
 
   async function adicionarServico() {
@@ -140,8 +153,8 @@ export default function PrecosPage() {
                   <label className="form-label">PREÇO (R$)</label>
                   <input className="form-input" type="number" placeholder="0.00" value={novoMat.preco_padrao} onChange={e => setNovoMat(f => ({ ...f, preco_padrao: e.target.value }))} />
                 </div>
-                <button className="btn btn-gold" onClick={adicionarMaterial}>Salvar</button>
-                <button className="btn btn-outline" onClick={() => setShowNovoMat(false)}>Cancelar</button>
+                <button className="btn btn-gold" onClick={adicionarMaterial} disabled={savingMat}>{savingMat ? 'Salvando...' : 'Salvar'}</button>
+                <button className="btn btn-outline" onClick={() => setShowNovoMat(false)} disabled={savingMat}>Cancelar</button>
               </div>
             )}
 
