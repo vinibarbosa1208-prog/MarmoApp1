@@ -47,7 +47,7 @@ function NovoProjetoModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
     <div className="modal-overlay open" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="modal" style={{ maxWidth: 480, marginTop: 60 }}>
         <div className="modal-header">
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 600 }}>Novo Projeto</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 600 }}>Novo Centro de Custos</span>
           <button className="btn btn-ghost btn-icon" onClick={onClose}>✕</button>
         </div>
         <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -73,7 +73,7 @@ function NovoProjetoModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
             <button className="btn btn-outline" onClick={onClose} disabled={saving}>Cancelar</button>
             <button className="btn btn-gold" onClick={salvar} disabled={saving || !titulo.trim()}>
-              {saving ? 'Criando...' : 'Criar projeto'}
+              {saving ? 'Criando...' : 'Criar centro de custos'}
             </button>
           </div>
         </div>
@@ -104,8 +104,8 @@ export default function ProjetosPage() {
   return (
     <div className="page-inner">
       <div className="page-header">
-        <h1 className="page-title">Projetos</h1>
-        <button className="btn btn-gold" onClick={() => setShowModal(true)}>+ Novo projeto</button>
+        <h1 className="page-title">Centro de Custos</h1>
+        <button className="btn btn-gold" onClick={() => setShowModal(true)}>+ Novo centro de custos</button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -190,7 +190,7 @@ export default function ProjetosPage() {
           <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--gray)', padding: '60px 0' }}>
             Nenhum projeto encontrado.{' '}
             <button className="btn btn-gold btn-sm" style={{ marginLeft: 8 }} onClick={() => setShowModal(true)}>
-              Criar primeiro projeto
+              Criar primeiro centro de custos
             </button>
           </div>
         )}

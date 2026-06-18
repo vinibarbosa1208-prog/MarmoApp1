@@ -511,12 +511,15 @@ export default function NovoOrcamentoPage() {
   function preencherMaterial(id: string) {
     const m = materiais.find(x => x.id === id)
     if (!m) return
-    const custo = (m as unknown as Record<string, number>).custo_unitario || 0
-    const markup = novoItem.markup || 3
+    const mat = m as unknown as Record<string, number>
+    const custo = mat.custo_unitario || 0
+    const markupMat = mat.markup || 3
+    const precVenda = mat.preco_venda || 0
     upItem({
       descricao: m.nome,
       custo_m2: custo,
-      preco_unitario: custo > 0 ? custo * markup : (m.preco_padrao || m.preco || m.preco_unitario || 0),
+      markup: markupMat,
+      preco_unitario: precVenda > 0 ? precVenda : (custo > 0 ? custo * markupMat : 0),
     })
   }
 

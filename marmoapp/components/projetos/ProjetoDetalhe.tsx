@@ -36,6 +36,7 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [avancando, setAvancando] = useState(false)
+  const [instalacaoPrevista, setInstalacaoPrevista] = useState(0)
 
   const load = useCallback(async () => {
     try {
@@ -91,6 +92,22 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
 
   const custos = projeto.custos ?? []
   const outros = (projeto.custo_total ?? 0) - BREAKDOWN.reduce((s, b) => s + (projeto[b.key] ?? 0), 0)
+
+  const orcItems = projeto.orcamento_itens ?? []
+  const prevMaterial = orcItems.filter(i => i.tipo === 'material').reduce((s, i) => s + (i.custo_item ?? 0), 0)
+  const prevServicos = orcItems.filter(i => i.tipo !== 'material').reduce((s, i) => s + (i.total_item ?? 0), 0)
+  const totalPrevisto = prevMaterial + prevServicos + instalacaoPrevista
+  const margemPrevista = projeto.valor_venda > 0
+    ? Math.round(((projeto.valor_venda - totalPrevisto) / projeto.valor_venda) * 10000) / 100
+    : 0
+  const temPrevisto = orcItems.length > 0
+
+  function fmtDiff(diff: number) {
+    const sign = diff > 0.005 ? '+' : diff < -0.005 ? '-' : ''
+    const color = diff > 0.005 ? 'var(--green)' : diff < -0.005 ? 'var(--red)' : 'var(--gray)'
+    const emoji = diff > 0.005 ? '🟢' : diff < -0.005 ? '🔴' : '✅'
+    return { sign, color, emoji, abs: Math.abs(diff) }
+  }
 
   return (
     <div className="page-inner">
@@ -188,6 +205,111 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      {/* Previsão de Custos (baseado no orçamento) */}
+      {temPrevisto && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header">
+            <span className="card-title">Previsão de Custos (baseado no orçamento)</span>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
+                <span style={{ color: 'var(--gray)' }}>Material</span>
+                <strong style={{ fontFamily: 'monospace' }}>{fmt(prevMaterial)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
+                <span style={{ color: 'var(--gray)' }}>Serviços</span>
+                <strong style={{ fontFamily: 'monospace' }}>{fmt(prevServicos)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
+                <span style={{ color: 'var(--gray)' }}>Instalação</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={instalacaoPrevista || ''}
+                  placeholder="0,00"
+                  onChange={e => setInstalacaoPrevista(parseFloat(e.target.value) || 0)}
+                  style={{ width: 120, textAlign: 'right', border: '1px solid var(--marble2)', borderRadius: 6, padding: '4px 8px', fontSize: 14, fontWeight: 600, fontFamily: 'monospace' }}
+                />
+              </div>
+              <div style={{ borderTop: '1px solid var(--marble2)', marginTop: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: 14 }}>
+                  <span style={{ fontWeight: 700 }}>Total prev.</span>
+                  <strong style={{ fontFamily: 'monospace' }}>{fmt(totalPrevisto)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0 10px', fontSize: 14 }}>
+                  <span style={{ color: 'var(--gray)' }}>Valor de venda</span>
+                  <strong style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{fmt(projeto.valor_venda)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', borderTop: '2px solid var(--gold)', fontSize: 15 }}>
+                  <span style={{ fontWeight: 700 }}>Margem prevista</span>
+                  <strong style={{ color: margemColor(margemPrevista) }}>{margemPrevista}%</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comparativo Previsto × Realizado */}
+      {temPrevisto && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header">
+            <span className="card-title">Previsto × Realizado</span>
+          </div>
+          <div className="card-body" style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ fontSize: 12, color: 'var(--gray)' }}>
+                  <th style={{ textAlign: 'left', padding: '4px 0', fontWeight: 600 }}></th>
+                  <th style={{ textAlign: 'right', padding: '4px 12px', fontWeight: 600 }}>Previsto</th>
+                  <th style={{ textAlign: 'right', padding: '4px 12px', fontWeight: 600 }}>Realizado</th>
+                  <th style={{ textAlign: 'right', padding: '4px 12px', fontWeight: 600 }}>Diferença</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { label: 'Material', prev: prevMaterial, real: projeto.custo_material ?? 0 },
+                  { label: 'Serviços', prev: prevServicos, real: projeto.custo_mao_obra ?? 0 },
+                  { label: 'Instalação', prev: instalacaoPrevista, real: projeto.custo_instalacao ?? 0 },
+                ].map(row => {
+                  const { sign, color, emoji, abs } = fmtDiff(row.prev - row.real)
+                  return (
+                    <tr key={row.label} style={{ borderTop: '1px solid var(--marble2)' }}>
+                      <td style={{ padding: '10px 0', fontWeight: 500 }}>{row.label}:</td>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', fontFamily: 'monospace' }}>{fmt(row.prev)}</td>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', fontFamily: 'monospace' }}>{fmt(row.real)}</td>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', fontFamily: 'monospace' }}>
+                        <span style={{ color, fontWeight: 600 }}>{sign}{fmt(abs)} {emoji}</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {(() => {
+                  const { sign, color, emoji, abs } = fmtDiff(totalPrevisto - (projeto.custo_total ?? 0))
+                  return (
+                    <tr style={{ borderTop: '2px solid var(--dark)', fontWeight: 700 }}>
+                      <td style={{ padding: '10px 0' }}>TOTAL:</td>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', fontFamily: 'monospace' }}>{fmt(totalPrevisto)}</td>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', fontFamily: 'monospace' }}>{fmt(projeto.custo_total ?? 0)}</td>
+                      <td style={{ textAlign: 'right', padding: '10px 12px', fontFamily: 'monospace' }}>
+                        <span style={{ color, fontWeight: 700 }}>{sign}{fmt(abs)} {emoji}</span>
+                      </td>
+                    </tr>
+                  )
+                })()}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, fontSize: 14, color: 'var(--gray)', borderTop: '1px solid var(--marble2)', paddingTop: 10 }}>
+              Lucro real:{' '}
+              <strong style={{ color: margemColor(margem) }}>{fmt(projeto.margem_lucro ?? 0)}</strong>
+              <span style={{ marginLeft: 8 }}>(margem: <strong style={{ color: margemColor(margem) }}>{margem}%</strong>)</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
         {/* Breakdown por categoria */}

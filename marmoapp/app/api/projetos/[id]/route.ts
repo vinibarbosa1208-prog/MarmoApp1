@@ -26,6 +26,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         new Date(a.entrada_em).getTime() - new Date(b.entrada_em).getTime()
     )
 
+    let orcamento_itens: Array<{ tipo: string; custo_item: number | null; total_item: number | null }> = []
+    if (projeto.orcamento_id) {
+      const { data: items } = await supabase
+        .from('orcamento_itens')
+        .select('tipo, custo_item, total_item')
+        .eq('orcamento_id', projeto.orcamento_id)
+      orcamento_itens = items || []
+    }
+
     return NextResponse.json({
       ...projeto,
       cliente_nome: projeto.clientes?.nome ?? null,
@@ -35,6 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       etapas,
       projeto_etapas: undefined,
       margem_percentual,
+      orcamento_itens,
     })
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
