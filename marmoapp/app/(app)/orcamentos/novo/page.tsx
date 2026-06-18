@@ -81,6 +81,12 @@ function calcArea(item: ItemForm): number {
     return base + lateralExtras
   }
 
+  if (item.tipo_peca === 'soleira') {
+    const comp = (ex.comprimento as number) || 0
+    const larg = (ex.largura as number) || 0
+    return comp * larg
+  }
+
   if (item.tipo_peca === 'nicho') {
     const l = (ex.largura as number) || 0
     const a = (ex.altura as number) || 0
@@ -716,7 +722,7 @@ export default function NovoOrcamentoPage() {
                 onLateralExtrasChange={handleLateralExtrasChange}
               />
             )}
-            {novoItem.tipo_peca && novoItem.tipo_peca !== 'lavatorio_extensao' && novoItem.tipo_peca !== 'lavatorio_simples' && (
+            {novoItem.tipo_peca && novoItem.tipo_peca !== 'lavatorio_extensao' && novoItem.tipo_peca !== 'lavatorio_simples' && novoItem.tipo_peca !== 'soleira' && (
               <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
                 <div className="form-row form-row-2">

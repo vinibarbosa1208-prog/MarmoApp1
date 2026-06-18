@@ -445,21 +445,40 @@ export default function SeletorPeca(props: Props) {
 
           {/* ── Soleira / Peitoril ── */}
           {peca === 'soleira' && (
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label">COMPRIMENTO (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 150"
-                  value={(dados_extras.comprimento as number) || ''}
-                  onChange={e => setExtra('comprimento', parseFloat(e.target.value) || 0)} />
-                {showErrors && !((dados_extras.comprimento as number) > 0) && <Err msg="Obrigatório." />}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">COMPRIMENTO (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.75"
+                    value={(dados_extras.comprimento as number) || ''}
+                    onChange={e => setExtra('comprimento', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.comprimento as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">LARGURA (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.19"
+                    value={(dados_extras.largura as number) || ''}
+                    onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">LARGURA (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 20"
-                  value={(dados_extras.largura as number) || ''}
-                  onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
-                {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
-              </div>
+              {(() => {
+                const comp = (dados_extras.comprimento as number) || 0
+                const larg = (dados_extras.largura as number) || 0
+                if (!comp || !larg) return null
+                const area = comp * larg
+                const d = (v: number) => v.toFixed(4).replace('.', ',').replace(/,?0+$/, '') || '0'
+                return (
+                  <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                      <span>Área</span>
+                      <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>
+                        {comp.toFixed(2).replace('.', ',')} × {larg.toFixed(2).replace('.', ',')} = <strong>{area.toFixed(4).replace('.', ',')} m²</strong>
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
 
