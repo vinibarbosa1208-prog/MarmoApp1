@@ -271,9 +271,13 @@ function NovoClienteModal({
     try {
       setLoading(true)
       setError('')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
+      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
       const { data, error: err } = await supabase
         .from('clientes')
-        .insert({ marmoraria_id: marmorariaId, nome: nome.trim(), telefone, email, tipo })
+        .insert({ marmoraria_id: u.marmoraria_id, nome: nome.trim(), telefone, email, tipo })
         .select()
         .single()
       if (err) throw err
