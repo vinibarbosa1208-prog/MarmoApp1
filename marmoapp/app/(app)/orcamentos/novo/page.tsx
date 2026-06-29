@@ -586,10 +586,14 @@ export default function NovoOrcamentoPage() {
   }
 
   async function salvar() {
-    if (!marmoraria) return
     try {
       setLoading(true)
       setErro('')
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
+      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
 
       const observacoesFinal = [
         form.condicao_pagamento ? `Condição de pagamento: ${form.condicao_pagamento}` : '',
@@ -599,7 +603,7 @@ export default function NovoOrcamentoPage() {
       const { data: orc, error: orcErr } = await supabase
         .from('orcamentos')
         .insert({
-          marmoraria_id: marmoraria.id,
+          marmoraria_id: u.marmoraria_id,
           cliente_id: form.cliente_id || null,
           titulo: form.descricao || 'Orçamento',
           status: 'rascunho',
@@ -620,7 +624,7 @@ export default function NovoOrcamentoPage() {
       if (itens.length > 0) {
         const payload = itens.map(i => ({
           orcamento_id: orc.id,
-          marmoraria_id: marmoraria.id,
+          marmoraria_id: u.marmoraria_id,
           tipo: i.tipo,
           ambiente: i.ambiente || null,
           descricao: i.descricao,
