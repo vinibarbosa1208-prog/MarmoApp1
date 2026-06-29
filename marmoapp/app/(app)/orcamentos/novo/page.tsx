@@ -275,9 +275,8 @@ function WizardProgress({ step, onJump }: { step: number; onJump: (s: number) =>
 }
 
 function NovoClienteModal({
-  marmorariaId, onClose, onCreated,
+  onClose, onCreated,
 }: {
-  marmorariaId: string
   onClose: () => void
   onCreated: (clienteId: string) => void
 }) {
@@ -1203,9 +1202,8 @@ export default function NovoOrcamentoPage() {
         )}
       </div>
 
-      {showClienteModal && marmoraria && (
+      {showClienteModal && (
         <NovoClienteModal
-          marmorariaId={marmoraria.id}
           onClose={() => setShowClienteModal(false)}
           onCreated={async id => {
             await loadClientes()
