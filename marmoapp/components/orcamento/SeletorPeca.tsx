@@ -684,9 +684,8 @@ export default function SeletorPeca(props: Props) {
                   <input type="checkbox"
                     checked={!!(dados_extras.cuba_pedra as boolean)}
                     onChange={e => {
-                      setExtra('cuba_pedra', e.target.checked)
-                      setExtra('qtd_cuba_pedra', e.target.checked ? 1 : 0)
-                      setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
+                      const checked = e.target.checked
+                      onChange({ dados_extras: { ...dados_extras, cuba_pedra: checked, qtd_cuba_pedra: checked ? 1 : 0, valor_cuba_pedra: checked ? 350 : 0 } })
                     }} />
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Cuba de pedra</span>
                 </label>
@@ -701,8 +700,7 @@ export default function SeletorPeca(props: Props) {
                       value={(dados_extras.qtd_cuba_pedra as number) || 1}
                       onChange={e => {
                         const qtd = Math.max(1, parseInt(e.target.value) || 1)
-                        setExtra('qtd_cuba_pedra', qtd)
-                        setExtra('valor_cuba_pedra', qtd * 350)
+                        onChange({ dados_extras: { ...dados_extras, qtd_cuba_pedra: qtd, valor_cuba_pedra: qtd * 350 } })
                       }}
                       style={{ width: 70 }}
                     />
@@ -766,9 +764,8 @@ export default function SeletorPeca(props: Props) {
                   <input type="checkbox"
                     checked={!!(dados_extras.cuba_pedra as boolean)}
                     onChange={e => {
-                      setExtra('cuba_pedra', e.target.checked)
-                      setExtra('qtd_cuba_pedra', e.target.checked ? 1 : 0)
-                      setExtra('valor_cuba_pedra', e.target.checked ? 350 : 0)
+                      const checked = e.target.checked
+                      onChange({ dados_extras: { ...dados_extras, cuba_pedra: checked, qtd_cuba_pedra: checked ? 1 : 0, valor_cuba_pedra: checked ? 350 : 0 } })
                     }} />
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Cuba de pedra</span>
                 </label>
@@ -783,8 +780,7 @@ export default function SeletorPeca(props: Props) {
                       value={(dados_extras.qtd_cuba_pedra as number) || 1}
                       onChange={e => {
                         const qtd = Math.max(1, parseInt(e.target.value) || 1)
-                        setExtra('qtd_cuba_pedra', qtd)
-                        setExtra('valor_cuba_pedra', qtd * 350)
+                        onChange({ dados_extras: { ...dados_extras, qtd_cuba_pedra: qtd, valor_cuba_pedra: qtd * 350 } })
                       }}
                       style={{ width: 70 }}
                     />

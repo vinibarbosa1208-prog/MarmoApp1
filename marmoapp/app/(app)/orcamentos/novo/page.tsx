@@ -53,12 +53,13 @@ function calcArea(item: ItemForm): number {
     if (!comprimento || !profundidade) return 0
     const base = comprimento * profundidade
     const dimMap: Record<string, number> = { frente: comprimento, fundo: comprimento, esquerda: profundidade, direita: profundidade }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
     let lateralExtras = 0
     for (const [lat, len] of Object.entries(dimMap)) {
       const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
       const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
       if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
-      if ((ex[`frontao_${lat}`] as boolean) && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
     }
     return base + lateralExtras
   }
@@ -71,12 +72,13 @@ function calcArea(item: ItemForm): number {
     const totalWidth = compTampo + compExtensao
     const base = totalWidth * prof
     const dimMap: Record<string, number> = { frente: totalWidth, fundo: totalWidth, esquerda: prof, direita: prof }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
     let lateralExtras = 0
     for (const [lat, len] of Object.entries(dimMap)) {
       const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
       const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
       if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
-      if ((ex[`frontao_${lat}`] as boolean) && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
     }
     return base + lateralExtras
   }
@@ -841,6 +843,58 @@ export default function NovoOrcamentoPage() {
                 })()}
               </div>
             )}
+            {(novoItem.tipo_peca === 'lavatorio_simples' || novoItem.tipo_peca === 'lavatorio_extensao') && (() => {
+              const ex = novoItem.dados_extras
+              const isSim = novoItem.tipo_peca === 'lavatorio_simples'
+              const comp = isSim
+                ? ((ex.comprimento as number) || 0)
+                : ((ex.comp_tampo as number) || 0) + ((ex.comp_extensao as number) || 0)
+              const prof = (ex.profundidade as number) || 0
+              if (!comp || !prof) return null
+              const tampo = comp * prof
+              const d = (n: number) => n.toFixed(2).replace('.', ',')
+              const dimMap: Record<string, number> = { frente: comp, fundo: comp, esquerda: prof, direita: prof }
+              const acabs: Record<string, string> = { frente: novoItem.acabamento_frente, fundo: novoItem.acabamento_fundo, esquerda: novoItem.acabamento_esquerda, direita: novoItem.acabamento_direita }
+              const latLabels: Record<string, string> = { frente: 'Frente', fundo: 'Fundo', esquerda: 'Esq.', direita: 'Dir.' }
+              const extras: { label: string; area: number }[] = []
+              let total = tampo
+              for (const [lat, len] of Object.entries(dimMap)) {
+                const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+                const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+                if (acabs[lat] === 'frontao' && altFrontao > 0) { const area = len * altFrontao; extras.push({ label: `Frontão ${latLabels[lat]}`, area }); total += area }
+                if ((ex[`saia_${lat}`] as boolean) && altSaia > 0) { const area = len * altSaia; extras.push({ label: `Saia ${latLabels[lat]}`, area }); total += area }
+              }
+              return (
+                <div style={{ margin: '8px 16px 0', padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: extras.length ? 4 : 0 }}>
+                    <span style={{ color: '#555' }}>Tampo</span>
+                    <span style={{ fontFamily: 'monospace' }}>{d(comp)} × {d(prof)} = <strong>{d(tampo)} m²</strong></span>
+                  </div>
+                  {extras.map(({ label, area }, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                      <span>{label}</span>
+                      <span style={{ fontFamily: 'monospace' }}><strong>{d(area)} m²</strong></span>
+                    </div>
+                  ))}
+                  <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                    <span>Total</span>
+                    <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                  </div>
+                  {novoItem.custo_m2 > 0 && (
+                    <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                        <span>Custo</span>
+                        <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(total * novoItem.quantidade * novoItem.custo_m2)}</strong></span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--gold)' }}>
+                        <span>Venda</span>
+                        <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.preco_unitario.toFixed(2)} = <strong>{fmt(total * novoItem.quantidade * novoItem.preco_unitario)}</strong></span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </>
         )}
 
