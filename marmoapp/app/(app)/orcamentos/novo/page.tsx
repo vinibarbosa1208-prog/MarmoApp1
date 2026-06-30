@@ -412,7 +412,7 @@ function ClienteCombobox({
 
 export default function NovoOrcamentoPage() {
   const router = useRouter()
-  const { clientes, materiais, servicos, marmoraria, loadOrcamentos, loadClientes, toast } = useApp()
+  const { clientes, materiais, servicos, loadOrcamentos, loadClientes, toast } = useApp()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [mostrarErros, setMostrarErros] = useState(false)
