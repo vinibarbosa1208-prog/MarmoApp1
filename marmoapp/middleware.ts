@@ -2,10 +2,15 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = [
+  '/',
   '/login',
   '/register',
+  '/onboarding',
   '/pricing',
   '/planos',
+  '/comecar',
+  '/api/leads',
+  '/api/log-error',
   '/api/antonio/webhook',
 ]
 
