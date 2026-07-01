@@ -57,28 +57,59 @@ export default function OnboardingPage() {
   }
 
   async function handleFinish() {
-    if (!userId) return
+    if (!userId) {
+      setError('Sessão expirada. Faça login novamente.')
+      router.replace('/login')
+      return
+    }
     setLoading(true)
     setError('')
 
     try {
       const plano = localStorage.getItem('marmoapp_plano') ?? 'basic'
-      const trialExpira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-      const { error: marmErr } = await supabase.from('marmorarias').insert({
-        owner_id: userId,
-        nome: form.marmoraria,
-        cnpj: form.cnpj || null,
-        telefone: form.tel,
-        cep: form.cep || null,
-        estado: form.estado || null,
-        cidade: form.cidade || null,
-        endereco: form.endereco || null,
-        plano,
-        email: userEmail,
-        trial_expira: trialExpira,
-      })
-      if (marmErr) throw marmErr
+      const { data: existing } = await supabase
+        .from('marmorarias')
+        .select('id')
+        .eq('owner_id', userId)
+        .maybeSingle()
+
+      if (existing) {
+        const { error: updateErr } = await supabase
+          .from('marmorarias')
+          .update({
+            nome: form.marmoraria,
+            cnpj: form.cnpj || null,
+            telefone: form.tel,
+            cep: form.cep || null,
+            estado: form.estado || null,
+            cidade: form.cidade || null,
+            endereco: form.endereco || null,
+            plano,
+            setup_concluido: true,
+          })
+          .eq('id', existing.id)
+        if (updateErr) throw updateErr
+      } else {
+        const trialExpira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        const { error: insertErr } = await supabase
+          .from('marmorarias')
+          .insert({
+            owner_id: userId,
+            nome: form.marmoraria,
+            cnpj: form.cnpj || null,
+            telefone: form.tel,
+            cep: form.cep || null,
+            estado: form.estado || null,
+            cidade: form.cidade || null,
+            endereco: form.endereco || null,
+            plano,
+            email: userEmail,
+            trial_expira: trialExpira,
+            setup_concluido: true,
+          })
+        if (insertErr) throw insertErr
+      }
 
       localStorage.removeItem('marmoapp_plano')
       localStorage.removeItem('marmoapp_nome_contato')
