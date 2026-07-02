@@ -39,6 +39,16 @@ function RegisterForm() {
       if (signUpErr) throw signUpErr
       if (!data.user) throw new Error('Usuário não criado')
 
+      // signUp pode não estabelecer sessão se havia sessão anterior ativa
+      // ou se o projeto exige confirmação de e-mail. Força login explícito.
+      if (!data.session) {
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.pass,
+        })
+        if (signInErr) throw signInErr
+      }
+
       const plano = searchParams.get('plano') ?? 'basic'
       localStorage.setItem('marmoapp_plano', plano)
       localStorage.setItem('marmoapp_nome_contato', form.nome)
