@@ -42,22 +42,11 @@ export default function PrecosPage() {
   }
 
   async function adicionarMaterial() {
-    if (!novoMat.nome) return
+    if (!novoMat.nome || !marmoraria) return
     try {
       setSavingMat(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-
-      const { data: u } = await supabase
-        .from('usuarios')
-        .select('marmoraria_id')
-        .eq('id', user.id)
-        .single()
-
-      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
-
       const { error } = await supabase.from('materiais').insert({
-        marmoraria_id: u.marmoraria_id,
+        marmoraria_id: marmoraria.id,
         nome: novoMat.nome,
         unidade: novoMat.unidade,
         preco_padrao: parseFloat(novoMat.preco_padrao) || 0,
@@ -75,33 +64,17 @@ export default function PrecosPage() {
   }
 
   async function adicionarServico() {
-    if (!novoSrv.nome) return
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-
-      const { data: u } = await supabase
-        .from('usuarios')
-        .select('marmoraria_id')
-        .eq('id', user.id)
-        .single()
-
-      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
-
-      const { error } = await supabase.from('servicos').insert({
-        marmoraria_id: u.marmoraria_id,
-        nome: novoSrv.nome,
-        descricao: novoSrv.descricao,
-        preco_padrao: parseFloat(novoSrv.preco_padrao) || 0,
-      })
-      if (error) throw error
-      setNovoSrv({ nome: '', descricao: '', preco_padrao: '' })
-      setShowNovoSrv(false)
-      await loadServicos()
-      toast('Serviço adicionado', 'ok2')
-    } catch (err: unknown) {
-      toast((err as Error)?.message || 'Erro ao salvar serviço', 'err')
-    }
+    if (!novoSrv.nome || !marmoraria) return
+    await supabase.from('servicos').insert({
+      marmoraria_id: marmoraria.id,
+      nome: novoSrv.nome,
+      descricao: novoSrv.descricao,
+      preco_padrao: parseFloat(novoSrv.preco_padrao) || 0,
+    })
+    setNovoSrv({ nome: '', descricao: '', preco_padrao: '' })
+    setShowNovoSrv(false)
+    await loadServicos()
+    toast('Serviço adicionado', 'ok2')
   }
 
   async function excluirMat(id: string) {
