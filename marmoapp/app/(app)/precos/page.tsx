@@ -42,15 +42,11 @@ export default function PrecosPage() {
   }
 
   async function adicionarMaterial() {
-    if (!novoMat.nome) return
+    if (!novoMat.nome || !marmoraria) return
     try {
       setSavingMat(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
-      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
       const { error } = await supabase.from('materiais').insert({
-        marmoraria_id: u.marmoraria_id,
+        marmoraria_id: marmoraria.id,
         nome: novoMat.nome,
         unidade: novoMat.unidade,
         preco_padrao: parseFloat(novoMat.preco_padrao) || 0,
