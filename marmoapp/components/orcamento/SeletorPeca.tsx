@@ -24,8 +24,12 @@ export function getLateraisDaPeca(tipo: string, dadosExtras?: Record<string, unk
       return ['esquerda', 'direita', 'frente', 'fundo']
     case 'nicho':
       return ['esquerda', 'direita', 'superior', 'inferior']
-    case 'pia_l': case 'pia_u': case 'lavatorio_simples':
+    case 'lavatorio_simples':
       return ['esquerda', 'direita', 'frente', 'fundo']
+    case 'pia_l':
+      return ['esquerda', 'direita', 'frente_seg1', 'frente_seg2', 'fundo']
+    case 'pia_u':
+      return ['esquerda', 'direita', 'frente_seg1', 'frente_seg2', 'frente_seg3', 'fundo']
     case 'lavatorio_extensao': {
       const lado = (dadosExtras?.extensao_lado as string) || 'direita'
       return ['esquerda', 'direita', 'frente', 'fundo'].filter(l => l !== lado)
@@ -60,22 +64,6 @@ const SERVICOS_LISTA = [
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
-  return (
-    <div onClick={onToggle} style={{
-      width: 40, height: 22, borderRadius: 11,
-      background: on ? 'var(--gold)' : '#ddd',
-      position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
-    }}>
-      <div style={{
-        position: 'absolute', top: 3, left: on ? 20 : 3,
-        width: 16, height: 16, borderRadius: '50%', background: '#fff',
-        transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-      }} />
-    </div>
-  )
-}
 
 function Err({ msg }: { msg: string }) {
   return <p style={{ color: '#c0392b', fontSize: 11, marginTop: 3 }}>{msg}</p>
@@ -300,7 +288,7 @@ interface Props extends SeletorPecaState {
 }
 
 export default function SeletorPeca(props: Props) {
-  const { tipo_peca, tem_saia, altura_saia, tem_frontao, altura_frontao, dados_extras, showErrors, onChange } = props
+  const { tipo_peca, dados_extras, showErrors, onChange } = props
 
   function setExtra(key: string, val: unknown) {
     onChange({ dados_extras: { ...dados_extras, [key]: val } })
@@ -793,43 +781,6 @@ export default function SeletorPeca(props: Props) {
             </>
           )}
 
-          {/* ── Toggle saia (para peças não-bancada que permitem) ── */}
-          {['pia_l', 'pia_u'].includes(peca) && (
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                <Toggle on={tem_saia} onToggle={() => onChange({ tem_saia: !tem_saia, altura_saia: !tem_saia ? 0.10 : 0 })} />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Possui saia?</span>
-              </label>
-              {tem_saia && (
-                <div className="form-group" style={{ marginTop: 8 }}>
-                  <label className="form-label">ALTURA DA SAIA (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.10"
-                    value={altura_saia || ''}
-                    onChange={e => onChange({ altura_saia: parseFloat(e.target.value) || 0 })} />
-                  {showErrors && !(altura_saia > 0) && <Err msg="Informe a altura da saia." />}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Toggle frontão (para peças não-bancada que permitem) ── */}
-          {['pia_l', 'pia_u'].includes(peca) && (
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                <Toggle on={tem_frontao} onToggle={() => onChange({ tem_frontao: !tem_frontao, altura_frontao: !tem_frontao ? 0.10 : 0 })} />
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Possui frontão?</span>
-              </label>
-              {tem_frontao && (
-                <div className="form-group" style={{ marginTop: 8 }}>
-                  <label className="form-label">ALTURA DO FRONTÃO (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.10"
-                    value={altura_frontao || ''}
-                    onChange={e => onChange({ altura_frontao: parseFloat(e.target.value) || 0 })} />
-                  {showErrors && !(altura_frontao > 0) && <Err msg="Informe a altura do frontão." />}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

@@ -16,6 +16,9 @@ const LATERAL_LABELS: Record<string, string> = {
   fundo: 'Fundo',
   superior: 'Superior',
   inferior: 'Inferior',
+  frente_seg1: 'Frente Seg. 1',
+  frente_seg2: 'Frente Seg. 2',
+  frente_seg3: 'Frente Seg. 3',
 }
 
 // Edge cross-section miniatura SVGs (50x50 viewBox, corner profile)
