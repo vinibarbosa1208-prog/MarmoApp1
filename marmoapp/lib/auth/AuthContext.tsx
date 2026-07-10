@@ -16,6 +16,28 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 })
 
+async function fetchMarmorariaId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('marmoraria_id')
+    .eq('id', userId)
+    .single()
+  if (!error) return data?.marmoraria_id ?? null
+
+  console.error('[AuthContext] Erro ao buscar marmoraria_id, tentando novamente em 1s:', error)
+  await new Promise(r => setTimeout(r, 1000))
+  const retry = await supabase
+    .from('usuarios')
+    .select('marmoraria_id')
+    .eq('id', userId)
+    .single()
+  if (retry.error) {
+    console.error('[AuthContext] Erro ao buscar marmoraria_id (retry falhou):', retry.error)
+    return null
+  }
+  return retry.data?.marmoraria_id ?? null
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [marmorariaId, setMarmorariaId] = useState<string | null>(null)
@@ -31,12 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setUser(session.user)
-        const { data } = await supabase
-          .from('usuarios')
-          .select('marmoraria_id')
-          .eq('id', session.user.id)
-          .single()
-        setMarmorariaId(data?.marmoraria_id ?? null)
+        setMarmorariaId(await fetchMarmorariaId(session.user.id))
       }
       setLoading(false)
     }
@@ -53,12 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(session?.user ?? null)
         if (session?.user) {
-          const { data } = await supabase
-            .from('usuarios')
-            .select('marmoraria_id')
-            .eq('id', session.user.id)
-            .single()
-          setMarmorariaId(data?.marmoraria_id ?? null)
+          setMarmorariaId(await fetchMarmorariaId(session.user.id))
         } else {
           setMarmorariaId(null)
         }

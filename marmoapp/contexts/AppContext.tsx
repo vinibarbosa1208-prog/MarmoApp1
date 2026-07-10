@@ -41,26 +41,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadClientes = useCallback(async () => {
     if (!state.marmoraria?.id) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('clientes')
       .select('*')
       .eq('marmoraria_id', state.marmoraria.id)
       .order('created_at', { ascending: false })
+    if (error) console.error('[AppContext] Erro ao buscar clientes:', error)
     if (data) setState(s => ({ ...s, clientes: data as Cliente[] }))
   }, [state.marmoraria?.id])
 
   const loadOrcamentos = useCallback(async () => {
     if (!state.marmoraria?.id) return
-    const { data: orcs } = await supabase
+    const { data: orcs, error } = await supabase
       .from('orcamentos')
       .select('*')
       .eq('marmoraria_id', state.marmoraria.id)
       .order('created_at', { ascending: false })
+    if (error) console.error('[AppContext] Erro ao buscar orçamentos:', error)
     if (!orcs) return
     const ids = orcs.map(o => o.id)
-    const { data: itens } = ids.length
+    const { data: itens, error: errItens } = ids.length
       ? await supabase.from('orcamento_itens').select('*').in('orcamento_id', ids)
-      : { data: [] }
+      : { data: [], error: null }
+    if (errItens) console.error('[AppContext] Erro ao buscar itens dos orçamentos:', errItens)
 
     const orcamentos: Orcamento[] = orcs.map(o => ({
       ...o,
@@ -81,21 +84,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loadMateriais = useCallback(async () => {
     if (!state.marmoraria?.id) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('materiais')
       .select('*')
       .eq('marmoraria_id', state.marmoraria.id)
       .order('nome')
+    if (error) console.error('[AppContext] Erro ao buscar materiais:', error)
     if (data) setState(s => ({ ...s, materiais: data as Material[] }))
   }, [state.marmoraria?.id])
 
   const loadServicos = useCallback(async () => {
     if (!state.marmoraria?.id) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('servicos')
       .select('*')
       .eq('marmoraria_id', state.marmoraria.id)
       .order('nome')
+    if (error) console.error('[AppContext] Erro ao buscar serviços:', error)
     if (data) setState(s => ({ ...s, servicos: data as Servico[] }))
   }, [state.marmoraria?.id])
 
@@ -122,7 +127,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', marmorariaId)
       .single()
-      .then(({ data }) => setState(s => ({ ...s, marmoraria: data as Marmoraria | null })))
+      .then(({ data, error }) => {
+        if (error) console.error('[AppContext] Erro ao buscar marmoraria:', error)
+        setState(s => ({ ...s, marmoraria: data as Marmoraria | null }))
+      })
   }, [marmorariaId])
 
   useEffect(() => {
