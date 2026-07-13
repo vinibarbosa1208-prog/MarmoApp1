@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { AuthProvider } from '@/lib/auth/AuthContext'
 import { AppProvider } from '@/contexts/AppContext'
+import MetaPixel from '@/components/MetaPixel'
 import './globals.css'
 
 export const viewport: Viewport = {
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </AppProvider>
         </AuthProvider>
+        <MetaPixel />
       </body>
     </html>
   )

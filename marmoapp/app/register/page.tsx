@@ -1,9 +1,15 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+
+declare global {
+  interface Window {
+    fbq?: (...args: unknown[]) => void
+  }
+}
 
 function RegisterForm() {
   const router = useRouter()
@@ -16,6 +22,10 @@ function RegisterForm() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    window.fbq?.('track', 'Lead')
+  }, [])
 
   function up(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))
@@ -52,6 +62,8 @@ function RegisterForm() {
       const plano = searchParams.get('plano') ?? 'basic'
       localStorage.setItem('marmoapp_plano', plano)
       localStorage.setItem('marmoapp_nome_contato', form.nome)
+
+      window.fbq?.('track', 'CompleteRegistration')
 
       router.push('/onboarding')
     } catch (e: unknown) {

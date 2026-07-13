@@ -26,7 +26,7 @@ const PLANOS = [
   },
   {
     id: 'pro', nome: 'Pro', preco: 297, descricao: 'Para equipes que querem crescer',
-    recursos: ['Tudo do Basic', 'Kanban de produção', 'Até 5 usuários', 'Relatórios financeiros', 'Agenda de serviços', 'Controle de projetos'],
+    recursos: ['Tudo do Basic', 'Kanban de produção', 'Até 3 usuários', 'Relatórios financeiros', 'Agenda de serviços', 'Controle de projetos'],
     destaque: true,
   },
   {
@@ -83,7 +83,7 @@ export default function LandingPage() {
             <Link href="/register?plano=basic" style={s.btnPrimary}>Teste grátis por 7 dias →</Link>
             <Link href="#como-funciona" style={s.btnSecondary}>Ver como funciona</Link>
           </div>
-          <p style={{ marginTop: 20, fontSize: 13, color: '#555' }}>Sem cartão de crédito · Cancele quando quiser</p>
+          <p style={{ marginTop: 20, fontSize: 13, color: '#555' }}>Cartão cobrado após o trial · Cancele quando quiser</p>
 
           {/* Dashboard mockup */}
           <div style={{ marginTop: 56, background: '#111', borderRadius: 14, border: '1px solid #222', padding: '20px', maxWidth: 760, marginLeft: 'auto', marginRight: 'auto', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}>
@@ -173,7 +173,7 @@ export default function LandingPage() {
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <p style={s.sectionLabel}>Planos</p>
             <h2 style={s.h2Dark}>Escolha o plano da sua marmoraria</h2>
-            <p style={{ fontSize: 14, color: '#9B8A7A' }}>7 dias grátis em todos os planos · Sem cartão de crédito</p>
+            <p style={{ fontSize: 14, color: '#9B8A7A' }}>7 dias grátis em todos os planos · Cartão cobrado após o trial</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
             {PLANOS.map(p => (
@@ -300,7 +300,7 @@ export default function LandingPage() {
             Marmo<span style={{ color: '#C9A84C' }}>App</span>
           </div>
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-            {[['Planos','#planos'],['Entrar','/login'],['Cadastrar','/register'],['Instagram','https://instagram.com/marmoapp_oficial'],['WhatsApp','https://wa.me/5511999999999']].map(([label,href]) => (
+            {[['Planos','#planos'],['Entrar','/login'],['Cadastrar','/register'],['Instagram','https://instagram.com/marmoapp.oficial'],['WhatsApp','https://wa.me/5511947340955']].map(([label,href]) => (
               <a key={label} href={href} style={{ fontSize: 13, color: '#555', textDecoration: 'none' }}>{label}</a>
             ))}
           </div>
