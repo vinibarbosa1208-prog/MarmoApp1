@@ -9,12 +9,13 @@ import type { Cliente } from '@/lib/types'
 const ORIGENS = ['indicação', 'google', 'instagram', 'presencial', 'whatsapp', 'outros']
 
 function ClienteModal({
-  cliente, marmorariaId, onClose, onSaved,
+  cliente, marmorariaId, onClose, onSaved, toast,
 }: {
   cliente: Cliente | null
   marmorariaId: string
   onClose: () => void
   onSaved: () => void
+  toast: (msg: string, type?: 'ok' | 'err' | 'ok2') => void
 }) {
   const [form, setForm] = useState({
     nome: cliente?.nome || '',
@@ -45,18 +46,37 @@ function ClienteModal({
     try {
       setLoading(true)
       setError('')
+
+      // Garante sessão ativa antes do insert
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Sessão expirada — faça login novamente')
+        return  // finally roda mesmo aqui, então setLoading(false) é garantido
+      }
+
       const { obs, ...rest } = form
       const payloadUpdate = { ...rest, observacoes: obs }
       const payloadInsert = { ...rest, observacoes: obs, marmoraria_id: marmorariaId }
-      const { error: err } = cliente
-        ? await supabase.from('clientes').update(payloadUpdate).eq('id', cliente.id)
-        : await supabase.from('clientes').insert(payloadInsert)
+
+      // Timeout de 12s para evitar travamento infinito
+      const TIMEOUT_MS = 12000
+      const operation = cliente
+        ? supabase.from('clientes').update(payloadUpdate).eq('id', cliente.id)
+        : supabase.from('clientes').insert(payloadInsert)
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tempo limite excedido. Verifique sua conexão e tente novamente.')), TIMEOUT_MS)
+      )
+
+      const { error: err } = await Promise.race([operation, timeoutPromise]) as Awaited<typeof operation>
       if (err) throw err
+
+      toast(cliente ? 'Cliente atualizado!' : 'Cliente cadastrado!', 'ok2')
       onSaved()
       onClose()
     } catch (err: any) {
       console.error('Erro ao salvar cliente:', err)
-      setError(err?.message || err?.details || 'Erro ao salvar cliente')
+      setError(err?.message || err?.details || 'Erro ao salvar. Tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -139,6 +159,7 @@ function ClienteModal({
 
 export default function ClientesPage() {
   const { clientes, orcamentos, marmoraria, loadClientes, toast } = useApp()
+
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState<{ open: boolean; cliente: Cliente | null }>({ open: false, cliente: null })
 
@@ -217,6 +238,7 @@ export default function ClientesPage() {
           marmorariaId={marmoraria.id}
           onClose={() => setModal({ open: false, cliente: null })}
           onSaved={loadClientes}
+          toast={toast}
         />
       )}
     </div>
