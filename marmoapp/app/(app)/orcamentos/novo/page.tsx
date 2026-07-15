@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
-import { fmt, formatPhone } from '@/lib/utils'
+import { fmt, formatPhone, sbSave } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import SeletorPeca, { getLateraisDaPeca, PECA_LABELS, type SeletorPecaState } from '@/components/orcamento/SeletorPeca'
 import AcabamentosLaterais from '@/components/orcamento/AcabamentosLaterais'
@@ -362,11 +362,13 @@ function NovoClienteModal({
       if (!user) throw new Error('Não autenticado')
       const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
       if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
-      const { data, error: err } = await supabase
-        .from('clientes')
-        .insert({ marmoraria_id: u.marmoraria_id, nome: nome.trim(), telefone, email, tipo })
-        .select()
-        .single()
+      const { data, error: err } = await sbSave(
+        supabase
+          .from('clientes')
+          .insert({ marmoraria_id: u.marmoraria_id, nome: nome.trim(), telefone, email, tipo })
+          .select()
+          .single()
+      )
       if (err) throw err
       onCreated(data.id)
       onClose()
@@ -665,24 +667,26 @@ export default function NovoOrcamentoPage() {
         form.observacoes,
       ].filter(Boolean).join('\n\n')
 
-      const { data: orc, error: orcErr } = await supabase
-        .from('orcamentos')
-        .insert({
-          marmoraria_id: u.marmoraria_id,
-          cliente_id: form.cliente_id || null,
-          titulo: form.descricao || 'Orçamento',
-          status: 'rascunho',
-          subtotal: subtotal,
-          mao_obra: maoObra,
-          desconto_rs: desconto,
-          total: totalFinal,
-          observacoes: observacoesFinal,
-          data_validade: form.validade || null,
-          crm_status: 'novo',
-          producao_status: 'comercial',
-        })
-        .select()
-        .single()
+      const { data: orc, error: orcErr } = await sbSave(
+        supabase
+          .from('orcamentos')
+          .insert({
+            marmoraria_id: u.marmoraria_id,
+            cliente_id: form.cliente_id || null,
+            titulo: form.descricao || 'Orçamento',
+            status: 'rascunho',
+            subtotal: subtotal,
+            mao_obra: maoObra,
+            desconto_rs: desconto,
+            total: totalFinal,
+            observacoes: observacoesFinal,
+            data_validade: form.validade || null,
+            crm_status: 'novo',
+            producao_status: 'comercial',
+          })
+          .select()
+          .single()
+      )
 
       if (orcErr) throw orcErr
 
@@ -713,7 +717,7 @@ export default function NovoOrcamentoPage() {
           altura_frontao: i.altura_frontao || null,
           dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
         }))
-        const { error: itensErr } = await supabase.from('orcamento_itens').insert(payload)
+        const { error: itensErr } = await sbSave(supabase.from('orcamento_itens').insert(payload))
         if (itensErr) throw itensErr
       }
 

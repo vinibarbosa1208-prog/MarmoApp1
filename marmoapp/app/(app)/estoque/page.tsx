@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useApp } from '@/contexts/AppContext'
-import { fmt } from '@/lib/utils'
+import { fmt, sbSave } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { Material } from '@/lib/types'
 
@@ -31,25 +31,36 @@ function MaterialModal({
 
   async function save() {
     if (!form.nome) { setError('Nome é obrigatório'); return }
-    setLoading(true)
-    const precoVenda = parseFloat(form.preco_venda) || 0
-    const payload = {
-      nome: form.nome,
-      tipo: form.tipo,
-      unidade: form.unidade,
-      fornecedor: form.fornecedor,
-      marmoraria_id: marmorariaId,
-      custo_unitario: parseFloat(form.custo_unitario) || 0,
-      preco_venda: precoVenda,
-      preco_unitario: precoVenda,
-      estoque_atual: parseFloat(form.estoque_atual) || 0,
-      estoque_minimo: parseFloat(form.estoque_minimo) || 0,
+    try {
+      setLoading(true)
+      setError('')
+      const precoVenda = parseFloat(form.preco_venda) || 0
+      const payload = {
+        nome: form.nome,
+        tipo: form.tipo,
+        unidade: form.unidade,
+        fornecedor: form.fornecedor,
+        marmoraria_id: marmorariaId,
+        custo_unitario: parseFloat(form.custo_unitario) || 0,
+        preco_venda: precoVenda,
+        preco_unitario: precoVenda,
+        estoque_atual: parseFloat(form.estoque_atual) || 0,
+        estoque_minimo: parseFloat(form.estoque_minimo) || 0,
+      }
+      const { error: err } = await sbSave(
+        material
+          ? supabase.from('materiais').update(payload).eq('id', material.id)
+          : supabase.from('materiais').insert(payload)
+      )
+      if (err) throw err
+      onSaved()
+      onClose()
+    } catch (err: any) {
+      console.error('Erro ao salvar material:', err)
+      setError(err?.message || 'Erro ao salvar. Tente novamente.')
+    } finally {
+      setLoading(false)
     }
-    const { error: err } = material
-      ? await supabase.from('materiais').update(payload).eq('id', material.id)
-      : await supabase.from('materiais').insert(payload)
-    if (err) { setError(err.message); setLoading(false); return }
-    onSaved(); onClose()
   }
 
   return (

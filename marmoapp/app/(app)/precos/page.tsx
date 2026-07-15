@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useApp } from '@/contexts/AppContext'
-import { fmt } from '@/lib/utils'
+import { fmt, sbSave } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { Material, Servico } from '@/lib/types'
 
@@ -26,31 +26,41 @@ export default function PrecosPage() {
   const srvs = servicos.filter(s => !query || s.nome.toLowerCase().includes(query.toLowerCase()))
 
   async function salvarPrecoMat(id: string) {
-    const preco = parseFloat(editingMatPreco)
-    await supabase.from('materiais').update({ preco_padrao: preco }).eq('id', id)
-    setEditingMatId(null)
-    await loadMateriais()
-    toast('Preço atualizado', 'ok2')
+    try {
+      const preco = parseFloat(editingMatPreco)
+      const { error } = await sbSave(supabase.from('materiais').update({ preco_padrao: preco }).eq('id', id))
+      if (error) throw error
+      setEditingMatId(null)
+      await loadMateriais()
+      toast('Preço atualizado', 'ok2')
+    } catch (err: any) {
+      toast(err?.message || 'Erro ao atualizar preço', 'err')
+    }
   }
 
   async function salvarPrecoSrv(id: string) {
-    const preco = parseFloat(editingSrvPreco)
-    await supabase.from('servicos').update({ preco_padrao: preco }).eq('id', id)
-    setEditingSrvId(null)
-    await loadServicos()
-    toast('Preço atualizado', 'ok2')
+    try {
+      const preco = parseFloat(editingSrvPreco)
+      const { error } = await sbSave(supabase.from('servicos').update({ preco_padrao: preco }).eq('id', id))
+      if (error) throw error
+      setEditingSrvId(null)
+      await loadServicos()
+      toast('Preço atualizado', 'ok2')
+    } catch (err: any) {
+      toast(err?.message || 'Erro ao atualizar preço', 'err')
+    }
   }
 
   async function adicionarMaterial() {
     if (!novoMat.nome || !marmoraria) return
     try {
       setSavingMat(true)
-      const { error } = await supabase.from('materiais').insert({
+      const { error } = await sbSave(supabase.from('materiais').insert({
         marmoraria_id: marmoraria.id,
         nome: novoMat.nome,
         unidade: novoMat.unidade,
         preco_padrao: parseFloat(novoMat.preco_padrao) || 0,
-      })
+      }))
       if (error) throw error
       setNovoMat({ nome: '', unidade: 'm²', preco_padrao: '' })
       setShowNovoMat(false)
@@ -65,16 +75,21 @@ export default function PrecosPage() {
 
   async function adicionarServico() {
     if (!novoSrv.nome || !marmoraria) return
-    await supabase.from('servicos').insert({
-      marmoraria_id: marmoraria.id,
-      nome: novoSrv.nome,
-      descricao: novoSrv.descricao,
-      preco_padrao: parseFloat(novoSrv.preco_padrao) || 0,
-    })
-    setNovoSrv({ nome: '', descricao: '', preco_padrao: '' })
-    setShowNovoSrv(false)
-    await loadServicos()
-    toast('Serviço adicionado', 'ok2')
+    try {
+      const { error } = await sbSave(supabase.from('servicos').insert({
+        marmoraria_id: marmoraria.id,
+        nome: novoSrv.nome,
+        descricao: novoSrv.descricao,
+        preco_padrao: parseFloat(novoSrv.preco_padrao) || 0,
+      }))
+      if (error) throw error
+      setNovoSrv({ nome: '', descricao: '', preco_padrao: '' })
+      setShowNovoSrv(false)
+      await loadServicos()
+      toast('Serviço adicionado', 'ok2')
+    } catch (err: any) {
+      toast(err?.message || 'Erro ao salvar serviço', 'err')
+    }
   }
 
   async function excluirMat(id: string) {

@@ -1,5 +1,20 @@
 import type { Orcamento } from './types'
 
+// Wrapper seguro para operações Supabase: timeout de 12s + garante setLoading(false) via finally
+type SbResult = { data: any; error: any }
+export async function sbSave(
+  operation: PromiseLike<SbResult>,
+  timeoutMs = 12000
+): Promise<SbResult> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new Error('Tempo limite excedido. Verifique sua conexão e tente novamente.')),
+      timeoutMs
+    )
+  )
+  return Promise.race([operation as Promise<SbResult>, timeout])
+}
+
 export function fmt(v: number | string | undefined | null): string {
   return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
 }
