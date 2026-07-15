@@ -16,9 +16,22 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-    if (err) { setError(err.message); setLoading(false); return }
-    router.push('/dashboard')
+    try {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tempo limite excedido. Verifique sua conexão.')), 12000)
+      )
+      const { error: err } = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        timeout,
+      ]) as Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>
+      if (err) { setError(err.message); return }
+      router.refresh()
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao entrar. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
