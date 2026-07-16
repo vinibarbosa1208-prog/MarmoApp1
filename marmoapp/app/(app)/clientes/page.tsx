@@ -47,25 +47,17 @@ function ClienteModal({
       setLoading(true)
       setError('')
 
-      // Garante sessão ativa antes do insert
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Sessão expirada — faça login novamente')
-        return  // finally roda mesmo aqui, então setLoading(false) é garantido
-      }
-
       const { obs, ...rest } = form
       const payloadUpdate = { ...rest, observacoes: obs }
       const payloadInsert = { ...rest, observacoes: obs, marmoraria_id: marmorariaId }
 
       // Timeout de 12s para evitar travamento infinito
-      const TIMEOUT_MS = 12000
       const operation = cliente
         ? supabase.from('clientes').update(payloadUpdate).eq('id', cliente.id)
         : supabase.from('clientes').insert(payloadInsert)
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Tempo limite excedido. Verifique sua conexão e tente novamente.')), TIMEOUT_MS)
+        setTimeout(() => reject(new Error('Tempo limite excedido. Verifique sua conexão e tente novamente.')), 12000)
       )
 
       const { error: err } = await Promise.race([operation, timeoutPromise]) as Awaited<typeof operation>
