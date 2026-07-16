@@ -56,7 +56,14 @@ function RegisterForm() {
           email: form.email,
           password: form.pass,
         })
-        if (signInErr) throw signInErr
+        if (signInErr) {
+          const code = (signInErr as { code?: string }).code
+          if (code === 'email_not_confirmed' || signInErr.message.toLowerCase().includes('email not confirmed')) {
+            setError('Verifique seu email e clique no link de confirmação para acessar.')
+            return
+          }
+          throw signInErr
+        }
       }
 
       const plano = searchParams.get('plano') ?? 'basic'
