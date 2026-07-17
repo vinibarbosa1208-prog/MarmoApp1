@@ -51,43 +51,86 @@ function fmt(v: number): string {
 }
 
 const PECA_LABELS_PDF: Record<string, string> = {
-  bancada_simples: 'Bancada Simples', bancada_cuba: 'Bancada c/ Cuba',
-  bancada_saia: 'Bancada c/ Saia', bancada_frontao: 'Bancada c/ Frontão',
-  ilha_cozinha: 'Ilha de Cozinha', escada: 'Escada',
-  soleira: 'Soleira / Peitoril', nicho: 'Nicho',
+  bancada_simples: 'Bancada de Pedra',
+  bancada_cuba: 'Bancada com Cuba',
+  bancada_saia: 'Bancada com Saia',
+  bancada_frontao: 'Bancada com Frontão',
+  ilha_cozinha: 'Ilha de Cozinha',
+  escada: 'Escada em Pedra',
+  soleira: 'Soleira / Peitoril',
+  nicho: 'Nicho em Pedra',
 }
+
 const ACAB_LABELS_PDF: Record<string, string> = {
-  reto: 'Reto', boleado: 'Boleado', meia_esquadria: 'Meia Esquadria',
+  reto: 'Reto (fio reto)',
+  boleado: 'Boleado (arredondado)',
+  meia_esquadria: 'Meia Esquadria (chanfrado)',
+  frontao: 'Frontão (parte frontal elevada)',
+  sem_acabamento: 'Sem acabamento',
 }
+
 const LATERAL_LABELS_PDF: Record<string, string> = {
-  esquerda: 'Esq', direita: 'Dir', frente: 'Frente', fundo: 'Fundo',
-  superior: 'Sup', inferior: 'Inf',
+  esquerda: 'Lado esquerdo',
+  direita: 'Lado direito',
+  frente: 'Frente',
+  fundo: 'Fundo / Encosto',
+  superior: 'Parte superior',
+  inferior: 'Parte inferior',
+}
+
+const TIPO_LABELS_PDF: Record<string, string> = {
+  material: 'Material',
+  servico: 'Serviço',
+  frete: 'Frete',
+  outro: 'Outro',
 }
 
 function pecaDetalhe(i: ItemPDF): string {
   if (!i.tipo_peca) return ''
-  const parts: string[] = [PECA_LABELS_PDF[i.tipo_peca] || i.tipo_peca]
-  const acabs: string[] = []
-  for (const lat of ['esquerda', 'direita', 'frente', 'fundo', 'superior', 'inferior']) {
+
+  const pecaNome = PECA_LABELS_PDF[i.tipo_peca] || i.tipo_peca
+  const parts: string[] = [pecaNome]
+
+  // Collect which sides have acabamento
+  const sides = ['esquerda', 'direita', 'frente', 'fundo', 'superior', 'inferior'] as const
+  const acabMap: Record<string, string> = {}
+  for (const lat of sides) {
     const v = (i as unknown as Record<string, unknown>)[`acabamento_${lat}`] as string | undefined
-    if (v) {
-      const raio = i.dados_extras?.[`raio_${lat}`] as number | undefined
-      const lbl = ACAB_LABELS_PDF[v] || v
-      acabs.push(`${LATERAL_LABELS_PDF[lat]}: ${lbl}${v === 'boleado' && raio ? ` R${raio}mm` : ''}`)
+    if (v) acabMap[lat] = v
+  }
+
+  const activeSides = Object.keys(acabMap)
+  if (activeSides.length > 0) {
+    const uniqueAcabs = [...new Set(Object.values(acabMap))]
+
+    if (uniqueAcabs.length === 1 && activeSides.length >= 3) {
+      // All sides share the same finish — show it in one line
+      const lbl = ACAB_LABELS_PDF[uniqueAcabs[0]] || uniqueAcabs[0]
+      parts.push(`Acabamento: ${lbl} — todos os lados`)
+    } else {
+      // Different finishes per side — list each one
+      for (const lat of activeSides) {
+        const v = acabMap[lat]
+        const raio = i.dados_extras?.[`raio_${lat}`] as number | undefined
+        const finishLbl = ACAB_LABELS_PDF[v] || v
+        const sideLbl = LATERAL_LABELS_PDF[lat] || lat
+        parts.push(`  ${sideLbl}: ${finishLbl}${v === 'boleado' && raio ? ` (raio ${raio}mm)` : ''}`)
+      }
     }
   }
-  if (acabs.length) parts.push(acabs.join(' | '))
-  if (i.tem_saia && i.altura_saia) parts.push(`Saia: ${i.altura_saia}cm`)
-  if (i.tem_frontao && i.altura_frontao) parts.push(`Frontão: ${i.altura_frontao}cm`)
-  // piece-specific extras
+
+  if (i.tem_saia && i.altura_saia) parts.push(`Inclui saia lateral: ${i.altura_saia}cm de altura`)
+  if (i.tem_frontao && i.altura_frontao) parts.push(`Inclui frontão: ${i.altura_frontao}cm de altura`)
+
   const ex = i.dados_extras
   if (ex) {
-    if (ex.tipo_cuba) parts.push(`Cuba: ${ex.tipo_cuba}`)
-    if (ex.num_degraus) parts.push(`${ex.num_degraus} degraus`)
-    if (ex.largura_piso) parts.push(`Piso ${ex.largura_piso}cm`)
-    if (ex.altura_espelho) parts.push(`Espelho ${ex.altura_espelho}cm`)
-    if (ex.comprimento) parts.push(`${ex.comprimento}×${ex.largura || '?'}cm`)
+    if (ex.tipo_cuba) parts.push(`Tipo de cuba: ${ex.tipo_cuba}`)
+    if (ex.num_degraus) parts.push(`Quantidade de degraus: ${ex.num_degraus}`)
+    if (ex.largura_piso) parts.push(`Largura do piso: ${ex.largura_piso}cm`)
+    if (ex.altura_espelho) parts.push(`Altura do espelho: ${ex.altura_espelho}cm`)
+    if (ex.comprimento) parts.push(`Medidas: ${ex.comprimento}×${ex.largura || '?'}cm`)
   }
+
   return parts.join('\n')
 }
 
@@ -316,17 +359,18 @@ export async function gerarOrcamentoPDF(
   const drawItemsTable = (items: ItemPDF[], startY: number): number => {
     const ha = items.some(i => i.area || (i.largura && i.altura))
     const hd = ha
-      ? [['Tipo', 'Descrição', 'Dimensões', 'Qtd', 'Preço/Un', 'Total']]
-      : [['Tipo', 'Descrição', 'Qtd', 'Preço/Un', 'Total']]
+      ? [['Tipo', 'Descrição do Item', 'Medidas', 'Qtd', 'Preço Unit.', 'Total']]
+      : [['Tipo', 'Descrição do Item', 'Qtd', 'Preço Unit.', 'Total']]
     const bd = items.map(i => {
       const dim = i.area
         ? `${fmtNum(i.area)} m²`
         : i.largura && i.altura ? `${fmtNum(i.largura, 2)} × ${fmtNum(i.altura, 2)} m` : '—'
       const detalhe = pecaDetalhe(i)
       const descFull = detalhe ? `${i.descricao}\n${detalhe}` : i.descricao
+      const tipoLabel = TIPO_LABELS_PDF[i.tipo] || i.tipo
       return ha
-        ? [i.tipo, descFull, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
-        : [i.tipo, descFull, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+        ? [tipoLabel, descFull, dim, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
+        : [tipoLabel, descFull, fmtNum(i.quantidade), fmt(i.preco_unitario), fmt(i.total_item)]
     })
     autoTable(doc, {
       startY, head: hd, body: bd, theme: 'grid',
@@ -334,8 +378,8 @@ export async function gerarOrcamentoPDF(
       bodyStyles: { fontSize: 8, textColor: DARK, cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }, overflow: 'linebreak' as const },
       alternateRowStyles: { fillColor: [248, 248, 248] as [number, number, number] },
       columnStyles: ha
-        ? { 0: { cellWidth: 18 }, 2: { cellWidth: 24, halign: 'center' }, 3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 26, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' } }
-        : { 0: { cellWidth: 18 }, 2: { cellWidth: 14, halign: 'center' }, 3: { cellWidth: 26, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' } },
+        ? { 0: { cellWidth: 20 }, 2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 12, halign: 'center' }, 4: { cellWidth: 26, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' } }
+        : { 0: { cellWidth: 20 }, 2: { cellWidth: 12, halign: 'center' }, 3: { cellWidth: 26, halign: 'right' }, 4: { cellWidth: 28, halign: 'right' } },
       margin: { left: 16, right: 16 },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
