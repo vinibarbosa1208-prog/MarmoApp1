@@ -29,6 +29,11 @@ interface ItemForm {
   tem_frontao: boolean
   altura_frontao: number
   dados_extras: Record<string, unknown>
+  // Material comparison (Option A vs B)
+  variante: '' | 'A' | 'B'
+  mostrarAlternativa: boolean
+  mat_alternativo: string
+  preco_alternativo: number
 }
 
 const ITEM_DEFAULTS: ItemForm = {
@@ -38,6 +43,7 @@ const ITEM_DEFAULTS: ItemForm = {
   acabamento_frente: '', acabamento_fundo: '',
   tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0,
   dados_extras: {},
+  variante: '', mostrarAlternativa: false, mat_alternativo: '', preco_alternativo: 0,
 }
 
 const AMBIENTE_SUGESTOES = ['Cozinha', 'Banheiro', 'Lavabo', 'Área Gourmet', 'Escada']
@@ -562,7 +568,24 @@ export default function NovoOrcamentoPage() {
     if (editandoIdx !== null) {
       setItens(prev => prev.map((item, i) => i === editandoIdx ? { ...novoItem } : item))
     } else {
-      setItens(prev => [...prev, { ...novoItem }])
+      const temAlt = novoItem.tipo === 'material' && novoItem.mostrarAlternativa && novoItem.mat_alternativo.trim() !== ''
+      if (temAlt) {
+        const itemA: ItemForm = { ...novoItem, variante: 'A', mostrarAlternativa: false, mat_alternativo: '', preco_alternativo: 0 }
+        const itemB: ItemForm = {
+          ...novoItem,
+          variante: 'B',
+          descricao: novoItem.mat_alternativo.trim(),
+          preco_unitario: novoItem.preco_alternativo,
+          custo_m2: 0,
+          markup: 0,
+          mostrarAlternativa: false,
+          mat_alternativo: '',
+          preco_alternativo: 0,
+        }
+        setItens(prev => [...prev, itemA, itemB])
+      } else {
+        setItens(prev => [...prev, { ...novoItem, variante: '', mostrarAlternativa: false }])
+      }
     }
     const ambiente = novoItem.ambiente
     setNovoItem({ ...ITEM_DEFAULTS, ambiente })
@@ -621,10 +644,15 @@ export default function NovoOrcamentoPage() {
 
   const servicoUnit = servicoIdSel ? (servicos.find(s => s.id === servicoIdSel)?.unidade || '') : ''
 
-  const subtotal = itens.reduce((s, i) => s + calcTotal(i), 0)
+  const temVariantes = itens.some(i => i.variante === 'A' || i.variante === 'B')
+  const subtotalA = itens.filter(i => i.variante !== 'B').reduce((s, i) => s + calcTotal(i), 0)
+  const subtotalB = itens.filter(i => i.variante !== 'A').reduce((s, i) => s + calcTotal(i), 0)
+  const subtotal = temVariantes ? subtotalA : itens.reduce((s, i) => s + calcTotal(i), 0)
   const maoObra = parseFloat(form.mao_obra) || 0
   const desconto = parseFloat(form.desconto_rs) || 0
   const totalFinal = subtotal + maoObra - desconto
+  const totalFinalA = temVariantes ? subtotalA + maoObra - desconto : 0
+  const totalFinalB = temVariantes ? subtotalB + maoObra - desconto : 0
   const descontoExcede = desconto > 0 && desconto > subtotal + maoObra
 
   const isMaterialComPeca = novoItem.tipo === 'material' && !!novoItem.tipo_peca
@@ -662,6 +690,9 @@ export default function NovoOrcamentoPage() {
         form.observacoes,
       ].filter(Boolean).join('\n\n')
 
+      const nomeVarianteA = itens.find(i => i.variante === 'A')?.descricao || 'Opção A'
+      const nomeVarianteB = itens.find(i => i.variante === 'B')?.descricao || 'Opção B'
+
       const { data: orc, error: orcErr } = await sbSave(
         supabase
           .from('orcamentos')
@@ -678,6 +709,11 @@ export default function NovoOrcamentoPage() {
             data_validade: form.validade || null,
             crm_status: 'novo',
             producao_status: 'comercial',
+            tem_variantes: temVariantes || null,
+            total_variante_a: temVariantes ? totalFinalA : null,
+            total_variante_b: temVariantes ? totalFinalB : null,
+            nome_variante_a: temVariantes ? nomeVarianteA : null,
+            nome_variante_b: temVariantes ? nomeVarianteB : null,
           })
           .select()
           .single()
@@ -711,6 +747,7 @@ export default function NovoOrcamentoPage() {
           tem_frontao: i.tem_frontao,
           altura_frontao: i.altura_frontao || null,
           dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
+          variante: i.variante || null,
         }))
         const { error: itensErr } = await sbSave(supabase.from('orcamento_itens').insert(payload))
         if (itensErr) throw itensErr
@@ -1128,6 +1165,57 @@ export default function NovoOrcamentoPage() {
           </div>
         )}
 
+        {/* Alternativa de material (Opção B) */}
+        {novoItem.tipo === 'material' && editandoIdx === null && (
+          <div style={{ marginTop: 14, borderTop: '1px dashed #EDE9E2', paddingTop: 12 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={novoItem.mostrarAlternativa}
+                onChange={e => upItem({ mostrarAlternativa: e.target.checked, mat_alternativo: '', preco_alternativo: 0 })}
+                style={{ width: 'auto', accentColor: 'var(--gold)' }}
+              />
+              <span style={{ fontSize: 13, color: '#555', fontWeight: 500 }}>
+                Incluir 2ª opção de material para comparação
+              </span>
+            </label>
+            {novoItem.mostrarAlternativa && (
+              <div style={{ marginTop: 10, background: '#fff8f0', border: '1px solid #f0d9c0', borderRadius: 8, padding: 12 }}>
+                <div style={{ fontSize: 11, color: '#8B6914', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Opção B — Material Alternativo
+                </div>
+                <div className="form-row form-row-2">
+                  <div className="form-group">
+                    <label className="form-label">NOME DO MATERIAL (Opção B)</label>
+                    <input
+                      className="form-input"
+                      placeholder="Ex: Granito Preto Absoluto"
+                      value={novoItem.mat_alternativo}
+                      onChange={e => upItem({ mat_alternativo: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">PREÇO DE VENDA (R$/m²)</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={novoItem.preco_alternativo || ''}
+                      style={{ color: 'var(--gold)', fontWeight: 700 }}
+                      onChange={e => upItem({ preco_alternativo: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                  Mesmas dimensões, peça e acabamentos do item principal. Serão adicionados como Opção A e Opção B.
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
           <span style={{ fontWeight: 700, color: 'var(--dark)' }}>Total: {fmt(calcTotal(novoItem))}</span>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -1282,7 +1370,18 @@ export default function NovoOrcamentoPage() {
                           <tr key={idx}>
                             <td><span className="badge badge-draft">{item.tipo}</span></td>
                             <td>
-                              <div style={{ fontWeight: 500 }}>{item.descricao}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
+                                {item.descricao}
+                                {item.variante && (
+                                  <span style={{
+                                    fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                                    background: item.variante === 'A' ? '#e8f5e9' : '#fff3e0',
+                                    color: item.variante === 'A' ? '#2e7d32' : '#e65100',
+                                  }}>
+                                    Opção {item.variante}
+                                  </span>
+                                )}
+                              </div>
                               {item.tipo_peca && (
                                 <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
                                   {PECA_LABELS[item.tipo_peca]}
@@ -1369,10 +1468,23 @@ export default function NovoOrcamentoPage() {
               <div className="card-header"><span className="card-title">Valores</span></div>
               <div className="card-body">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <span style={{ color: '#888' }}>Subtotal</span>
-                    <strong>{fmt(subtotal)}</strong>
-                  </div>
+                  {temVariantes ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                        <span style={{ color: '#2e7d32', fontWeight: 600 }}>Subtotal Opção A</span>
+                        <strong style={{ color: '#2e7d32' }}>{fmt(subtotalA)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                        <span style={{ color: '#e65100', fontWeight: 600 }}>Subtotal Opção B</span>
+                        <strong style={{ color: '#e65100' }}>{fmt(subtotalB)}</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                      <span style={{ color: '#888' }}>Subtotal</span>
+                      <strong>{fmt(subtotal)}</strong>
+                    </div>
+                  )}
                   <div className="form-group">
                     <label className="form-label">MÃO DE OBRA (R$)</label>
                     <input className="form-input" type="number" min="0" step="0.01" placeholder="0.00"
@@ -1389,10 +1501,23 @@ export default function NovoOrcamentoPage() {
                     )}
                   </div>
                   <hr style={{ border: 'none', borderTop: '2px solid var(--gold)', margin: '4px 0' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700 }}>
-                    <span>TOTAL</span>
-                    <span style={{ color: descontoExcede ? '#c0392b' : 'var(--gold)' }}>{fmt(Math.max(0, totalFinal))}</span>
-                  </div>
+                  {temVariantes ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700 }}>
+                        <span style={{ color: '#2e7d32' }}>TOTAL Opção A</span>
+                        <span style={{ color: '#2e7d32' }}>{fmt(Math.max(0, totalFinalA))}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700 }}>
+                        <span style={{ color: '#e65100' }}>TOTAL Opção B</span>
+                        <span style={{ color: '#e65100' }}>{fmt(Math.max(0, totalFinalB))}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 700 }}>
+                      <span>TOTAL</span>
+                      <span style={{ color: descontoExcede ? '#c0392b' : 'var(--gold)' }}>{fmt(Math.max(0, totalFinal))}</span>
+                    </div>
+                  )}
                   <button className="btn btn-gold" onClick={salvar} disabled={loading} style={{ marginTop: 8 }}>
                     {loading ? 'Salvando...' : '💾 Salvar Orçamento'}
                   </button>
