@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }: Props) {
-  const { clientes, orcamentos, toast } = useApp()
+  const { clientes, orcamentos, marmoraria, toast } = useApp()
   const [saving, setSaving] = useState(false)
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
   const [form, setForm] = useState<CreateAgendaEventInput>({
@@ -49,10 +49,7 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
     if (!form.data_inicio) { toast('Data de início obrigatória', 'err'); return }
     setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
-      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
+      if (!marmoraria?.id) throw new Error('Sessão inválida — recarregue a página')
 
       const payload: CreateAgendaEventInput & { marmoraria_id: string; status: string } = {
         titulo: form.titulo.trim(),
@@ -63,7 +60,7 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
         cliente_id: form.cliente_id || undefined,
         orcamento_id: form.orcamento_id || undefined,
         descricao: form.descricao || undefined,
-        marmoraria_id: u.marmoraria_id,
+        marmoraria_id: marmoraria.id,
         status: 'agendado',
       }
 

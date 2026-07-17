@@ -341,10 +341,11 @@ function WizardProgress({ step, onJump }: { step: number; onJump: (s: number) =>
 }
 
 function NovoClienteModal({
-  onClose, onCreated,
+  onClose, onCreated, marmorariaId,
 }: {
   onClose: () => void
   onCreated: (clienteId: string) => void
+  marmorariaId: string
 }) {
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -358,14 +359,11 @@ function NovoClienteModal({
     try {
       setLoading(true)
       setError('')
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
-      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
+      if (!marmorariaId) throw new Error('Sessão inválida — recarregue a página')
       const { data, error: err } = await sbSave(
         supabase
           .from('clientes')
-          .insert({ marmoraria_id: u.marmoraria_id, nome: nome.trim(), telefone, email, tipo })
+          .insert({ marmoraria_id: marmorariaId, nome: nome.trim(), telefone, email, tipo })
           .select()
           .single()
       )
@@ -480,7 +478,7 @@ function ClienteCombobox({
 
 export default function NovoOrcamentoPage() {
   const router = useRouter()
-  const { clientes, materiais, servicos, loadOrcamentos, loadClientes, toast } = useApp()
+  const { clientes, materiais, servicos, marmoraria, loadOrcamentos, loadClientes, toast } = useApp()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [mostrarErros, setMostrarErros] = useState(false)
@@ -657,10 +655,7 @@ export default function NovoOrcamentoPage() {
       setLoading(true)
       setErro('')
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Não autenticado')
-      const { data: u } = await supabase.from('usuarios').select('marmoraria_id').eq('id', user.id).single()
-      if (!u?.marmoraria_id) throw new Error('Marmoraria não encontrada')
+      if (!marmoraria?.id) throw new Error('Sessão inválida — recarregue a página')
 
       const observacoesFinal = [
         form.condicao_pagamento ? `Condição de pagamento: ${form.condicao_pagamento}` : '',
@@ -671,7 +666,7 @@ export default function NovoOrcamentoPage() {
         supabase
           .from('orcamentos')
           .insert({
-            marmoraria_id: u.marmoraria_id,
+            marmoraria_id: marmoraria!.id,
             cliente_id: form.cliente_id || null,
             titulo: form.descricao || 'Orçamento',
             status: 'rascunho',
@@ -693,7 +688,7 @@ export default function NovoOrcamentoPage() {
       if (itens.length > 0) {
         const payload = itens.map(i => ({
           orcamento_id: orc.id,
-          marmoraria_id: u.marmoraria_id,
+          marmoraria_id: marmoraria!.id,
           tipo: i.tipo,
           ambiente: i.ambiente || null,
           descricao: i.descricao,
@@ -1416,8 +1411,9 @@ export default function NovoOrcamentoPage() {
         )}
       </div>
 
-      {showClienteModal && (
+      {showClienteModal && marmoraria && (
         <NovoClienteModal
+          marmorariaId={marmoraria.id}
           onClose={() => setShowClienteModal(false)}
           onCreated={async id => {
             await loadClientes()
