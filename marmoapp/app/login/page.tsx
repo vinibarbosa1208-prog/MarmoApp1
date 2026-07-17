@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Tempo limite excedido. Verifique sua conexão.')), 12000)
+        setTimeout(() => reject(new Error('Tempo limite excedido. Verifique sua conexão.')), 30000)
       )
       const { error: err } = await Promise.race([
         supabase.auth.signInWithPassword({ email, password }),
