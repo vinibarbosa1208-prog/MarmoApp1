@@ -418,9 +418,76 @@ function FuncionarioModal({
   )
 }
 
+// ── Empresa card (no add button) ──────────────────────────────
+function EmpresaCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card" style={{ marginBottom: 24 }}>
+      <div className="card-header">
+        <div>
+          <div className="card-title">Dados da Empresa</div>
+          <div style={{ fontSize: 12, color: 'var(--gray)', marginTop: 2 }}>
+            Informações que aparecem no cabeçalho dos orçamentos em PDF.
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: '0 24px 24px' }}>{children}</div>
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function ConfiguracoesPage() {
-  const { toast, user } = useApp()
+  const { toast, user, marmoraria } = useApp()
+
+  // Section 0 — dados da empresa
+  const [empresa, setEmpresa] = useState({
+    nome: '', telefone: '', cnpj: '', endereco: '', cidade: '', estado: '', cep: '',
+  })
+  const [savingEmpresa, setSavingEmpresa] = useState(false)
+
+  // Preenche form quando marmoraria carrega
+  useEffect(() => {
+    if (marmoraria) {
+      setEmpresa({
+        nome:      (marmoraria as Record<string, unknown>).nome      as string ?? '',
+        telefone:  (marmoraria as Record<string, unknown>).telefone  as string ?? '',
+        cnpj:      (marmoraria as Record<string, unknown>).cnpj      as string ?? '',
+        endereco:  (marmoraria as Record<string, unknown>).endereco  as string ?? '',
+        cidade:    (marmoraria as Record<string, unknown>).cidade    as string ?? '',
+        estado:    (marmoraria as Record<string, unknown>).estado    as string ?? '',
+        cep:       (marmoraria as Record<string, unknown>).cep       as string ?? '',
+      })
+    }
+  }, [marmoraria?.id])
+
+  async function saveEmpresa() {
+    if (!marmoraria?.id) return
+    setSavingEmpresa(true)
+    try {
+      const { error } = await supabase
+        .from('marmorarias')
+        .update({
+          nome:     empresa.nome.trim(),
+          telefone: empresa.telefone.trim(),
+          cnpj:     empresa.cnpj.trim() || null,
+          endereco: empresa.endereco.trim() || null,
+          cidade:   empresa.cidade.trim() || null,
+          estado:   empresa.estado.trim() || null,
+          cep:      empresa.cep.trim() || null,
+        })
+        .eq('id', marmoraria.id)
+      if (error) throw error
+      toast('Dados da empresa atualizados!', 'ok2')
+    } catch (e: unknown) {
+      toast(e instanceof Error ? e.message : 'Erro ao salvar', 'err')
+    } finally {
+      setSavingEmpresa(false)
+    }
+  }
+
+  function upEmpresa(k: string, v: string) {
+    setEmpresa(f => ({ ...f, [k]: v }))
+  }
 
   // Section 1 — tipos de agendamento
   const [tipos, setTipos] = useState<AgendaEventType[]>([])
@@ -582,6 +649,49 @@ export default function ConfiguracoesPage() {
       <div className="page-header">
         <h1 className="page-title">Configurações</h1>
       </div>
+
+      {/* ── SEÇÃO 0: Dados da Empresa ── */}
+      <EmpresaCard>
+        <div className="form-row form-row-2" style={{ marginTop: 4 }}>
+          <div className="form-group">
+            <label className="form-label">NOME DA EMPRESA *</label>
+            <input className="form-input" placeholder="Real Pedras Marmoraria" value={empresa.nome} onChange={e => upEmpresa('nome', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">CNPJ</label>
+            <input className="form-input" placeholder="00.000.000/0001-00" value={empresa.cnpj} onChange={e => upEmpresa('cnpj', e.target.value)} />
+          </div>
+        </div>
+        <div className="form-row form-row-2">
+          <div className="form-group">
+            <label className="form-label">TELEFONE / WHATSAPP</label>
+            <input className="form-input" placeholder="(11) 94734-0955" value={empresa.telefone} onChange={e => upEmpresa('telefone', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">CEP</label>
+            <input className="form-input" placeholder="00000-000" maxLength={9} value={empresa.cep} onChange={e => upEmpresa('cep', e.target.value)} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">ENDEREÇO</label>
+          <input className="form-input" placeholder="Rua Porto Alegre 422" value={empresa.endereco} onChange={e => upEmpresa('endereco', e.target.value)} />
+        </div>
+        <div className="form-row form-row-2">
+          <div className="form-group">
+            <label className="form-label">CIDADE</label>
+            <input className="form-input" placeholder="Itaquaquecetuba" value={empresa.cidade} onChange={e => upEmpresa('cidade', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">ESTADO (UF)</label>
+            <input className="form-input" placeholder="SP" maxLength={2} value={empresa.estado} onChange={e => upEmpresa('estado', e.target.value.toUpperCase())} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+          <button className="btn btn-gold" onClick={saveEmpresa} disabled={savingEmpresa}>
+            {savingEmpresa ? 'Salvando…' : '💾 Salvar Dados da Empresa'}
+          </button>
+        </div>
+      </EmpresaCard>
 
       {/* ── SEÇÃO 1: Tipos de Agendamento ── */}
       <SectionCard
