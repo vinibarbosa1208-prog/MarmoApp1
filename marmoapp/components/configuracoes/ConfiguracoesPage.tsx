@@ -448,14 +448,15 @@ export default function ConfiguracoesPage() {
   // Preenche form quando marmoraria carrega
   useEffect(() => {
     if (marmoraria) {
+      const m = marmoraria as unknown as Record<string, string>
       setEmpresa({
-        nome:      (marmoraria as Record<string, unknown>).nome      as string ?? '',
-        telefone:  (marmoraria as Record<string, unknown>).telefone  as string ?? '',
-        cnpj:      (marmoraria as Record<string, unknown>).cnpj      as string ?? '',
-        endereco:  (marmoraria as Record<string, unknown>).endereco  as string ?? '',
-        cidade:    (marmoraria as Record<string, unknown>).cidade    as string ?? '',
-        estado:    (marmoraria as Record<string, unknown>).estado    as string ?? '',
-        cep:       (marmoraria as Record<string, unknown>).cep       as string ?? '',
+        nome:     m.nome     ?? '',
+        telefone: m.telefone ?? '',
+        cnpj:     m.cnpj     ?? '',
+        endereco: m.endereco ?? '',
+        cidade:   m.cidade   ?? '',
+        estado:   m.estado   ?? '',
+        cep:      m.cep      ?? '',
       })
     }
   }, [marmoraria?.id])
