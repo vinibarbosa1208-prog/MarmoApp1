@@ -113,6 +113,7 @@ export default function EditarOrcamentoPage() {
   const [itens, setItens] = useState<ItemForm[]>([])
   const [novoItem, setNovoItem] = useState<ItemForm>({ ...ITEM_DEFAULTS })
   const [servicoIdSel, setServicodeIdSel] = useState('')
+  const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
 
   const orc = orcamentos.find(o => o.id === orcId)
   const [form, setForm] = useState({
@@ -187,13 +188,36 @@ export default function EditarOrcamentoPage() {
     setMostrarErros(true)
     if (!novoItem.descricao) { toast('Descrição do item é obrigatória', 'err'); return }
     if (!itemValido) { toast('Preencha todos os campos obrigatórios do item', 'err'); return }
-    setItens(prev => [...prev, { ...novoItem }])
+    if (editandoIdx !== null) {
+      setItens(prev => prev.map((item, i) => i === editandoIdx ? { ...novoItem } : item))
+      setEditandoIdx(null)
+    } else {
+      setItens(prev => [...prev, { ...novoItem }])
+    }
     setNovoItem({ ...ITEM_DEFAULTS })
     setServicodeIdSel('')
     setMostrarErros(false)
   }
 
-  function removerItem(idx: number) { setItens(prev => prev.filter((_, i) => i !== idx)) }
+  function editarItem(idx: number) {
+    setNovoItem({ ...itens[idx] })
+    setEditandoIdx(idx)
+    setMostrarErros(false)
+    // Scroll form into view
+    setTimeout(() => document.querySelector('.card-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
+  function cancelarEdicao() {
+    setNovoItem({ ...ITEM_DEFAULTS })
+    setEditandoIdx(null)
+    setServicodeIdSel('')
+    setMostrarErros(false)
+  }
+
+  function removerItem(idx: number) {
+    if (editandoIdx === idx) cancelarEdicao()
+    setItens(prev => prev.filter((_, i) => i !== idx))
+  }
 
   function preencherMaterial(id: string) {
     const m = materiais.find(x => x.id === id)
@@ -337,7 +361,9 @@ export default function EditarOrcamentoPage() {
             <div className="card-header"><span className="card-title">Itens</span></div>
             <div className="card-body">
               <div style={{ background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Adicionar Item</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: editandoIdx !== null ? 'var(--gold)' : '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {editandoIdx !== null ? `✏️ Editando item ${editandoIdx + 1}` : 'Adicionar Item'}
+                </div>
 
                 <div className="form-row form-row-2" style={{ marginBottom: 12 }}>
                   <div className="form-group">
@@ -584,8 +610,15 @@ export default function EditarOrcamentoPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                   <span style={{ fontWeight: 700 }}>Total: {fmt(calcTotal(novoItem))}</span>
-                  <button className="btn btn-gold" onClick={adicionarItem}
-                    disabled={mostrarErros && !itemValido}>+ Adicionar</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {editandoIdx !== null && (
+                      <button className="btn btn-outline" onClick={cancelarEdicao}>Cancelar</button>
+                    )}
+                    <button className="btn btn-gold" onClick={adicionarItem}
+                      disabled={mostrarErros && !itemValido}>
+                      {editandoIdx !== null ? '💾 Salvar Alterações' : '+ Adicionar'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -594,7 +627,7 @@ export default function EditarOrcamentoPage() {
                   <thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th></tr></thead>
                   <tbody>
                     {itens.map((item, idx) => (
-                      <tr key={idx}>
+                      <tr key={idx} style={{ background: editandoIdx === idx ? '#fffbf0' : undefined }}>
                         <td><span className="badge badge-draft">{item.tipo}</span></td>
                         <td>
                           <div style={{ fontWeight: 500 }}>{item.descricao}</div>
@@ -607,7 +640,13 @@ export default function EditarOrcamentoPage() {
                         <td>{item.quantidade}</td>
                         <td>{fmt(item.preco_unitario)}</td>
                         <td className="font-bold">{fmt(calcTotal(item))}</td>
-                        <td><button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)}>🗑️</button></td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => editarItem(idx)}
+                              disabled={editandoIdx === idx} title="Editar item">✏️</button>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)} title="Excluir item">🗑️</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
