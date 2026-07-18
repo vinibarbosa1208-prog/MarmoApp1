@@ -114,6 +114,9 @@ export default function EditarOrcamentoPage() {
   const [novoItem, setNovoItem] = useState<ItemForm>({ ...ITEM_DEFAULTS })
   const [servicoIdSel, setServicodeIdSel] = useState('')
   const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
+  // Alteração em lote
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set())
+  const [lote, setLote] = useState({ novoMaterial: '', custo_m2: '', markup: '', preco_unitario: '' })
 
   const orc = orcamentos.find(o => o.id === orcId)
   const [form, setForm] = useState({
@@ -217,6 +220,64 @@ export default function EditarOrcamentoPage() {
   function removerItem(idx: number) {
     if (editandoIdx === idx) cancelarEdicao()
     setItens(prev => prev.filter((_, i) => i !== idx))
+    setSelecionados(prev => {
+      const next = new Set<number>()
+      prev.forEach(i => { if (i < idx) next.add(i); else if (i > idx) next.add(i - 1) })
+      return next
+    })
+  }
+
+  // Lote: toggle individual
+  function toggleSelecionado(idx: number) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      return next
+    })
+  }
+
+  // Lote: selecionar todos com mesmo material (descrição)
+  function selecionarMesmoMaterial(descricao: string) {
+    const indices = itens.reduce<number[]>((acc, item, i) => {
+      if (item.tipo === 'material' && item.descricao === descricao) acc.push(i)
+      return acc
+    }, [])
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      const allAlreadySel = indices.every(i => next.has(i))
+      if (allAlreadySel) indices.forEach(i => next.delete(i))
+      else indices.forEach(i => next.add(i))
+      return next
+    })
+  }
+
+  // Lote: selecionar / desselecionar todos
+  function toggleTodos() {
+    if (selecionados.size === itens.length) setSelecionados(new Set())
+    else setSelecionados(new Set(itens.map((_, i) => i)))
+  }
+
+  // Lote: aplicar alterações
+  function aplicarLote() {
+    if (selecionados.size === 0) return
+    setItens(prev => prev.map((item, i) => {
+      if (!selecionados.has(i)) return item
+      const updates: Partial<ItemForm> = {}
+      if (lote.novoMaterial.trim()) updates.descricao = lote.novoMaterial.trim()
+      if (lote.custo_m2 !== '') updates.custo_m2 = parseFloat(lote.custo_m2) || 0
+      if (lote.markup !== '') updates.markup = parseFloat(lote.markup) || 1
+      if (lote.preco_unitario !== '') updates.preco_unitario = parseFloat(lote.preco_unitario) || 0
+      // Recalcular preço se custo+markup informados mas preço não
+      if ((lote.custo_m2 !== '' || lote.markup !== '') && lote.preco_unitario === '') {
+        const custo = updates.custo_m2 ?? item.custo_m2
+        const mk = updates.markup ?? item.markup
+        if (custo > 0 && mk > 0) updates.preco_unitario = custo * mk
+      }
+      return { ...item, ...updates }
+    }))
+    setSelecionados(new Set())
+    setLote({ novoMaterial: '', custo_m2: '', markup: '', preco_unitario: '' })
+    toast(`${selecionados.size} item(s) atualizado(s)`, 'ok2')
   }
 
   function preencherMaterial(id: string) {
@@ -623,34 +684,140 @@ export default function EditarOrcamentoPage() {
               </div>
 
               {itens.length > 0 && (
-                <table>
-                  <thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th></tr></thead>
-                  <tbody>
-                    {itens.map((item, idx) => (
-                      <tr key={idx} style={{ background: editandoIdx === idx ? '#fffbf0' : undefined }}>
-                        <td><span className="badge badge-draft">{item.tipo}</span></td>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>{item.descricao}</div>
-                          {item.tipo_peca && (
-                            <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
-                              {PECA_LABELS[item.tipo_peca]}
-                            </div>
-                          )}
-                        </td>
-                        <td>{item.quantidade}</td>
-                        <td>{fmt(item.preco_unitario)}</td>
-                        <td className="font-bold">{fmt(calcTotal(item))}</td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => editarItem(idx)}
-                              disabled={editandoIdx === idx} title="Editar item">✏️</button>
-                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)} title="Excluir item">🗑️</button>
-                          </div>
-                        </td>
+                <>
+                  {/* Barra de seleção rápida por material */}
+                  {(() => {
+                    const materiaisDistintos = Array.from(
+                      new Set(itens.filter(i => i.tipo === 'material').map(i => i.descricao))
+                    )
+                    if (materiaisDistintos.length === 0) return null
+                    return (
+                      <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Selecionar:</span>
+                        {materiaisDistintos.map(desc => {
+                          const indices = itens.reduce<number[]>((acc, item, i) => {
+                            if (item.tipo === 'material' && item.descricao === desc) acc.push(i)
+                            return acc
+                          }, [])
+                          const allSel = indices.every(i => selecionados.has(i))
+                          return (
+                            <button key={desc} onClick={() => selecionarMesmoMaterial(desc)}
+                              style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: allSel ? '1.5px solid var(--gold)' : '1.5px solid #ccc', background: allSel ? '#fffbf0' : '#fff', color: allSel ? 'var(--gold)' : '#555', cursor: 'pointer', fontWeight: allSel ? 700 : 400 }}>
+                              {desc} ({indices.length})
+                            </button>
+                          )
+                        })}
+                        {selecionados.size > 0 && (
+                          <button onClick={() => setSelecionados(new Set())}
+                            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1.5px solid #ccc', background: '#fff', color: '#888', cursor: 'pointer' }}>
+                            Limpar seleção
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style={{ width: 36, textAlign: 'center' }}>
+                          <input type="checkbox"
+                            checked={itens.length > 0 && selecionados.size === itens.length}
+                            onChange={toggleTodos}
+                            title="Selecionar todos"
+                            style={{ cursor: 'pointer' }} />
+                        </th>
+                        <th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {itens.map((item, idx) => (
+                        <tr key={idx} style={{ background: editandoIdx === idx ? '#fffbf0' : selecionados.has(idx) ? '#f5f0ff' : undefined }}>
+                          <td style={{ textAlign: 'center' }}>
+                            <input type="checkbox"
+                              checked={selecionados.has(idx)}
+                              onChange={() => toggleSelecionado(idx)}
+                              style={{ cursor: 'pointer' }} />
+                          </td>
+                          <td><span className="badge badge-draft">{item.tipo}</span></td>
+                          <td>
+                            <div style={{ fontWeight: 500 }}>{item.descricao}</div>
+                            {item.tipo_peca && (
+                              <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
+                                {PECA_LABELS[item.tipo_peca]}
+                              </div>
+                            )}
+                          </td>
+                          <td>{item.quantidade}</td>
+                          <td>{fmt(item.preco_unitario)}</td>
+                          <td className="font-bold">{fmt(calcTotal(item))}</td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => editarItem(idx)}
+                                disabled={editandoIdx === idx} title="Editar item">✏️</button>
+                              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removerItem(idx)} title="Excluir item">🗑️</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+
+              {/* Barra flutuante de alteração em lote */}
+              {selecionados.size > 0 && (
+                <div style={{
+                  position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+                  background: '#1a1a2e', color: '#fff', borderRadius: 16, padding: '14px 20px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.35)', zIndex: 1000,
+                  display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', maxWidth: 780,
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', whiteSpace: 'nowrap' }}>
+                    {selecionados.size} item(s) selecionado(s)
+                  </span>
+                  <input
+                    placeholder="Novo material"
+                    value={lote.novoMaterial}
+                    onChange={e => setLote(l => ({ ...l, novoMaterial: e.target.value }))}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 150, background: '#2a2a3e', color: '#fff' }}
+                  />
+                  <input
+                    placeholder="Custo R$/m²"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={lote.custo_m2}
+                    onChange={e => setLote(l => ({ ...l, custo_m2: e.target.value }))}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 110, background: '#2a2a3e', color: '#fff' }}
+                  />
+                  <input
+                    placeholder="Fator (×)"
+                    type="number"
+                    min="0.1"
+                    step="0.5"
+                    value={lote.markup}
+                    onChange={e => setLote(l => ({ ...l, markup: e.target.value }))}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 90, background: '#2a2a3e', color: '#fff' }}
+                  />
+                  <input
+                    placeholder="Preço venda"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={lote.preco_unitario}
+                    onChange={e => setLote(l => ({ ...l, preco_unitario: e.target.value }))}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 110, background: '#2a2a3e', color: '#fff' }}
+                  />
+                  <button onClick={aplicarLote}
+                    style={{ padding: '7px 18px', borderRadius: 10, background: 'var(--gold)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Aplicar
+                  </button>
+                  <button onClick={() => { setSelecionados(new Set()); setLote({ novoMaterial: '', custo_m2: '', markup: '', preco_unitario: '' }) }}
+                    style={{ padding: '7px 14px', borderRadius: 10, background: 'transparent', color: '#aaa', border: '1.5px solid #444', fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Cancelar
+                  </button>
+                </div>
               )}
             </div>
           </div>
