@@ -19,8 +19,8 @@ export default function LoginPage() {
     try {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
       if (err) { setError(err.message); return }
-      router.refresh()
-      router.push('/dashboard')
+      // Hard redirect — garante que cookies estejam no browser antes do middleware checar
+      window.location.href = '/dashboard'
     } catch (err: any) {
       setError(err?.message || 'Erro ao entrar. Tente novamente.')
     } finally {
