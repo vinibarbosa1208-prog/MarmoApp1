@@ -108,11 +108,6 @@ export default function LoginPage() {
           <button className="btn-primary" type="submit" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar no sistema'}
           </button>
-          {loading && (
-            <p style={{ textAlign: 'center', fontSize: 11, color: '#999', marginTop: 8 }}>
-              Aguardando resposta do servidor...
-            </p>
-          )}
           <p className="auth-hint" style={{ marginTop: 14 }}>
             Não tem conta?{' '}
             <Link href="/register" style={{ color: 'var(--gold)' }}>
