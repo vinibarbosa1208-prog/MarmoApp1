@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
@@ -9,11 +9,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const navigating = useRef(false)
 
-  // Corrige bfcache: se o browser restaurar a página do cache com loading=true, reset
+  // Corrige bfcache: se browser restaurar a página do cache com loading=true, reset
   useEffect(() => {
     const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) setLoading(false)
+      if (e.persisted) {
+        navigating.current = false
+        setLoading(false)
+        setError('')
+      }
     }
     window.addEventListener('pageshow', handlePageShow)
     return () => window.removeEventListener('pageshow', handlePageShow)
@@ -21,21 +26,12 @@ export default function LoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
+    if (loading || navigating.current) return
     setError('')
     setLoading(true)
 
-    // Timeout de 20 segundos para evitar loading infinito
-    let timedOut = false
-    const timeoutId = setTimeout(() => {
-      timedOut = true
-      setLoading(false)
-      setError('Conexão demorou demais. Verifique sua internet e tente novamente.')
-    }, 20000)
-
     try {
       const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
-      clearTimeout(timeoutId)
-      if (timedOut) return
 
       if (err) {
         const msg = err.message?.toLowerCase() ?? ''
@@ -46,27 +42,24 @@ export default function LoginPage() {
         } else {
           setError(err.message)
         }
+        setLoading(false)
         return
       }
 
       if (!data.session) {
-        setError('Sessão não pôde ser estabelecida. Tente novamente.')
+        setError('Não foi possível estabelecer a sessão. Tente novamente.')
+        setLoading(false)
         return
       }
 
-      // Hard redirect — garante que os cookies da sessão estejam no browser antes do middleware checar
+      // Marca como navegando para não resetar o estado no bfcache antes de ir
+      navigating.current = true
       window.location.replace('/dashboard')
     } catch (err: unknown) {
-      clearTimeout(timeoutId)
-      if (!timedOut) {
-        const msg = err instanceof Error ? err.message : 'Erro ao entrar. Tente novamente.'
-        setError(msg)
-        setLoading(false)
-      }
-    } finally {
-      // Só resetar loading em caso de erro (em caso de sucesso a página navega)
-      // O `finally` roda antes da navegação — resetar aqui causaria flash do botão
-      // então só resetamos se `loading` ainda é true e não houve navegação
+      const msg = err instanceof Error ? err.message : 'Erro ao entrar. Tente novamente.'
+      setError(msg)
+      setLoading(false)
+      navigating.current = false
     }
   }
 
