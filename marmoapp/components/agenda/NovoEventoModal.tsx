@@ -47,30 +47,48 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
   async function salvar() {
     if (!form.titulo.trim()) { toast('Título obrigatório', 'err'); return }
     if (!form.data_inicio) { toast('Data de início obrigatória', 'err'); return }
+    if (!marmoraria?.id) { toast('Sessão inválida — recarregue a página', 'err'); return }
     setSaving(true)
-    try {
-      if (!marmoraria?.id) throw new Error('Sessão inválida — recarregue a página')
 
-      const payload: CreateAgendaEventInput & { marmoraria_id: string; status: string } = {
+    // Timeout de segurança: se o Supabase não responder em 15s, mostra erro
+    const timeoutId = setTimeout(() => {
+      setSaving(false)
+      toast('Tempo esgotado — verifique sua conexão e tente novamente', 'err')
+    }, 15000)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        clearTimeout(timeoutId)
+        toast('Sessão expirada — faça login novamente', 'err')
+        setSaving(false)
+        return
+      }
+
+      const payload = {
         titulo: form.titulo.trim(),
-        tipo_id: form.tipo_id || undefined,
+        tipo_id: form.tipo_id || null,
         data_inicio: new Date(form.data_inicio).toISOString(),
-        data_fim: form.data_fim ? new Date(form.data_fim).toISOString() : undefined,
+        data_fim: form.data_fim ? new Date(form.data_fim).toISOString() : null,
         dia_inteiro: form.dia_inteiro,
-        cliente_id: form.cliente_id || undefined,
-        orcamento_id: form.orcamento_id || undefined,
-        descricao: form.descricao || undefined,
+        cliente_id: form.cliente_id || null,
+        orcamento_id: form.orcamento_id || null,
+        descricao: form.descricao || null,
         marmoraria_id: marmoraria.id,
         status: 'agendado',
       }
 
       const { error } = await supabase.from('agenda_events').insert(payload)
+      clearTimeout(timeoutId)
       if (error) throw error
       toast('Evento criado', 'ok')
       onSaved()
       onClose()
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Erro ao salvar', 'err')
+      clearTimeout(timeoutId)
+      const msg = e instanceof Error ? e.message : 'Erro ao salvar evento'
+      console.error('[NovoEventoModal] Erro ao salvar:', e)
+      toast(msg, 'err')
     } finally {
       setSaving(false)
     }
