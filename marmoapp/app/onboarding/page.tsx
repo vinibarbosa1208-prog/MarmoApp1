@@ -26,10 +26,21 @@ export default function OnboardingPage() {
   })
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
       setUserId(user.id)
       setUserEmail(user.email ?? '')
+
+      // Se usuário já tem marmoraria configurada, redireciona para o dashboard
+      // Evita sobrescrever dados com formulário vazio
+      const { data: marmoraria } = await supabase
+        .from('marmorarias')
+        .select('id, setup_concluido')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+      if (marmoraria?.setup_concluido) {
+        router.replace('/dashboard')
+      }
     })
   }, [router])
 

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import Toast from '@/components/Toast'
 import { useApp } from '@/contexts/AppContext'
+import { useAuth } from '@/lib/auth/AuthContext'
 
 const BOTTOM_NAV = [
   {
@@ -32,16 +33,19 @@ const BOTTOM_NAV = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useApp()
+  const { loading: authLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    // Aguarda auth carregar completamente antes de redirecionar
+    if (authLoading) return
     const t = setTimeout(() => {
       if (user === null) router.push('/login')
-    }, 800)
+    }, 500)
     return () => clearTimeout(t)
-  }, [user, router])
+  }, [user, router, authLoading])
 
   // Close sidebar on route change
   useEffect(() => {

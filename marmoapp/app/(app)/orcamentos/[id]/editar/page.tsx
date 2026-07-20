@@ -111,6 +111,8 @@ export default function EditarOrcamentoPage() {
   const [saving, setSaving] = useState(false)
   const [mostrarErros, setMostrarErros] = useState(false)
   const [itens, setItens] = useState<ItemForm[]>([])
+  // IDs dos itens originais carregados do banco — usados para DELETE seguro no salvar()
+  const [originalIds, setOriginalIds] = useState<string[]>([])
   const [novoItem, setNovoItem] = useState<ItemForm>({ ...ITEM_DEFAULTS })
   const [servicoIdSel, setServicodeIdSel] = useState('')
   const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
@@ -137,28 +139,32 @@ export default function EditarOrcamentoPage() {
     })
 
     supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcId).then(({ data }) => {
-      if (data) setItens(data.map(i => ({
-        id: i.id,
-        tipo: i.tipo as ItemForm['tipo'],
-        descricao: i.descricao,
-        largura: i.largura || 0,
-        altura: i.altura || 0,
-        area: i.area || 0,
-        quantidade: i.quantidade,
-        preco_unitario: i.preco_unitario || 0,
-        custo_m2: i.custo_m2 || 0,
-        markup: i.markup || 3,
-        tipo_peca: i.tipo_peca || '',
-        acabamento_esquerda: i.acabamento_esquerda || '',
-        acabamento_direita: i.acabamento_direita || '',
-        acabamento_frente: i.acabamento_frente || '',
-        acabamento_fundo: i.acabamento_fundo || '',
-        tem_saia: i.tem_saia || false,
-        altura_saia: i.altura_saia || 0,
-        tem_frontao: i.tem_frontao || false,
-        altura_frontao: i.altura_frontao || 0,
-        dados_extras: i.dados_extras || {},
-      })))
+      if (data) {
+        const mapped = data.map(i => ({
+          id: i.id,
+          tipo: i.tipo as ItemForm['tipo'],
+          descricao: i.descricao,
+          largura: i.largura || 0,
+          altura: i.altura || 0,
+          area: i.area || 0,
+          quantidade: i.quantidade,
+          preco_unitario: i.preco_unitario || 0,
+          custo_m2: i.custo_m2 || 0,
+          markup: i.markup || 3,
+          tipo_peca: i.tipo_peca || '',
+          acabamento_esquerda: i.acabamento_esquerda || '',
+          acabamento_direita: i.acabamento_direita || '',
+          acabamento_frente: i.acabamento_frente || '',
+          acabamento_fundo: i.acabamento_fundo || '',
+          tem_saia: i.tem_saia || false,
+          altura_saia: i.altura_saia || 0,
+          tem_frontao: i.tem_frontao || false,
+          altura_frontao: i.altura_frontao || 0,
+          dados_extras: i.dados_extras || {},
+        }))
+        setItens(mapped)
+        setOriginalIds(data.map(i => i.id))
+      }
       setLoading(false)
     })
   }, [orc, orcId])
@@ -308,8 +314,10 @@ export default function EditarOrcamentoPage() {
   const isMaterialComPeca = novoItem.tipo === 'material' && !!novoItem.tipo_peca
 
   async function salvar() {
+    if (!marmoraria) { toast('Dados da marmoraria não carregados. Aguarde e tente novamente.', 'err'); return }
     setSaving(true)
     try {
+      // 1. Atualiza cabeçalho do orçamento
       const { error: orcErr } = await supabase.from('orcamentos').update({
         cliente_id: form.cliente_id || null,
         titulo: form.descricao || 'Orçamento',
@@ -323,37 +331,58 @@ export default function EditarOrcamentoPage() {
       }).eq('id', orcId)
       if (orcErr) throw orcErr
 
-      const { error: delErr } = await supabase.from('orcamento_itens').delete().eq('orcamento_id', orcId)
-      if (delErr) throw delErr
-
-      if (itens.length > 0 && marmoraria) {
-        const { error: insErr } = await supabase.from('orcamento_itens').insert(itens.map(i => ({
-          orcamento_id: orcId,
-          marmoraria_id: marmoraria.id,
-          tipo: i.tipo,
-          descricao: i.descricao,
-          largura: i.largura || null,
-          altura: i.altura || null,
-          area: calcArea(i) || null,
-          quantidade: i.quantidade,
-          preco_unitario: i.preco_unitario,
-          custo_m2: i.custo_m2 || null,
-          markup: i.markup || null,
-          total_item: calcTotal(i),
-          custo_item: calcCusto(i) || null,
-          tipo_peca: i.tipo_peca || null,
-          acabamento_esquerda: i.acabamento_esquerda || null,
-          acabamento_direita: i.acabamento_direita || null,
-          acabamento_frente: i.acabamento_frente || null,
-          acabamento_fundo: i.acabamento_fundo || null,
-          tem_saia: i.tem_saia,
-          altura_saia: i.altura_saia || null,
-          tem_frontao: i.tem_frontao,
-          altura_frontao: i.altura_frontao || null,
-          dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
-        })))
+      // 2. INSERT dos itens PRIMEIRO — se falhar, os itens originais continuam no banco
+      let newIds: string[] = []
+      if (itens.length > 0) {
+        const { data: inserted, error: insErr } = await supabase
+          .from('orcamento_itens')
+          .insert(itens.map(i => ({
+            orcamento_id: orcId,
+            marmoraria_id: marmoraria.id,
+            tipo: i.tipo,
+            descricao: i.descricao,
+            largura: i.largura || null,
+            altura: i.altura || null,
+            area: calcArea(i) || null,
+            quantidade: i.quantidade,
+            preco_unitario: i.preco_unitario,
+            custo_m2: i.custo_m2 || null,
+            markup: i.markup || null,
+            total_item: calcTotal(i),
+            custo_item: calcCusto(i) || null,
+            tipo_peca: i.tipo_peca || null,
+            acabamento_esquerda: i.acabamento_esquerda || null,
+            acabamento_direita: i.acabamento_direita || null,
+            acabamento_frente: i.acabamento_frente || null,
+            acabamento_fundo: i.acabamento_fundo || null,
+            tem_saia: i.tem_saia,
+            altura_saia: i.altura_saia || null,
+            tem_frontao: i.tem_frontao,
+            altura_frontao: i.altura_frontao || null,
+            dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
+          })))
+          .select('id')
         if (insErr) throw insErr
+        newIds = (inserted ?? []).map(r => r.id)
       }
+
+      // 3. DELETE dos itens antigos SOMENTE após INSERT bem-sucedido
+      if (originalIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from('orcamento_itens')
+          .delete()
+          .in('id', originalIds)
+        if (delErr) {
+          // Compensação: remove os itens recém-inseridos para evitar duplicatas
+          if (newIds.length > 0) {
+            await supabase.from('orcamento_itens').delete().in('id', newIds)
+          }
+          throw delErr
+        }
+      }
+
+      // Atualiza os IDs originais para o próximo save
+      setOriginalIds(newIds)
 
       await loadOrcamentos()
       toast('Orçamento atualizado!', 'ok2')
