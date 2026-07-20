@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { sendWelcomeEmail } from '@/lib/email/sequences'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,20 +49,6 @@ export async function POST(request: NextRequest) {
   if (error) {
     console.error('Erro ao salvar lead:', error)
     return NextResponse.json({ error: 'Erro ao salvar dados' }, { status: 500 })
-  }
-
-  // Email de boas-vindas (best-effort)
-  try {
-    const { error: emailError } = await sendWelcomeEmail(email, nome_contato)
-    if (!emailError) {
-      await supabaseAdmin.from('email_logs').insert({
-        lead_id: lead.id,
-        email_type: 'welcome',
-        sent_to: email,
-      })
-    }
-  } catch (e) {
-    console.error('Erro ao enviar email de boas-vindas:', e)
   }
 
   // Redireciona para /cadastro com dados pré-preenchidos
