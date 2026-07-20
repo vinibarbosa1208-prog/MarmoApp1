@@ -36,14 +36,15 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // getSession() lê do cookie sem round-trip de rede (getUser() adicionava 2-3s por request)
-  const { data: { session } } = await supabase.auth.getSession()
-
   const { pathname } = request.nextUrl
   const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p))
   if (isPublic) return supabaseResponse
 
-  if (!session?.user) {
+  // getUser() valida o JWT diretamente no servidor Supabase — evita race condition de
+  // token refresh que ocorre com getSession() em múltiplas instâncias edge simultâneas.
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
