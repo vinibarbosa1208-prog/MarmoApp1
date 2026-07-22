@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
@@ -36,11 +36,16 @@ function PaymentGate() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
+  // Persiste mesmo após WelcomeBanner remover o param da URL
+  const fromCheckout = useRef(false)
+  if (searchParams.get('checkout') === 'success') {
+    fromCheckout.current = true
+  }
 
   useEffect(() => {
     if (!marmoraria) return
-    // Vindo do Stripe com sucesso → dá um passe (webhook vai setar trial_expira em breve)
-    if (searchParams.get('checkout') === 'success') return
+    // Veio do Stripe agora — não bloqueia (webhook ainda não refletiu no AppContext)
+    if (fromCheckout.current) return
     // Se trial_expira é null → nunca concluiu o pagamento
     if (marmoraria.trial_expira === null) {
       router.replace('/checkout')
