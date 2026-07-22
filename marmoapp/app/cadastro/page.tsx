@@ -151,14 +151,15 @@ function CadastroForm() {
         body:    JSON.stringify({ plano, nome: marmoraria, cnpj, telefone, cidade, email }),
       })
 
+      const checkoutData = await checkoutRes.json()
+
       if (!checkoutRes.ok) {
-        // Se Stripe falhar, entra no sistema mesmo assim
-        console.error('[cadastro] stripe checkout error:', await checkoutRes.text())
-        router.push('/dashboard')
-        return
+        console.error('[cadastro] stripe checkout error:', checkoutData)
+        setLoading(false)
+        return setError(checkoutData?.error || 'Erro ao iniciar pagamento. Tente novamente.')
       }
 
-      const { url } = await checkoutRes.json()
+      const { url } = checkoutData
 
       if (url) {
         setSuccess(true)
