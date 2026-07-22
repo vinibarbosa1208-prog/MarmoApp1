@@ -8,8 +8,35 @@ declare global {
   interface Window { fbq?: (...args: unknown[]) => void }
 }
 
+const PLANOS = [
+  {
+    id: 'basic',
+    label: 'Basic',
+    preco: 'R$ 147',
+    periodo: '/mês',
+    descricao: 'Até 2 usuários',
+    popular: false,
+  },
+  {
+    id: 'pro',
+    label: 'Pro',
+    preco: 'R$ 297',
+    periodo: '/mês',
+    descricao: 'Até 5 usuários · Antonio AI',
+    popular: true,
+  },
+  {
+    id: 'enterprise',
+    label: 'Enterprise',
+    preco: 'R$ 497',
+    periodo: '/mês',
+    descricao: 'Usuários ilimitados · Suporte dedicado',
+    popular: false,
+  },
+]
+
 function CadastroForm() {
-  const router = useRouter()
+  const router  = useRouter()
   const searchParams = useSearchParams()
 
   const [form, setForm] = useState({
@@ -19,6 +46,7 @@ function CadastroForm() {
     cidade:     '',
     cnpj:       '',
     senha:      '',
+    plano:      (searchParams.get('plano') ?? 'pro') as 'basic' | 'pro' | 'enterprise',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -53,7 +81,7 @@ function CadastroForm() {
     e.preventDefault()
     if (loading) return
 
-    const { marmoraria, email, telefone, cidade, cnpj, senha } = form
+    const { marmoraria, email, telefone, cidade, cnpj, senha, plano } = form
 
     if (!marmoraria.trim()) return setError('Informe o nome da marmoraria.')
     if (!email.includes('@'))  return setError('Informe um e-mail válido.')
@@ -65,6 +93,7 @@ function CadastroForm() {
     setError('')
 
     try {
+      // 1. Cria usuário no Supabase Auth
       const { error: signUpErr } = await supabase.auth.signUp({
         email,
         password: senha,
@@ -85,6 +114,7 @@ function CadastroForm() {
         }
       }
 
+      // 2. Garante sessão ativa (necessário para o checkout API ler cookies)
       let { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
@@ -104,22 +134,24 @@ function CadastroForm() {
         return setError('Conta criada! Faça login para acessar o sistema.')
       }
 
+      // 3. Dispara lead (sem aguardar)
       fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome_marmoraria: marmoraria, nome_contato: email, whatsapp: telefone, email }),
       }).catch(() => {})
 
-      const trialExpira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      // 4. Cria registro da marmoraria no Supabase
+      //    trial_expira = null para que o Stripe controle o trial (checkout route verifica esse campo)
       const { error: marmErr } = await supabase.from('marmorarias').insert({
-        owner_id: session.user.id,
-        nome:     marmoraria.trim(),
-        cnpj:     cnpj || null,
+        owner_id:        session.user.id,
+        nome:            marmoraria.trim(),
+        cnpj:            cnpj || null,
         telefone,
         cidade,
         email,
-        plano:           'basic',
-        trial_expira:    trialExpira,
+        plano,
+        trial_expira:    null,
         setup_concluido: true,
       })
 
@@ -128,8 +160,30 @@ function CadastroForm() {
       }
 
       window.fbq?.('track', 'CompleteRegistration')
-      setSuccess(true)
-      router.push('/dashboard')
+
+      // 5. Cria Checkout Session no Stripe (trial 7 dias)
+      const checkoutRes = await fetch('/api/stripe/checkout', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ plano }),
+      })
+
+      if (!checkoutRes.ok) {
+        // Se Stripe falhar, entra no sistema mesmo assim
+        console.error('[cadastro] stripe checkout error:', await checkoutRes.text())
+        router.push('/dashboard')
+        return
+      }
+
+      const { url } = await checkoutRes.json()
+
+      if (url) {
+        setSuccess(true)
+        // Redireciona para o Stripe Checkout (após confirmação → /dashboard?checkout=success)
+        window.location.href = url
+      } else {
+        router.push('/dashboard')
+      }
 
     } catch (err: unknown) {
       setLoading(false)
@@ -170,7 +224,9 @@ function CadastroForm() {
         a { color: #C9A84C; text-decoration: none; }
         a:hover { text-decoration: underline; }
         button { cursor: pointer; }
-        button:hover:not(:disabled) { background: #E5C46A !important; }
+        button:hover:not(:disabled) { opacity: 0.9; }
+        .plano-card { transition: border-color 0.15s, box-shadow 0.15s; cursor: pointer; }
+        .plano-card:hover { border-color: #C9A84C !important; }
       `}</style>
 
       <div style={{
@@ -180,25 +236,25 @@ function CadastroForm() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '64px 20px',
+        padding: '48px 20px 64px',
         fontFamily: "'DM Sans', sans-serif",
         boxSizing: 'border-box',
       }}>
 
         {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 28 }}>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 600, letterSpacing: '0.3px' }}>
             <span style={{ color: '#ffffff' }}>Marmo</span><span style={{ color: '#C9A84C' }}>App</span>
           </div>
-          <div style={{ color: '#8a8a8a', fontSize: 13, letterSpacing: '0.2px' }}>
-            7 dias grátis · sem cartão de crédito
+          <div style={{ color: '#8a8a8a', fontSize: 13 }}>
+            7 dias grátis · sem cobrança imediata
           </div>
         </div>
 
         {/* Card */}
         <div style={{
           width: '100%',
-          maxWidth: 480,
+          maxWidth: 520,
           background: '#F8F6F2',
           borderRadius: 20,
           border: '1px solid rgba(201,168,76,0.35)',
@@ -209,11 +265,11 @@ function CadastroForm() {
           {/* Barra dourada */}
           <div style={{ height: 5, width: '100%', background: 'linear-gradient(90deg,#C9A84C,#E5C46A,#C9A84C)' }} />
 
-          <div style={{ padding: 32 }}>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 600, color: '#2C2922', marginBottom: 6 }}>
+          <div style={{ padding: '28px 32px 32px' }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 600, color: '#2C2922', marginBottom: 4 }}>
               Crie sua conta
             </div>
-            <div style={{ fontSize: 14, color: '#9B8A7A', marginBottom: 28 }}>
+            <div style={{ fontSize: 14, color: '#9B8A7A', marginBottom: 24 }}>
               Configure sua marmoraria em menos de 2 minutos
             </div>
 
@@ -221,10 +277,10 @@ function CadastroForm() {
               <div style={{ textAlign: 'center', padding: '32px 0' }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>🎉</div>
                 <p style={{ fontSize: 16, fontWeight: 600, color: '#2C2922' }}>Conta criada!</p>
-                <p style={{ fontSize: 14, color: '#9B8A7A', marginTop: 6 }}>Abrindo o sistema...</p>
+                <p style={{ fontSize: 14, color: '#9B8A7A', marginTop: 6 }}>Redirecionando para o pagamento...</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <label style={labelStyle}>Nome da marmoraria</label>
@@ -275,28 +331,80 @@ function CadastroForm() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={labelStyle}>CNPJ (opcional)</label>
-                  <input
-                    type="text"
-                    placeholder="00.000.000/0001-00"
-                    value={form.cnpj}
-                    onChange={e => up('cnpj', maskCNPJ(e.target.value))}
-                    maxLength={18}
-                    style={inputStyle}
-                  />
+                <div style={{ display: 'flex', gap: 14 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                    <label style={labelStyle}>CNPJ (opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="00.000.000/0001-00"
+                      value={form.cnpj}
+                      onChange={e => up('cnpj', maskCNPJ(e.target.value))}
+                      maxLength={18}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                    <label style={labelStyle}>Senha</label>
+                    <input
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={form.senha}
+                      onChange={e => up('senha', e.target.value)}
+                      autoComplete="new-password"
+                      style={inputStyle}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={labelStyle}>Senha</label>
-                  <input
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={form.senha}
-                    onChange={e => up('senha', e.target.value)}
-                    autoComplete="new-password"
-                    style={inputStyle}
-                  />
+                {/* Seleção de plano */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                  <label style={labelStyle}>Escolha seu plano</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {PLANOS.map(p => {
+                      const selected = form.plano === p.id
+                      return (
+                        <div
+                          key={p.id}
+                          className="plano-card"
+                          onClick={() => up('plano', p.id)}
+                          style={{
+                            flex: 1,
+                            background: selected ? 'rgba(201,168,76,0.08)' : '#fff',
+                            border: selected ? '2px solid #C9A84C' : '1.5px solid #EDE9E2',
+                            borderRadius: 10,
+                            padding: '11px 10px',
+                            textAlign: 'center',
+                            position: 'relative',
+                          }}
+                        >
+                          {p.popular && (
+                            <div style={{
+                              position: 'absolute',
+                              top: -10,
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              background: '#C9A84C',
+                              color: '#2C2922',
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: '0.5px',
+                              padding: '2px 8px',
+                              borderRadius: 20,
+                              whiteSpace: 'nowrap',
+                            }}>MAIS POPULAR</div>
+                          )}
+                          <div style={{ fontSize: 11, fontWeight: 700, color: selected ? '#C9A84C' : '#9B8A7A', marginBottom: 3 }}>
+                            {p.label}
+                          </div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: selected ? '#2C2922' : '#5a4e44', lineHeight: 1 }}>
+                            {p.preco}
+                          </div>
+                          <div style={{ fontSize: 9, color: '#9B8A7A', marginBottom: 4 }}>{p.periodo}</div>
+                          <div style={{ fontSize: 10, color: '#9B8A7A', lineHeight: 1.4 }}>{p.descricao}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
                 {error && (
@@ -324,16 +432,33 @@ function CadastroForm() {
                     border: 'none',
                     borderRadius: 10,
                     padding: 14,
-                    marginTop: 8,
+                    marginTop: 4,
                     fontFamily: "'DM Sans', sans-serif",
                     cursor: loading ? 'wait' : 'pointer',
-                    transition: 'background 0.15s',
+                    transition: 'opacity 0.15s',
                   }}
                 >
-                  {loading ? 'Criando sua conta...' : 'Criar conta e entrar →'}
+                  {loading ? 'Criando sua conta...' : 'Continuar para pagamento →'}
                 </button>
 
-                <div style={{ textAlign: 'center', fontSize: 12, color: '#9B8A7A', marginTop: 2, lineHeight: 1.5 }}>
+                {/* Trial badge */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  color: '#9B8A7A',
+                  marginTop: 2,
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="6.5" stroke="#22c55e" strokeWidth="1.4"/>
+                    <path d="M5 8l2 2 4-4" stroke="#22c55e" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>7 dias grátis · seu cartão <strong>não</strong> será cobrado agora</span>
+                </div>
+
+                <div style={{ textAlign: 'center', fontSize: 12, color: '#9B8A7A', lineHeight: 1.5 }}>
                   Ao continuar você concorda com os{' '}
                   <a href="/termos" style={{ color: '#C9A84C' }}>termos de uso</a>.
                 </div>

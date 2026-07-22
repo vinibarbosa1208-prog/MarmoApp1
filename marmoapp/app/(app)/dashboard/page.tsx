@@ -1,8 +1,56 @@
 'use client'
 
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import { fmt, orcTotal } from '@/lib/utils'
+
+function WelcomeBanner() {
+  const searchParams = useSearchParams()
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'success') {
+      setShow(true)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('checkout')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
+
+  if (!show) return null
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.06))',
+      border: '1px solid rgba(201,168,76,0.35)',
+      borderRadius: 12,
+      padding: '16px 20px',
+      marginBottom: 20,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 24 }}>🎉</span>
+        <div>
+          <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>
+            Bem-vindo ao MarmoApp! Seu trial de 7 dias começou.
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            Seu cartão só será cobrado após os 7 dias gratuitos. Explore à vontade!
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={() => setShow(false)}
+        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', flexShrink: 0 }}
+      >✕</button>
+    </div>
+  )
+}
 
 const STATUS_COLORS: Record<string, string> = {
   rascunho: '#8B8B9A', enviado: '#2980B9', aprovado: '#27AE60', recusado: '#C0392B',
@@ -37,6 +85,12 @@ export default function DashboardPage() {
 
   return (
     <div className="page-inner">
+
+      {/* Banner de boas-vindas pós-checkout */}
+      <Suspense fallback={null}>
+        <WelcomeBanner />
+      </Suspense>
+
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <div style={{ display: 'flex', gap: 8 }}>

@@ -38,14 +38,18 @@ export async function POST(req: NextRequest) {
     // Trial só oferecido se trial_expira ainda não foi definido (nunca usou)
     const trialUsado = !!marmoraria.trial_expira
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    // Deriva a URL base do próprio request (funciona em localhost e em produção)
+    const origin = req.headers.get('origin')
+      || req.headers.get('referer')?.replace(/\/$/, '').split('/').slice(0, 3).join('/')
+      || process.env.NEXT_PUBLIC_APP_URL
+      || 'https://app.marmoapp.com'
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/dashboard?checkout=success`,
-      cancel_url: `${appUrl}/planos`,
+      success_url: `${origin}/dashboard?checkout=success`,
+      cancel_url: `${origin}/cadastro`,
       metadata: { marmoraria_id, plano },
       subscription_data: {
         metadata: { marmoraria_id, plano },
