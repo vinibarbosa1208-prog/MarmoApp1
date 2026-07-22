@@ -141,31 +141,14 @@ function CadastroForm() {
         body: JSON.stringify({ nome_marmoraria: marmoraria, nome_contato: email, whatsapp: telefone, email }),
       }).catch(() => {})
 
-      // 4. Cria registro da marmoraria no Supabase
-      //    trial_expira = null para que o Stripe controle o trial (checkout route verifica esse campo)
-      const { error: marmErr } = await supabase.from('marmorarias').insert({
-        owner_id:        session.user.id,
-        nome:            marmoraria.trim(),
-        cnpj:            cnpj || null,
-        telefone,
-        cidade,
-        email,
-        plano,
-        trial_expira:    null,
-        setup_concluido: true,
-      })
-
-      if (marmErr && marmErr.code !== '23505') {
-        console.warn('[cadastro] marmoraria insert:', marmErr.message)
-      }
-
       window.fbq?.('track', 'CompleteRegistration')
 
-      // 5. Cria Checkout Session no Stripe (trial 7 dias)
+      // 4. Cria marmoraria + Checkout Stripe num único passo server-side
+      //    O route.ts usa apiSupabase (service role) para criar a marmoraria — sem problemas de RLS
       const checkoutRes = await fetch('/api/stripe/checkout', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ plano }),
+        body:    JSON.stringify({ plano, nome: marmoraria, cnpj, telefone, cidade, email }),
       })
 
       if (!checkoutRes.ok) {

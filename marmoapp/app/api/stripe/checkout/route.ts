@@ -1,25 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getMarmorariaId, apiSupabase as supabase } from '@/lib/api-auth'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { apiSupabase } from '@/lib/api-auth'
 import { stripe, PLANO_PRICE_MAP } from '@/lib/stripe'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+async function getAuthUser() {
+  const cookieStore = await cookies()
+  const authClient = createServerClient(SUPABASE_URL, ANON_KEY, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(list) {
+        try { list.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } catch {}
+      },
+    },
+  })
+  const { data: { user } } = await authClient.auth.getUser()
+  return user
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const marmoraria_id = await getMarmorariaId()
-    if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    const body = await req.json()
+    const { plano, nome, cnpj, telefone, cidade, email: emailForm } = body
 
-    const { plano } = await req.json()
     const priceId = PLANO_PRICE_MAP[plano]
     if (!priceId) return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
 
-    const { data: marmoraria } = await supabase
+    // Autentica usuário via cookies
+    const user = await getAuthUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    // Busca marmoraria existente pelo owner_id (service role, sem RLS)
+    let { data: marmoraria } = await apiSupabase
       .from('marmorarias')
       .select('id, email, trial_expira')
-      .eq('id', marmoraria_id)
-      .single()
+      .eq('owner_id', user.id)
+      .maybeSingle()
+
+    // Se não existe, cria agora com service role (bypassa RLS)
+    if (!marmoraria && nome) {
+      const { data: nova, error: insErr } = await apiSupabase
+        .from('marmorarias')
+        .insert({
+          owner_id:        user.id,
+          nome:            nome.trim(),
+          cnpj:            cnpj || null,
+          telefone:        telefone || null,
+          cidade:          cidade || null,
+          email:           emailForm || user.email,
+          plano,
+          trial_expira:    null,   // Stripe controla o trial
+          setup_concluido: true,
+        })
+        .select('id, email, trial_expira')
+        .single()
+
+      if (insErr) {
+        console.error('[checkout] marmoraria insert:', insErr.message)
+        return NextResponse.json({ error: 'Erro ao criar marmoraria' }, { status: 500 })
+      }
+      marmoraria = nova
+    }
 
     if (!marmoraria) return NextResponse.json({ error: 'Marmoraria não encontrada' }, { status: 404 })
 
-    const { data: assinatura } = await supabase
+    const marmoraria_id = marmoraria.id
+
+    const { data: assinatura } = await apiSupabase
       .from('assinaturas')
       .select('stripe_customer')
       .eq('marmoraria_id', marmoraria_id)
