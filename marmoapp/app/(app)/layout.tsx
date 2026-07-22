@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import Toast from '@/components/Toast'
@@ -31,6 +31,25 @@ const BOTTOM_NAV = [
   },
 ]
 
+function PaymentGate() {
+  const { marmoraria } = useApp()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (!marmoraria) return
+    // Vindo do Stripe com sucesso → dá um passe (webhook vai setar trial_expira em breve)
+    if (searchParams.get('checkout') === 'success') return
+    // Se trial_expira é null → nunca concluiu o pagamento
+    if (marmoraria.trial_expira === null) {
+      router.replace('/checkout')
+    }
+  }, [marmoraria, searchParams, router, pathname])
+
+  return null
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useApp()
   const { loading: authLoading } = useAuth()
@@ -56,6 +75,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {/* Gate de pagamento — redireciona se trial_expira === null */}
+      <Suspense fallback={null}><PaymentGate /></Suspense>
+
       {/* Mobile topbar */}
       <div className="mobile-topbar">
         <button

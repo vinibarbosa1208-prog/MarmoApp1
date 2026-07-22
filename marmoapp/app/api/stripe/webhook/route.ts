@@ -67,7 +67,15 @@ export async function POST(req: NextRequest) {
           { onConflict: 'marmoraria_id' }
         )
 
-        await supabase.from('marmorarias').update({ plano, ativo: true }).eq('id', marmoraria_id)
+        // Define trial_expira → sinaliza que pagamento foi concluído
+        const trialFim = new Date()
+        trialFim.setDate(trialFim.getDate() + 7)
+
+        await supabase.from('marmorarias').update({
+          plano,
+          ativo: true,
+          trial_expira: trialFim.toISOString(),
+        }).eq('id', marmoraria_id)
         break
       }
 
