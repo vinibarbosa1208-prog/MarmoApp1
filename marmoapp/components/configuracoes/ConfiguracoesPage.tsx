@@ -119,7 +119,7 @@ function NomeCorModal({
                 type="color"
                 value={cor}
                 onChange={e => setCor(e.target.value)}
-                style={{ width: 44, height: 36, border: '1.5px solid #eee', borderRadius: 8, cursor: 'pointer', padding: 2 }}
+                style={{ width: 44, height: 36, border: '1.5px solid var(--card-border)', borderRadius: 8, cursor: 'pointer', padding: 2 }}
               />
               <span style={{ fontSize: 13, color: 'var(--gray)' }}>{cor}</span>
             </div>
@@ -216,7 +216,7 @@ function CampoModal({
                   flexShrink: 0,
                 }}>
                   {obrigatorio && (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="3">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   )}

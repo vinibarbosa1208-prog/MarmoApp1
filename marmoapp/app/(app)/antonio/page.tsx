@@ -283,7 +283,7 @@ export default function AntonioPage() {
                 {sessions.map(s => (
                   <button key={s.id} onClick={() => carregarSessao(s)} style={{
                     background: s.id === currentSessionId ? '#FDF8F0' : 'transparent',
-                    border: `1px solid ${s.id === currentSessionId ? 'var(--gold)' : '#EDE9E2'}`,
+                    border: `1px solid ${s.id === currentSessionId ? 'var(--gold)' : 'var(--divider)'}`,
                     borderRadius: 8, padding: '10px 12px', cursor: 'pointer', textAlign: 'left', width: '100%',
                   }}>
                     <div style={{ fontSize: 12, color: 'var(--dark)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -300,10 +300,10 @@ export default function AntonioPage() {
         </div>
 
         {/* Coluna direita — Chat */}
-        <div style={{ display: 'flex', flexDirection: 'column', background: '#fff', borderRadius: 12, border: '1px solid #EDE9E2', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--card-bg)', borderRadius: 12, border: '1px solid var(--card-border)', overflow: 'hidden', minHeight: 0 }}>
 
           {/* Header do chat */}
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #EDE9E2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--divider)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Avatar size={36} />
               <div>
@@ -359,7 +359,7 @@ export default function AntonioPage() {
           </div>
 
           {/* Input */}
-          <div style={{ padding: '14px 20px', borderTop: '1px solid #EDE9E2', flexShrink: 0 }}>
+          <div style={{ padding: '14px 20px', borderTop: '1px solid var(--divider)', flexShrink: 0 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
               <button onClick={recording ? pararGravacao : iniciarGravacao} disabled={loading}
                 style={{

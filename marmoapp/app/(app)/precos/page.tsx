@@ -107,18 +107,19 @@ export default function PrecosPage() {
   }
 
   const tabStyle = (active: boolean) => ({
-    padding: '12px 28px', fontSize: 13.5, fontWeight: 700, border: 'none', cursor: 'pointer',
+    padding: '12px 28px', fontSize: 13.5, fontWeight: 600, border: 'none', cursor: 'pointer',
     fontFamily: 'DM Sans, sans-serif', transition: 'all 0.2s',
-    background: active ? 'var(--dark)' : 'transparent',
-    color: active ? 'var(--gold)' : '#888',
+    background: 'transparent',
+    color: active ? 'var(--text)' : 'var(--text-muted)',
     borderBottom: active ? '2px solid var(--gold)' : '2px solid transparent',
     marginBottom: -2,
   } as React.CSSProperties)
 
   const countBadge = (n: number, active: boolean) => ({
-    background: active ? 'var(--gold)' : '#ddd',
-    color: active ? 'var(--dark)' : '#666',
+    background: active ? 'rgba(201,168,76,0.15)' : 'var(--page-bg)',
+    color: active ? 'var(--gold)' : 'var(--text-muted)',
     fontSize: 11, padding: '2px 8px', borderRadius: 20, marginLeft: 6,
+    border: active ? '1px solid rgba(201,168,76,0.25)' : '1px solid var(--card-border)',
   } as React.CSSProperties)
 
   return (
@@ -133,7 +134,7 @@ export default function PrecosPage() {
       </div>
 
       <div className="card">
-        <div style={{ borderBottom: '2px solid #EDE9E2', display: 'flex' }}>
+        <div style={{ borderBottom: '1px solid var(--divider)', display: 'flex', padding: '0 4px' }}>
           <button style={tabStyle(tab === 'materiais')} onClick={() => setTab('materiais')}>
             🪨 Materiais <span style={countBadge(materiais.length, tab === 'materiais')}>{materiais.length}</span>
           </button>
@@ -149,7 +150,7 @@ export default function PrecosPage() {
             </div>
 
             {showNovoMat && (
-              <div style={{ background: '#f8f8f8', border: '1px solid #eee', borderRadius: 10, padding: '16px 20px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+              <div style={{ background: 'var(--page-bg)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '16px 20px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end' }}>
                 <div className="form-group" style={{ flex: 2 }}>
                   <label className="form-label">NOME</label>
                   <input className="form-input" placeholder="Ex: Mármore Branco" value={novoMat.nome} onChange={e => setNovoMat(f => ({ ...f, nome: e.target.value }))} />
@@ -171,34 +172,34 @@ export default function PrecosPage() {
 
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#F7F5F1' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#888', borderBottom: '1px solid #EDE9E2' }}>MATERIAL</th>
-                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#888', borderBottom: '1px solid #EDE9E2' }}>UNIDADE</th>
-                  <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#888', borderBottom: '1px solid #EDE9E2' }}>PREÇO PADRÃO</th>
-                  <th style={{ padding: '12px 16px', borderBottom: '1px solid #EDE9E2', width: 100 }}></th>
+                <tr style={{ background: 'var(--page-bg)' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', letterSpacing: '0.4px' }}>MATERIAL</th>
+                  <th style={{ textAlign: 'center', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', letterSpacing: '0.4px' }}>UNIDADE</th>
+                  <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', letterSpacing: '0.4px' }}>PREÇO PADRÃO</th>
+                  <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--divider)', width: 100 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {mats.length === 0 ? (
-                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: '#bbb' }}>Nenhum material cadastrado</td></tr>
+                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>Nenhum material cadastrado</td></tr>
                 ) : mats.map(m => (
-                  <tr key={m.id} style={{ borderBottom: '1px solid #F4F1EB' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{m.nome}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center', color: '#888' }}>{m.unidade}</td>
+                  <tr key={m.id} style={{ borderBottom: '1px solid var(--divider)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text)' }}>{m.nome}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>{m.unidade}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       {editingMatId === m.id ? (
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                           <input type="number" step="0.01" value={editingMatPreco}
                             onChange={e => setEditingMatPreco(e.target.value)}
-                            style={{ width: 100, padding: '6px 10px', border: '1.5px solid var(--gold)', borderRadius: 8, fontSize: 13, textAlign: 'right' }}
+                            style={{ width: 100, padding: '6px 10px', border: '1.5px solid var(--gold)', borderRadius: 8, fontSize: 13, textAlign: 'right', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }}
                             autoFocus onKeyDown={e => e.key === 'Enter' && salvarPrecoMat(m.id)} />
                           <button className="btn btn-gold btn-sm" onClick={() => salvarPrecoMat(m.id)}>✓</button>
                           <button className="btn btn-outline btn-sm" onClick={() => setEditingMatId(null)}>✕</button>
                         </div>
                       ) : (
                         <button onClick={() => { setEditingMatId(m.id); setEditingMatPreco(String(m.preco_padrao || m.preco || 0)) }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--dark)', fontSize: 14 }}>
-                          {fmt(m.preco_padrao || m.preco || 0)} <span style={{ color: '#aaa', fontSize: 11 }}>✏️</span>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--text)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {fmt(m.preco_padrao || m.preco || 0)} <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>✏️</span>
                         </button>
                       )}
                     </td>
@@ -219,7 +220,7 @@ export default function PrecosPage() {
             </div>
 
             {showNovoSrv && (
-              <div style={{ background: '#f8f8f8', border: '1px solid #eee', borderRadius: 10, padding: '16px 20px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end' }}>
+              <div style={{ background: 'var(--page-bg)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '16px 20px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end' }}>
                 <div className="form-group" style={{ flex: 2 }}>
                   <label className="form-label">NOME</label>
                   <input className="form-input" placeholder="Ex: Corte de mármore" value={novoSrv.nome} onChange={e => setNovoSrv(f => ({ ...f, nome: e.target.value }))} />
@@ -239,34 +240,34 @@ export default function PrecosPage() {
 
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#F7F5F1' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#888', borderBottom: '1px solid #EDE9E2' }}>SERVIÇO</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#888', borderBottom: '1px solid #EDE9E2' }}>DESCRIÇÃO</th>
-                  <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#888', borderBottom: '1px solid #EDE9E2' }}>PREÇO PADRÃO</th>
-                  <th style={{ padding: '12px 16px', borderBottom: '1px solid #EDE9E2', width: 100 }}></th>
+                <tr style={{ background: 'var(--page-bg)' }}>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', letterSpacing: '0.4px' }}>SERVIÇO</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', letterSpacing: '0.4px' }}>DESCRIÇÃO</th>
+                  <th style={{ textAlign: 'right', padding: '12px 16px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--divider)', letterSpacing: '0.4px' }}>PREÇO PADRÃO</th>
+                  <th style={{ padding: '12px 16px', borderBottom: '1px solid var(--divider)', width: 100 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {srvs.length === 0 ? (
-                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: '#bbb' }}>Nenhum serviço cadastrado</td></tr>
+                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>Nenhum serviço cadastrado</td></tr>
                 ) : srvs.map(s => (
-                  <tr key={s.id} style={{ borderBottom: '1px solid #F4F1EB' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{s.nome}</td>
-                    <td style={{ padding: '12px 16px', color: '#888', fontSize: 13 }}>{s.descricao || '—'}</td>
+                  <tr key={s.id} style={{ borderBottom: '1px solid var(--divider)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text)' }}>{s.nome}</td>
+                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: 13 }}>{s.descricao || '—'}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       {editingSrvId === s.id ? (
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                           <input type="number" step="0.01" value={editingSrvPreco}
                             onChange={e => setEditingSrvPreco(e.target.value)}
-                            style={{ width: 100, padding: '6px 10px', border: '1.5px solid var(--gold)', borderRadius: 8, fontSize: 13, textAlign: 'right' }}
+                            style={{ width: 100, padding: '6px 10px', border: '1.5px solid var(--gold)', borderRadius: 8, fontSize: 13, textAlign: 'right', background: 'var(--input-bg)', color: 'var(--text)', outline: 'none' }}
                             autoFocus onKeyDown={e => e.key === 'Enter' && salvarPrecoSrv(s.id)} />
                           <button className="btn btn-gold btn-sm" onClick={() => salvarPrecoSrv(s.id)}>✓</button>
                           <button className="btn btn-outline btn-sm" onClick={() => setEditingSrvId(null)}>✕</button>
                         </div>
                       ) : (
                         <button onClick={() => { setEditingSrvId(s.id); setEditingSrvPreco(String(s.preco_padrao || 0)) }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--dark)', fontSize: 14 }}>
-                          {fmt(s.preco_padrao || 0)} <span style={{ color: '#aaa', fontSize: 11 }}>✏️</span>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, color: 'var(--text)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {fmt(s.preco_padrao || 0)} <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>✏️</span>
                         </button>
                       )}
                     </td>

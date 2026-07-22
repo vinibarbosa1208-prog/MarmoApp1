@@ -327,17 +327,17 @@ function WizardProgress({ step, onJump }: { step: number; onJump: (s: number) =>
               <div style={{
                 width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 13, fontWeight: 700,
-                background: ativo ? 'var(--gold)' : concluido ? '#e8d9b0' : '#EDE9E2',
-                color: ativo ? '#fff' : concluido ? 'var(--dark)' : '#999',
+                background: ativo ? 'var(--gold)' : concluido ? 'rgba(201,168,76,0.2)' : 'var(--divider)',
+                color: ativo ? '#fff' : concluido ? 'var(--dark)' : 'var(--text-muted)',
               }}>
                 {concluido ? '✓' : n}
               </div>
-              <span style={{ fontSize: 13, fontWeight: ativo ? 700 : 500, color: ativo ? 'var(--dark)' : '#999' }}>
+              <span style={{ fontSize: 13, fontWeight: ativo ? 700 : 500, color: ativo ? 'var(--dark)' : 'var(--text-muted)' }}>
                 {n}. {nome}
               </span>
             </button>
             {n < ETAPAS.length && (
-              <span style={{ color: '#ccc', margin: '0 6px' }}>→</span>
+              <span style={{ color: 'var(--text-faint)', margin: '0 6px' }}>→</span>
             )}
           </div>
         )
@@ -455,24 +455,24 @@ function ClienteCombobox({
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4,
-          background: '#fff', border: '1px solid #EDE9E2', borderRadius: 8, maxHeight: 220, overflowY: 'auto',
+          background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto',
           boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
         }}>
           {filtered.length === 0 && (
-            <div style={{ padding: 10, fontSize: 13, color: '#888' }}>Nenhum cliente encontrado</div>
+            <div style={{ padding: 10, fontSize: 13, color: 'var(--text-muted)' }}>Nenhum cliente encontrado</div>
           )}
           {filtered.map(c => (
             <div
               key={c.id}
               onMouseDown={() => { onChange(c.id); setOpen(false) }}
-              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, background: c.id === value ? '#fef8ec' : 'transparent' }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, background: c.id === value ? 'rgba(201,168,76,0.08)' : 'transparent' }}
             >
               {c.nome}
             </div>
           ))}
           <div
             onMouseDown={() => { onNovoCliente(); setOpen(false) }}
-            style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--gold)', borderTop: '1px solid #EDE9E2' }}
+            style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--gold)', borderTop: '1px solid var(--divider)' }}
           >
             + Novo Cliente
           </div>
@@ -766,8 +766,8 @@ export default function NovoOrcamentoPage() {
 
   function renderFormItem() {
     return (
-      <div style={{ background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, padding: 16, marginTop: 12 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: editandoIdx !== null ? 'var(--gold)' : '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div style={{ background: 'var(--page-bg)', border: '1px solid var(--divider)', borderRadius: 10, padding: 16, marginTop: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: editandoIdx !== null ? 'var(--gold)' : 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {editandoIdx !== null ? '✏️ Editando Item' : 'Adicionar Item'}
         </div>
 
@@ -828,8 +828,8 @@ export default function NovoOrcamentoPage() {
               />
             )}
             {novoItem.tipo_peca && novoItem.tipo_peca !== 'lavatorio_extensao' && novoItem.tipo_peca !== 'lavatorio_simples' && novoItem.tipo_peca !== 'soleira' && novoItem.tipo_peca !== 'pia_l' && novoItem.tipo_peca !== 'pia_u' && (
-              <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
+              <div style={{ marginTop: 12, padding: 14, background: 'rgba(25,135,84,0.06)', border: '1px solid #b8ddd0', borderRadius: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
                 <div className="form-row form-row-2">
                   <div className="form-group">
                     <label className="form-label">LARGURA (m)</label>
@@ -860,22 +860,22 @@ export default function NovoOrcamentoPage() {
                   const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
                   const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
                   return (
-                    <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                    <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--card-bg)', borderRadius: 8, border: '1px solid rgba(25,135,84,0.2)', fontSize: 13 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ color: '#555' }}>Piso</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Piso</span>
                         <span style={{ fontFamily: 'monospace' }}>{d(w)} × {d(lp / 100)} × {n} degraus = <strong>{d(piso)} m²</strong></span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
                         <span>Espelho</span>
                         <span style={{ fontFamily: 'monospace' }}>{d(w)} × {d(ae / 100)} × {n} degraus = <strong>{d(espelho)} m²</strong></span>
                       </div>
-                      <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                      <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                         <span>Total</span>
                         <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
                       </div>
                       {novoItem.custo_m2 > 0 && (
-                        <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                        <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 12, marginBottom: 3 }}>
                             <span>Custo</span>
                             <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
                           </div>
@@ -896,39 +896,39 @@ export default function NovoOrcamentoPage() {
                   const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
                   const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
                   return (
-                    <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                    <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--card-bg)', borderRadius: 8, border: '1px solid rgba(25,135,84,0.2)', fontSize: 13 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ color: '#555' }}>Tampo</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Tampo</span>
                         <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura)} = <strong>{d(tampo)} m²</strong></span>
                       </div>
                       {novoItem.tem_frontao && novoItem.altura_frontao > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
                           <span>Frontão</span>
                           <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_frontao)} = <strong>{d(frontao)} m²</strong></span>
                         </div>
                       )}
                       {novoItem.tem_saia && novoItem.altura_saia > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
                           <span>Saia</span>
                           <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_saia)} = <strong>{d(saia)} m²</strong></span>
                         </div>
                       )}
-                      <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                      <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                         <span>Total</span>
                         <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
                       </div>
                       {(() => {
                         const ml = calcAcabamentoLinear(novoItem)
                         return ml > 0 ? (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: '#7A6A4A', background: '#FDF8F0', border: '1px solid #E8D9B0', borderRadius: 6, padding: '5px 10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: 'var(--gold)', background: 'rgba(201,168,76,0.06)', border: '1px solid #E8D9B0', borderRadius: 6, padding: '5px 10px' }}>
                             <span>Acabamento necessário</span>
                             <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{d(ml)} ml (meia esquadria)</span>
                           </div>
                         ) : null
                       })()}
                       {novoItem.custo_m2 > 0 && (
-                        <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                        <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 12, marginBottom: 3 }}>
                             <span>Custo</span>
                             <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
                           </div>
@@ -965,24 +965,24 @@ export default function NovoOrcamentoPage() {
                 if ((ex[`saia_${lat}`] as boolean) && altSaia > 0) { const area = len * altSaia; extras.push({ label: `Saia ${latLabels[lat]}`, area }); total += area }
               }
               return (
-                <div style={{ margin: '8px 16px 0', padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                <div style={{ margin: '8px 16px 0', padding: '10px 12px', background: 'var(--card-bg)', borderRadius: 8, border: '1px solid rgba(25,135,84,0.2)', fontSize: 13 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: extras.length ? 4 : 0 }}>
-                    <span style={{ color: '#555' }}>Tampo</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>Tampo</span>
                     <span style={{ fontFamily: 'monospace' }}>{d(comp)} × {d(prof)} = <strong>{d(tampo)} m²</strong></span>
                   </div>
                   {extras.map(({ label, area }, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
                       <span>{label}</span>
                       <span style={{ fontFamily: 'monospace' }}><strong>{d(area)} m²</strong></span>
                     </div>
                   ))}
-                  <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                  <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                     <span>Total</span>
                     <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
                   </div>
                   {novoItem.custo_m2 > 0 && (
-                    <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                    <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 12, marginBottom: 3 }}>
                         <span>Custo</span>
                         <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(total * novoItem.quantidade * novoItem.custo_m2)}</strong></span>
                       </div>
@@ -1049,32 +1049,32 @@ export default function NovoOrcamentoPage() {
               }
 
               return (
-                <div style={{ margin: '8px 16px 0', padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
+                <div style={{ margin: '8px 16px 0', padding: '10px 12px', background: 'var(--card-bg)', borderRadius: 8, border: '1px solid rgba(25,135,84,0.2)', fontSize: 13 }}>
                   {segs.map((seg, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ color: '#555' }}>{seg.label}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{seg.label}</span>
                       <span style={{ fontFamily: 'monospace' }}>{d(seg.c)} × {d(seg.p)} = <strong>{d(seg.c * seg.p)} m²</strong></span>
                     </div>
                   ))}
                   {extras.map(({ label, area }, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
                       <span>{label}</span>
                       <span style={{ fontFamily: 'monospace' }}><strong>{d(area)} m²</strong></span>
                     </div>
                   ))}
-                  <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                  <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                     <span>Total</span>
                     <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
                   </div>
                   {mlEsquadria > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: '#7A6A4A', background: '#FDF8F0', border: '1px solid #E8D9B0', borderRadius: 6, padding: '5px 10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: 'var(--gold)', background: 'rgba(201,168,76,0.06)', border: '1px solid #E8D9B0', borderRadius: 6, padding: '5px 10px' }}>
                       <span>Acabamento meia esquadria</span>
                       <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{d(mlEsquadria)} ml</span>
                     </div>
                   )}
                   {novoItem.custo_m2 > 0 && (
-                    <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
+                    <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: 12, marginBottom: 3 }}>
                         <span>Custo</span>
                         <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(total * novoItem.quantidade * novoItem.custo_m2)}</strong></span>
                       </div>
@@ -1167,7 +1167,7 @@ export default function NovoOrcamentoPage() {
 
         {/* Alternativa de material (Opção B) */}
         {novoItem.tipo === 'material' && editandoIdx === null && (
-          <div style={{ marginTop: 14, borderTop: '1px dashed #EDE9E2', paddingTop: 12 }}>
+          <div style={{ marginTop: 14, borderTop: '1px dashed var(--divider)', paddingTop: 12 }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
               <input
                 type="checkbox"
@@ -1175,12 +1175,12 @@ export default function NovoOrcamentoPage() {
                 onChange={e => upItem({ mostrarAlternativa: e.target.checked, mat_alternativo: '', preco_alternativo: 0 })}
                 style={{ width: 'auto', accentColor: 'var(--gold)' }}
               />
-              <span style={{ fontSize: 13, color: '#555', fontWeight: 500 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
                 Incluir 2ª opção de material para comparação
               </span>
             </label>
             {novoItem.mostrarAlternativa && (
-              <div style={{ marginTop: 10, background: '#fff8f0', border: '1px solid #f0d9c0', borderRadius: 8, padding: 12 }}>
+              <div style={{ marginTop: 10, background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 8, padding: 12 }}>
                 <div style={{ fontSize: 11, color: '#8B6914', fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Opção B — Material Alternativo
                 </div>
@@ -1208,7 +1208,7 @@ export default function NovoOrcamentoPage() {
                     />
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                   Mesmas dimensões, peça e acabamentos do item principal. Serão adicionados como Opção A e Opção B.
                 </div>
               </div>
@@ -1300,7 +1300,7 @@ export default function NovoOrcamentoPage() {
                 {ambientes.map(a => (
                   <span key={a} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20,
-                    background: '#fef8ec', border: '1.5px solid var(--gold)', fontSize: 13, fontWeight: 600, color: 'var(--dark)',
+                    background: 'rgba(201,168,76,0.08)', border: '1.5px solid var(--gold)', fontSize: 13, fontWeight: 600, color: 'var(--dark)',
                   }}>
                     {a}
                     <button type="button" onClick={() => removerAmbiente(a)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c0392b', fontWeight: 700, padding: 0, lineHeight: 1 }}>×</button>
@@ -1324,7 +1324,7 @@ export default function NovoOrcamentoPage() {
             </div>
 
             <div style={{ marginTop: 10 }}>
-              <span style={{ fontSize: 12, color: '#888', marginRight: 8 }}>Sugestões:</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 8 }}>Sugestões:</span>
               <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                 {AMBIENTE_SUGESTOES.map(s => (
                   <button key={s} type="button" onClick={() => addAmbiente(s)} className="btn btn-outline btn-sm" disabled={ambientes.some(a => a.toLowerCase() === s.toLowerCase())}>
@@ -1359,7 +1359,7 @@ export default function NovoOrcamentoPage() {
                 </div>
                 <div className="card-body">
                   {itensAmbiente.length === 0 ? (
-                    <p style={{ color: '#999', fontSize: 13, fontStyle: 'italic' }}>(vazio — clique em + Adicionar Item)</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>(vazio — clique em + Adicionar Item)</p>
                   ) : (
                     <table>
                       <thead>
@@ -1401,7 +1401,7 @@ export default function NovoOrcamentoPage() {
                           </tr>
                         ))}
                         <tr>
-                          <td colSpan={4} style={{ textAlign: 'right', fontWeight: 700, color: '#888' }}>Subtotal {amb}:</td>
+                          <td colSpan={4} style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text-muted)' }}>Subtotal {amb}:</td>
                           <td className="font-bold" colSpan={2}>{fmt(subtotalAmbiente)}</td>
                         </tr>
                       </tbody>
@@ -1428,8 +1428,8 @@ export default function NovoOrcamentoPage() {
               <div className="card-body">
                 <div style={{ marginBottom: 6 }}><strong>CLIENTE:</strong> {clienteSelecionado?.nome || '—'}</div>
                 <div><strong>TÍTULO:</strong> {form.descricao || '—'}</div>
-                {form.condicao_pagamento && <div style={{ marginTop: 6, fontSize: 13, color: '#777' }}>Condição de pagamento: {form.condicao_pagamento}</div>}
-                {form.validade && <div style={{ fontSize: 13, color: '#777' }}>Validade: {form.validade}</div>}
+                {form.condicao_pagamento && <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-muted)' }}>Condição de pagamento: {form.condicao_pagamento}</div>}
+                {form.validade && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Validade: {form.validade}</div>}
               </div>
             </div>
 
@@ -1452,7 +1452,7 @@ export default function NovoOrcamentoPage() {
                         </div>
                       ))}
                     </div>
-                    <hr style={{ border: 'none', borderTop: '1px solid #EDE9E2', margin: '10px 0' }} />
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--divider)', margin: '10px 0' }} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                       <span>Subtotal {amb}</span>
                       <span>{fmt(subtotalAmbiente)}</span>
@@ -1481,7 +1481,7 @@ export default function NovoOrcamentoPage() {
                     </>
                   ) : (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                      <span style={{ color: '#888' }}>Subtotal</span>
+                      <span style={{ color: 'var(--text-muted)' }}>Subtotal</span>
                       <strong>{fmt(subtotal)}</strong>
                     </div>
                   )}

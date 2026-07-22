@@ -82,7 +82,7 @@ function LadoConfig({
   const nome = lado.charAt(0).toUpperCase() + lado.slice(1)
 
   return (
-    <div style={{ paddingBottom: 10, borderBottom: '1px solid #EDE9E2' }}>
+    <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--divider)' }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.05em', marginBottom: 5 }}>
         {nome.toUpperCase()}
       </div>
@@ -98,7 +98,7 @@ function LadoConfig({
               fontSize: 11,
               fontWeight: opcao === op.value ? 700 : 500,
               cursor: 'pointer',
-              border: `1.5px solid ${opcao === op.value ? 'var(--gold)' : '#EDE9E2'}`,
+              border: `1.5px solid ${opcao === op.value ? 'var(--gold)' : 'var(--divider)'}`,
               background: opcao === op.value ? '#fef8ec' : '#fff',
               color: opcao === op.value ? 'var(--dark)' : '#666',
               transition: 'border-color 0.1s, background 0.1s',
@@ -310,7 +310,7 @@ export default function SeletorPeca(props: Props) {
               onClick={() => onChange({ tipo_peca: id, tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0, dados_extras: {} })}
               style={{
                 background: selected ? '#fef8ec' : '#fff',
-                border: `2px solid ${selected ? 'var(--gold)' : '#EDE9E2'}`,
+                border: `2px solid ${selected ? 'var(--gold)' : 'var(--divider)'}`,
                 borderRadius: 8,
                 padding: '8px 6px 6px',
                 cursor: 'pointer',
@@ -331,7 +331,7 @@ export default function SeletorPeca(props: Props) {
       )}
 
       {tipo_peca && (
-        <div style={{ marginTop: 12, padding: 14, background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ marginTop: 12, padding: 14, background: 'var(--page-bg)', border: '1px solid var(--card-border)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* ── Bancada — configuração por lado ── */}
           {peca === 'bancada_simples' && (
@@ -366,7 +366,7 @@ export default function SeletorPeca(props: Props) {
                         padding: '10px 14px',
                         borderRadius: 8,
                         cursor: 'pointer',
-                        border: `2px solid ${sel ? 'var(--gold)' : '#EDE9E2'}`,
+                        border: `2px solid ${sel ? 'var(--gold)' : 'var(--divider)'}`,
                         background: sel ? '#fef8ec' : '#fff',
                         transition: 'border-color 0.15s, background 0.15s',
                         textAlign: 'left',
@@ -714,7 +714,7 @@ export default function SeletorPeca(props: Props) {
                         onClick={() => setExtra('extensao_lado', lado)}
                         style={{
                           padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          border: `2px solid ${sel ? 'var(--gold)' : '#EDE9E2'}`,
+                          border: `2px solid ${sel ? 'var(--gold)' : 'var(--divider)'}`,
                           background: sel ? '#fef8ec' : '#fff',
                           color: sel ? 'var(--dark)' : '#888',
                         }}>

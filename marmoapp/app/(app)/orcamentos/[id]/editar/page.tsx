@@ -450,7 +450,7 @@ export default function EditarOrcamentoPage() {
           <div className="card">
             <div className="card-header"><span className="card-title">Itens</span></div>
             <div className="card-body">
-              <div style={{ background: '#f9f7f3', border: '1px solid #EDE9E2', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+              <div style={{ background: 'var(--page-bg)', border: '1px solid var(--card-border)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: editandoIdx !== null ? 'var(--gold)' : '#888', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {editandoIdx !== null ? `✏️ Editando item ${editandoIdx + 1}` : 'Adicionar Item'}
                 </div>
@@ -731,14 +731,14 @@ export default function EditarOrcamentoPage() {
                           const allSel = indices.every(i => selecionados.has(i))
                           return (
                             <button key={desc} onClick={() => selecionarMesmoMaterial(desc)}
-                              style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: allSel ? '1.5px solid var(--gold)' : '1.5px solid #ccc', background: allSel ? '#fffbf0' : '#fff', color: allSel ? 'var(--gold)' : '#555', cursor: 'pointer', fontWeight: allSel ? 700 : 400 }}>
+                              style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: allSel ? '1.5px solid var(--gold)' : '1.5px solid var(--card-border)', background: allSel ? 'rgba(201,168,76,0.06)' : 'var(--card-bg)', color: allSel ? 'var(--gold)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: allSel ? 700 : 400 }}>
                               {desc} ({indices.length})
                             </button>
                           )
                         })}
                         {selecionados.size > 0 && (
                           <button onClick={() => setSelecionados(new Set())}
-                            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1.5px solid #ccc', background: '#fff', color: '#888', cursor: 'pointer' }}>
+                            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1.5px solid var(--card-border)', background: 'var(--card-bg)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                             Limpar seleção
                           </button>
                         )}
@@ -798,7 +798,7 @@ export default function EditarOrcamentoPage() {
               {selecionados.size > 0 && (
                 <div style={{
                   position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-                  background: '#1a1a2e', color: '#fff', borderRadius: 16, padding: '14px 20px',
+                  background: 'var(--sidebar-bg)', color: '#fff', borderRadius: 16, padding: '14px 20px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.35)', zIndex: 1000,
                   display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', maxWidth: 780,
                 }}>
@@ -809,7 +809,7 @@ export default function EditarOrcamentoPage() {
                     placeholder="Novo material"
                     value={lote.novoMaterial}
                     onChange={e => setLote(l => ({ ...l, novoMaterial: e.target.value }))}
-                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 150, background: '#2a2a3e', color: '#fff' }}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 150, background: 'rgba(255,255,255,0.08)', color: '#fff' }}
                   />
                   <input
                     placeholder="Custo R$/m²"
@@ -818,7 +818,7 @@ export default function EditarOrcamentoPage() {
                     step="0.01"
                     value={lote.custo_m2}
                     onChange={e => setLote(l => ({ ...l, custo_m2: e.target.value }))}
-                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 110, background: '#2a2a3e', color: '#fff' }}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 110, background: 'rgba(255,255,255,0.08)', color: '#fff' }}
                   />
                   <input
                     placeholder="Fator (×)"
@@ -827,7 +827,7 @@ export default function EditarOrcamentoPage() {
                     step="0.5"
                     value={lote.markup}
                     onChange={e => setLote(l => ({ ...l, markup: e.target.value }))}
-                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 90, background: '#2a2a3e', color: '#fff' }}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 90, background: 'rgba(255,255,255,0.08)', color: '#fff' }}
                   />
                   <input
                     placeholder="Preço venda"
@@ -836,14 +836,14 @@ export default function EditarOrcamentoPage() {
                     step="0.01"
                     value={lote.preco_unitario}
                     onChange={e => setLote(l => ({ ...l, preco_unitario: e.target.value }))}
-                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 110, background: '#2a2a3e', color: '#fff' }}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: 'none', fontSize: 13, width: 110, background: 'rgba(255,255,255,0.08)', color: '#fff' }}
                   />
                   <button onClick={aplicarLote}
                     style={{ padding: '7px 18px', borderRadius: 10, background: 'var(--gold)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Aplicar
                   </button>
                   <button onClick={() => { setSelecionados(new Set()); setLote({ novoMaterial: '', custo_m2: '', markup: '', preco_unitario: '' }) }}
-                    style={{ padding: '7px 14px', borderRadius: 10, background: 'transparent', color: '#aaa', border: '1.5px solid #444', fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    style={{ padding: '7px 14px', borderRadius: 10, background: 'transparent', color: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(255,255,255,0.2)', fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Cancelar
                   </button>
                 </div>

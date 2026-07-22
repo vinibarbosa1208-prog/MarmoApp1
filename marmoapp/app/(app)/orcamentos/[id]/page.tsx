@@ -182,7 +182,7 @@ export default function VerOrcamentoPage() {
                 className="btn"
                 onClick={excluirOrcamento}
                 disabled={deleting}
-                style={{ background: '#c0392b', color: '#fff', border: 'none' }}
+                style={{ background: 'var(--red)', color: '#fff', border: 'none' }}
               >
                 {deleting ? 'Excluindo...' : 'Excluir'}
               </button>
@@ -201,7 +201,7 @@ export default function VerOrcamentoPage() {
           <button
             className="btn btn-outline"
             onClick={() => setShowDeleteModal(true)}
-            style={{ color: '#c0392b', borderColor: '#c0392b' }}
+            style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
           >🗑️ Excluir</button>
           <button className="btn btn-outline" onClick={visualizarPDF} disabled={busy}>
             {generatingPdf ? 'Gerando...' : '👁️ Ver PDF'}
@@ -241,7 +241,7 @@ export default function VerOrcamentoPage() {
                 )}
               </div>
               {orc.observacoes && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #EDE9E2' }}>
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Observações</div>
                   <div style={{ fontSize: 13, whiteSpace: 'pre-wrap', color: 'var(--dark)' }}>{orc.observacoes}</div>
                 </div>
@@ -296,7 +296,7 @@ export default function VerOrcamentoPage() {
                 {desconto > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                     <span style={{ color: 'var(--gray)' }}>Desconto</span>
-                    <strong style={{ color: '#c0392b' }}>– {fmt(desconto)}</strong>
+                    <strong style={{ color: 'var(--red)' }}>– {fmt(desconto)}</strong>
                   </div>
                 )}
                 <hr style={{ border: 'none', borderTop: '2px solid var(--gold)', margin: '2px 0' }} />

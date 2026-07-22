@@ -180,7 +180,7 @@ export default function FilaPage() {
           const etapaAnterior = idx > 0 ? PIPELINE[idx - 1] : null
 
           return (
-            <div key={etapa.id} style={{ minWidth: 200, flex: 1, background: '#f7f7f7', borderRadius: 10, overflow: 'hidden' }}>
+            <div key={etapa.id} style={{ minWidth: 200, flex: 1, background: 'var(--page-bg)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--card-border)' }}>
               <div style={{ background: etapa.cor, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{etapa.label}</span>
                 <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
@@ -190,16 +190,16 @@ export default function FilaPage() {
 
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {cards.length === 0 ? (
-                  <div style={{ padding: 20, textAlign: 'center', color: '#ccc', fontSize: 12 }}>Nenhum pedido</div>
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-faint)', fontSize: 12 }}>Nenhum pedido</div>
                 ) : cards.map(o => {
                   const cli = clientes.find(c => c.id === (o.clienteId || o.cliente_id))
                   const totalVal = orcTotal(o)
                   return (
                     <div key={o.id} style={{ background: '#fff', borderRadius: 8, padding: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${etapa.cor}` }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A', marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
                         {o.descricao || `Orç. #${o.numero || o.id.slice(0,6)}`}
                       </div>
-                      <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>{cli?.nome || '—'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{cli?.nome || '—'}</div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: etapa.cor, marginBottom: 8 }}>{fmt(totalVal)}</div>
                       {etapa.id === 'instalacao' && (
                         <button
@@ -212,7 +212,7 @@ export default function FilaPage() {
                       {etapaAnterior && (
                         <button
                           onClick={() => voltar(o.id, etapaAnterior.id, etapaAnterior.label)}
-                          style={{ width: '100%', background: '#fff', border: '1px solid #ddd', borderRadius: 6, padding: 6, color: '#666', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}
+                          style={{ width: '100%', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 6, padding: 6, color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}
                         >
                           ← {etapaAnterior.label}
                         </button>
@@ -225,7 +225,7 @@ export default function FilaPage() {
                           → {proxEtapa.label}
                         </button>
                       ) : (
-                        <div style={{ textAlign: 'center', fontSize: 11, color: '#27AE60', fontWeight: 700 }}>✅ Concluído</div>
+                        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>✅ Concluído</div>
                       )}
                     </div>
                   )

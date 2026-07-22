@@ -39,7 +39,7 @@ function ModalConfirmarExclusao({ numero, onConfirm, onCancel, busy }: {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button className="btn btn-outline" onClick={onCancel} disabled={busy}>Cancelar</button>
           <button className="btn" onClick={onConfirm} disabled={busy}
-            style={{ background: '#c0392b', color: '#fff', border: 'none' }}>
+            style={{ background: 'var(--red)', color: '#fff', border: 'none' }}>
             {busy ? 'Excluindo...' : 'Excluir'}
           </button>
         </div>
@@ -182,7 +182,7 @@ export default function OrcamentosPage() {
                         value={crmStatus}
                         onChange={e => atualizarCRM(o.id, e.target.value)}
                         style={{
-                          background: '#fff', border: `1.5px solid ${CRM_COLORS[crmStatus] || '#EDE9E2'}`,
+                          background: '#fff', border: `1.5px solid ${CRM_COLORS[crmStatus] || 'var(--divider)'}`,
                           color: CRM_COLORS[crmStatus] || '#888', borderRadius: 6,
                           padding: '4px 8px', fontSize: 11, cursor: 'pointer', fontWeight: 600,
                         }}
@@ -208,7 +208,7 @@ export default function OrcamentosPage() {
                           className="btn btn-ghost btn-sm btn-icon"
                           title="Excluir"
                           onClick={() => setDeleteTarget({ id: o.id, numero: `ORC-${new Date(o.created_at).getFullYear()}-${String(o.numero ?? 0).padStart(4, '0')}` })}
-                          style={{ color: '#c0392b' }}
+                          style={{ color: 'var(--red)' }}
                         >🗑️</button>
                       </div>
                     </td>

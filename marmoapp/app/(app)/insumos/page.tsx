@@ -557,7 +557,7 @@ function AbaPedidos() {
       {/* Barra de ação em lote */}
       {selecionados.size > 0 && (
         <div style={{
-          background: '#1e293b', color: '#fff', borderRadius: 10, padding: '12px 20px',
+          background: 'var(--sidebar-bg)', color: '#fff', borderRadius: 10, padding: '12px 20px',
           display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12,
         }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{selecionados.size} pedido(s) selecionado(s) — {fmt(totalSelecionados)}</span>

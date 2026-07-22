@@ -46,6 +46,9 @@
     --gray: #6B7280;
     --marble: #F9FAFB;
     --marble2: #E5E7EB;
+    --gray2: #9CA3AF;
+    --light: #F9FAFB;
+    --border: #E5E7EB;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--page-bg); color: var(--text); min-height: 100vh; }

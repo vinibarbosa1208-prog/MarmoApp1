@@ -118,7 +118,7 @@ export default function AcabamentosLaterais({
           return (
             <div key={lateral} style={{
               padding: '10px 12px',
-              border: `1.5px solid ${hasError ? '#c0392b' : '#EDE9E2'}`,
+              border: `1.5px solid ${hasError ? 'var(--red)' : 'var(--divider)'}`,
               borderRadius: 8,
               background: hasError ? '#fff5f5' : '#fff',
             }}>
@@ -144,7 +144,7 @@ export default function AcabamentosLaterais({
                         }}
                         title={ACABAMENTO_LABELS[tipo]}
                         style={{
-                          border: `2px solid ${sel ? 'var(--gold)' : '#EDE9E2'}`,
+                          border: `2px solid ${sel ? 'var(--gold)' : 'var(--divider)'}`,
                           borderRadius: 6,
                           background: sel ? '#fef8ec' : '#fff',
                           padding: '4px 6px',
