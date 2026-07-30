@@ -68,11 +68,14 @@ function PaymentGate() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useApp()
-  const { loading: authLoading } = useAuth()
+  const { user, marmoraria } = useApp()
+  const { loading: authLoading, marmorariaId } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Mostra loading enquanto auth ou marmoraria ainda carregam
+  const isLoading = authLoading || (!!marmorariaId && !marmoraria)
 
   useEffect(() => {
     // Aguarda auth carregar completamente antes de redirecionar
@@ -89,6 +92,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--page-bg)',
+        flexDirection: 'column',
+        gap: 16,
+      }}>
+        <div style={{
+          width: 40, height: 40, border: '3px solid var(--card-border)',
+          borderTopColor: 'var(--gold)', borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <img src="/logo-marmoapp.jpg" alt="MarmoApp" style={{ height: 28, opacity: 0.6 }} />
+      </div>
+    )
+  }
 
   return (
     <>
