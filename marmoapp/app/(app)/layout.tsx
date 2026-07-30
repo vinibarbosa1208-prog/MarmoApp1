@@ -33,6 +33,7 @@ const BOTTOM_NAV = [
 
 function PaymentGate() {
   const { marmoraria } = useApp()
+  const { loading: authLoading, marmorariaId } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -43,14 +44,25 @@ function PaymentGate() {
   }
 
   useEffect(() => {
-    if (!marmoraria) return
-    // Veio do Stripe agora — não bloqueia (webhook ainda não refletiu no AppContext)
+    // Aguarda auth terminar de carregar
+    if (authLoading) return
+    // Veio do Stripe agora — não bloqueia
     if (fromCheckout.current) return
+
+    // Auth carregou mas usuário não tem marmoraria vinculada → enviar para cadastro
+    if (!marmorariaId && !marmoraria) {
+      router.replace('/cadastro')
+      return
+    }
+
+    // marmorariaId existe mas marmoraria ainda carregando do banco → aguardar
+    if (!marmoraria) return
+
     // Se trial_expira é null → nunca concluiu o pagamento
     if (marmoraria.trial_expira === null) {
       router.replace('/checkout')
     }
-  }, [marmoraria, searchParams, router, pathname])
+  }, [marmoraria, marmorariaId, authLoading, searchParams, router, pathname])
 
   return null
 }
