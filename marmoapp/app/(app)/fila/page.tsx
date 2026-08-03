@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useApp } from '@/contexts/AppContext'
-import { fmt, orcTotal } from '@/lib/utils'
+import { fmt, orcTotal, areaCortadaItens, mlAcabamentoItens } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
 interface Funcionario { id: string; nome: string; cargo: string; valor_metro_linear: number | null; ativo: boolean }
@@ -186,7 +186,7 @@ const FILA_TO_ETAPA: Record<string, string> = {
 }
 
 export default function FilaPage() {
-  const { orcamentos, clientes, loadOrcamentos, toast } = useApp()
+  const { orcamentos, clientes, marmoraria, loadOrcamentos, toast } = useApp()
   const [instaladores, setInstaladores] = useState<Funcionario[]>([])
   const [instalarModal, setInstalarModal] = useState<{ open: boolean; orcId: string; orcLabel: string }>({ open: false, orcId: '', orcLabel: '' })
   const [previsaoModal, setPrevisaoModal] = useState<{ open: boolean; orcId: string; orcLabel: string; dataAtual: string }>({ open: false, orcId: '', orcLabel: '', dataAtual: '' })
@@ -214,7 +214,7 @@ export default function FilaPage() {
     .filter(a => a.dias <= 7)
     .sort((a, b) => a.dias - b.dias)
 
-  async function avancar(orcId: string, novoStatus: string) {
+  async function avancar(orcId: string, novoStatus: string, etapaAtual: string) {
     // Saindo de Comercial pra Corte: pede a data prevista de instalação antes de avançar
     if (novoStatus === 'corte') {
       const orc = ativos.find(o => o.id === orcId)
@@ -226,10 +226,33 @@ export default function FilaPage() {
       })
       return
     }
-    await avancarConfirmado(orcId, novoStatus)
+    await avancarConfirmado(orcId, novoStatus, etapaAtual)
   }
 
-  async function avancarConfirmado(orcId: string, novoStatus: string, dataPrevista?: string) {
+  // Apontamento automático de PCP: ao sair de Corte ou Acabamento, mede
+  // quanto foi processado usando os próprios itens do orçamento — sem
+  // precisar de nenhum preenchimento manual.
+  async function registrarApontamentoPCP(orcId: string, etapaSaindo: string) {
+    if (etapaSaindo !== 'corte' && etapaSaindo !== 'acabamento') return
+    if (!marmoraria) return
+    const { data: itensOrc } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcId)
+    if (!itensOrc || itensOrc.length === 0) return
+
+    const quantidade = etapaSaindo === 'corte' ? areaCortadaItens(itensOrc) : mlAcabamentoItens(itensOrc)
+    if (quantidade <= 0) return
+
+    await supabase.from('producao_apontamentos').insert({
+      marmoraria_id: marmoraria.id,
+      orcamento_id: orcId,
+      etapa: etapaSaindo,
+      quantidade,
+      unidade: etapaSaindo === 'corte' ? 'm2' : 'ml',
+      data: new Date().toISOString().split('T')[0],
+      origem: 'automatico',
+    })
+  }
+
+  async function avancarConfirmado(orcId: string, novoStatus: string, etapaAtual: string, dataPrevista?: string) {
     const payload: Record<string, unknown> = {
       producao_status: novoStatus,
       producao_status_atualizado_em: new Date().toISOString(),
@@ -238,6 +261,7 @@ export default function FilaPage() {
 
     const { error } = await supabase.from('orcamentos').update(payload).eq('id', orcId)
     if (error) { toast('Erro: ' + error.message, 'err'); return }
+    await registrarApontamentoPCP(orcId, etapaAtual)
     const etapa = FILA_TO_ETAPA[novoStatus]
     const projetoId = projetoMap[orcId]
     if (etapa && projetoId) {
@@ -368,7 +392,7 @@ export default function FilaPage() {
                       )}
                       {proxEtapa ? (
                         <button
-                          onClick={() => avancar(o.id, proxEtapa.id)}
+                          onClick={() => avancar(o.id, proxEtapa.id, etapa.id)}
                           style={{ width: '100%', background: etapa.cor, border: 'none', borderRadius: 6, padding: 6, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
                         >
                           → {proxEtapa.label}
@@ -401,7 +425,7 @@ export default function FilaPage() {
           dataInicial={previsaoModal.dataAtual}
           onCancelar={() => setPrevisaoModal({ open: false, orcId: '', orcLabel: '', dataAtual: '' })}
           onConfirmar={(data) => {
-            avancarConfirmado(previsaoModal.orcId, 'corte', data)
+            avancarConfirmado(previsaoModal.orcId, 'corte', 'comercial', data)
             setPrevisaoModal({ open: false, orcId: '', orcLabel: '', dataAtual: '' })
           }}
         />
