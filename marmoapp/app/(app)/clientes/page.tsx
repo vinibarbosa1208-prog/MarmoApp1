@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useApp } from '@/contexts/AppContext'
 import { fmt, orcTotal, formatPhone, fetchCEP } from '@/lib/utils'
@@ -165,6 +166,7 @@ export default function ClientesPage() {
   const { clientes, orcamentos, marmoraria, loadClientes, toast } = useApp()
 
   const [query, setQuery] = useState('')
+  const [ranking, setRanking] = useState(false)
   const [modal, setModal] = useState<{ open: boolean; cliente: Cliente | null }>({ open: false, cliente: null })
 
   const filtered = clientes.filter(c =>
@@ -174,6 +176,15 @@ export default function ClientesPage() {
   function clienteOrcs(id: string) {
     return orcamentos.filter(o => (o.clienteId || o.cliente_id) === id && o.status === 'aprovado')
   }
+
+  // No modo ranking, ordena do cliente que mais comprou pro que menos comprou
+  const listados = ranking
+    ? [...filtered].sort((a, b) => {
+        const totalA = clienteOrcs(a.id).reduce((s, o) => s + orcTotal(o), 0)
+        const totalB = clienteOrcs(b.id).reduce((s, o) => s + orcTotal(o), 0)
+        return totalB - totalA
+      })
+    : filtered
 
   async function excluir(id: string) {
     if (!confirm('Excluir este cliente?')) return
@@ -186,12 +197,17 @@ export default function ClientesPage() {
     <div className="page-inner">
       <div className="page-header">
         <h1 className="page-title">Clientes</h1>
-        <button className="btn btn-gold" onClick={() => setModal({ open: true, cliente: null })}>+ Novo Cliente</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className={`btn ${ranking ? 'btn-gold' : 'btn-outline'}`} onClick={() => setRanking(r => !r)}>
+            🏆 {ranking ? 'Ver por Nome' : 'Ver Ranking'}
+          </button>
+          <button className="btn btn-gold" onClick={() => setModal({ open: true, cliente: null })}>+ Novo Cliente</button>
+        </div>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <span className="card-title">Base de Clientes</span>
+          <span className="card-title">{ranking ? 'Ranking — Quem Mais Comprou' : 'Base de Clientes'}</span>
           <div className="search-bar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -204,19 +220,24 @@ export default function ClientesPage() {
           <table>
             <thead>
               <tr>
+                {ranking && <th>#</th>}
                 <th>Nome</th><th>Tipo</th><th>Telefone</th><th>Origem</th>
                 <th>Orçamentos</th><th>Total Gasto</th><th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7}><div className="empty-state"><h3>Nenhum cliente</h3><p>Cadastre seu primeiro cliente</p></div></td></tr>
-              ) : filtered.map(c => {
+              {listados.length === 0 ? (
+                <tr><td colSpan={ranking ? 8 : 7}><div className="empty-state"><h3>Nenhum cliente</h3><p>Cadastre seu primeiro cliente</p></div></td></tr>
+              ) : listados.map((c, idx) => {
                 const orcs = clienteOrcs(c.id)
                 const total = orcs.reduce((s, o) => s + orcTotal(o), 0)
+                const medalha = ranking ? (['🥇', '🥈', '🥉'][idx] || `${idx + 1}º`) : null
                 return (
                   <tr key={c.id}>
-                    <td style={{ fontWeight: 500 }}>{c.nome}</td>
+                    {ranking && <td className="text-sm text-gray">{medalha}</td>}
+                    <td style={{ fontWeight: 500 }}>
+                      <Link href={`/clientes/${c.id}`} style={{ color: 'var(--dark)', textDecoration: 'none' }}>{c.nome}</Link>
+                    </td>
                     <td><span className={`badge ${c.tipo === 'pj' ? 'badge-sent' : 'badge-draft'}`}>{c.tipo === 'pj' ? 'PJ' : 'PF'}</span></td>
                     <td className="text-sm">{c.telefone || '—'}</td>
                     <td className="text-sm text-gray">{c.origem || '—'}</td>
@@ -224,6 +245,7 @@ export default function ClientesPage() {
                     <td className="font-bold">{total > 0 ? fmt(total) : '—'}</td>
                     <td>
                       <div className="flex gap-2">
+                        <Link href={`/clientes/${c.id}`} className="btn btn-ghost btn-sm btn-icon" title="Ver perfil">👤</Link>
                         <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setModal({ open: true, cliente: c })}>✏️</button>
                         <button className="btn btn-ghost btn-sm btn-icon" onClick={() => excluir(c.id)}>🗑️</button>
                       </div>

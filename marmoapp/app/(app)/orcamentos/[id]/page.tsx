@@ -15,6 +15,24 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_CLASS: Record<string, string> = {
   rascunho: 'badge-draft', enviado: 'badge-sent', aprovado: 'badge-approved', recusado: 'badge-rejected',
 }
+const ETAPA_LABEL: Record<string, { label: string; cor: string }> = {
+  comercial:         { label: 'Comercial',              cor: '#2980B9' },
+  corte:             { label: 'Corte',                  cor: '#8E44AD' },
+  acabamento:        { label: 'Acabamento',              cor: '#E67E22' },
+  aguardando_data:   { label: 'Aguardando Data',         cor: '#16A085' },
+  instalacao:        { label: 'Instalação Confirmada',   cor: '#27AE60' },
+  finalizado:        { label: 'Finalizado',              cor: '#2C3E50' },
+}
+
+interface InstalacaoRegistrada {
+  id: string
+  data: string
+  metros_lineares: number
+  valor_total: number | null
+  funcionarios: { nome: string } | null
+}
+
+interface ProjetoLink { id: string; titulo: string | null; nome_centro: string | null }
 
 export default function VerOrcamentoPage() {
   const router = useRouter()
@@ -23,6 +41,8 @@ export default function VerOrcamentoPage() {
   const { orcamentos, clientes, marmoraria, toast, loadOrcamentos } = useApp()
   const [itens, setItens] = useState<OrcamentoItem[]>([])
   const [loadingItens, setLoadingItens] = useState(true)
+  const [instalacoes, setInstalacoes] = useState<InstalacaoRegistrada[]>([])
+  const [projeto, setProjeto] = useState<ProjetoLink | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -35,6 +55,18 @@ export default function VerOrcamentoPage() {
       if (data) setItens(data)
       setLoadingItens(false)
     })
+    // Instalações efetivamente registradas (data real de execução) e o
+    // Centro de Custos vinculado a este orçamento, pro card de Produção.
+    supabase.from('funcionario_instalacoes')
+      .select('id, data, metros_lineares, valor_total, funcionarios(nome)')
+      .eq('ordem_servico_id', orcId)
+      .order('data', { ascending: false })
+      .then(({ data }) => setInstalacoes((data as any) || []))
+    supabase.from('projetos')
+      .select('id, titulo, nome_centro')
+      .eq('orcamento_id', orcId)
+      .maybeSingle()
+      .then(({ data }) => setProjeto(data))
   }, [orcId])
 
   const buildOrcPDF = useCallback((): OrcamentoPDF | null => {
@@ -221,7 +253,11 @@ export default function VerOrcamentoPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Cliente</div>
-                  <div style={{ fontWeight: 600 }}>{cliente?.nome || '—'}</div>
+                  {cliente ? (
+                    <Link href={`/clientes/${cliente.id}`} style={{ fontWeight: 600, color: 'var(--dark)', textDecoration: 'none' }}>{cliente.nome} →</Link>
+                  ) : (
+                    <div style={{ fontWeight: 600 }}>—</div>
+                  )}
                   {cliente?.telefone && <div style={{ fontSize: 13, color: 'var(--gray)' }}>{cliente.telefone}</div>}
                   {cliente?.email && <div style={{ fontSize: 13, color: 'var(--gray)' }}>{cliente.email}</div>}
                 </div>
@@ -276,6 +312,52 @@ export default function VerOrcamentoPage() {
               )}
             </div>
           </div>
+
+          {orc.producao_status && (
+            <div className="card">
+              <div className="card-header"><span className="card-title">Produção</span></div>
+              <div className="card-body">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Etapa Atual</div>
+                    <span className="badge" style={{ background: ETAPA_LABEL[orc.producao_status]?.cor || 'var(--gray)', color: '#fff' }}>
+                      {ETAPA_LABEL[orc.producao_status]?.label || orc.producao_status}
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Instalação Prevista</div>
+                    <div style={{ fontSize: 14 }}>
+                      {(orc as any).data_prevista_instalacao
+                        ? new Date((orc as any).data_prevista_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')
+                        : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: projeto ? 16 : 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 6 }}>Instalações Executadas</div>
+                  {instalacoes.length === 0 ? (
+                    <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Nenhuma instalação registrada ainda</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {instalacoes.map(i => (
+                        <div key={i.id} style={{ fontSize: 13, display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)', paddingBottom: 6 }}>
+                          <span>{new Date(i.data + 'T00:00:00').toLocaleDateString('pt-BR')} — {i.funcionarios?.nome || 'Instalador'}</span>
+                          <span style={{ color: 'var(--gray)' }}>{i.metros_lineares} m</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {projeto && (
+                  <Link href={`/projetos/${projeto.id}`} className="btn btn-outline" style={{ width: '100%', textAlign: 'center' }}>
+                    📊 Abrir Centro de Custos
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
