@@ -8,8 +8,9 @@ import { fmt, orcTotal, areaCortadaItens, mlAcabamentoItens, mediaDiariaPCP } fr
 export default function RelatoriosPage() {
   const { orcamentos, clientes, materiais } = useApp()
 
-  const [apontamentos, setApontamentos] = useState<{ etapa: string; quantidade: number; data: string }[]>([])
-  const [instalacoes, setInstalacoes] = useState<{ metros_lineares: number; data: string }[]>([])
+  const [apontamentos, setApontamentos] = useState<{ etapa: string; quantidade: number; data: string; funcionario_id: string | null }[]>([])
+  const [instalacoes, setInstalacoes] = useState<{ metros_lineares: number; data: string; funcionario_id: string | null }[]>([])
+  const [funcionarios, setFuncionarios] = useState<{ id: string; nome: string; cargo: string }[]>([])
   const [pendentes, setPendentes] = useState<{ corte: number; acabamento: number }>({ corte: 0, acabamento: 0 })
   const [loadingPCP, setLoadingPCP] = useState(true)
 
@@ -19,13 +20,15 @@ export default function RelatoriosPage() {
     const desdeStr = desde.toISOString().split('T')[0]
 
     async function carregarPCP() {
-      const [apRes, instRes, pendRes] = await Promise.all([
-        supabase.from('producao_apontamentos').select('etapa, quantidade, data').gte('data', desdeStr),
-        supabase.from('funcionario_instalacoes').select('metros_lineares, data').gte('data', desdeStr),
+      const [apRes, instRes, pendRes, funcRes] = await Promise.all([
+        supabase.from('producao_apontamentos').select('etapa, quantidade, data, funcionario_id').gte('data', desdeStr),
+        supabase.from('funcionario_instalacoes').select('metros_lineares, data, funcionario_id').gte('data', desdeStr),
         supabase.from('orcamentos').select('id, producao_status').in('producao_status', ['corte', 'acabamento']),
+        fetch('/api/funcionarios', { credentials: 'include' }).then(r => r.ok ? r.json() : []),
       ])
-      setApontamentos(apRes.data || [])
+      setApontamentos((apRes.data as any) || [])
       setInstalacoes((instRes.data as any) || [])
+      setFuncionarios(funcRes || [])
 
       const pendOrcs = pendRes.data || []
       if (pendOrcs.length > 0) {
@@ -52,6 +55,23 @@ export default function RelatoriosPage() {
   const diasFilaCorte = capCorte > 0 ? Math.ceil(pendentes.corte / capCorte) : null
   const diasFilaAcabamento = capAcabamento > 0 ? Math.ceil(pendentes.acabamento / capAcabamento) : null
   const temDadosPCP = capCorte > 0 || capAcabamento > 0 || capInstalacao > 0
+
+  // Capacidade média diária por funcionário — base pra definir metas individuais
+  const capacidadePorFuncionario = funcionarios
+    .filter(f => f.cargo === 'serrador' || f.cargo === 'acabador' || f.cargo === 'instalador')
+    .map(f => {
+      const registros = f.cargo === 'instalador'
+        ? instalacoes.filter(i => i.funcionario_id === f.id).map(i => ({ quantidade: i.metros_lineares, data: i.data }))
+        : apontamentos.filter(a => a.funcionario_id === f.id && a.etapa === f.cargo.replace('serrador', 'corte').replace('acabador', 'acabamento'))
+      return {
+        nome: f.nome,
+        cargo: f.cargo,
+        media: mediaDiariaPCP(registros),
+        unidade: f.cargo === 'serrador' ? 'm²/dia' : 'ml/dia',
+      }
+    })
+    .filter(f => f.media > 0)
+    .sort((a, b) => b.media - a.media)
 
   const totalOrcs = orcamentos.length
   const aprovados = orcamentos.filter(o => o.status === 'aprovado')
@@ -187,6 +207,24 @@ export default function RelatoriosPage() {
                       <div>Acabamento: <strong>{pendentes.acabamento.toFixed(1)} ml</strong> pendentes → cerca de <strong>{diasFilaAcabamento} dia{diasFilaAcabamento !== 1 ? 's' : ''}</strong> pra zerar no ritmo atual</div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {capacidadePorFuncionario.length > 0 && (
+                <div style={{ paddingTop: 16, marginTop: 16, borderTop: '1px solid var(--divider)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>Capacidade Média por Funcionário — base pra metas individuais</div>
+                  <table>
+                    <thead><tr><th>Nome</th><th>Função</th><th>Média/dia</th></tr></thead>
+                    <tbody>
+                      {capacidadePorFuncionario.map(f => (
+                        <tr key={f.nome + f.cargo}>
+                          <td style={{ fontWeight: 500 }}>{f.nome}</td>
+                          <td className="text-sm text-gray" style={{ textTransform: 'capitalize' }}>{f.cargo}</td>
+                          <td className="font-bold">{f.media.toFixed(1)} {f.unidade}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </>

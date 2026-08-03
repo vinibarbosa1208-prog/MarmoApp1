@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useApp } from '@/contexts/AppContext'
 import { fmt, orcTotal, areaCortadaItens, mlAcabamentoItens } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import type { Orcamento, OrcamentoItem } from '@/lib/types'
 
 interface Funcionario { id: string; nome: string; cargo: string; valor_metro_linear: number | null; ativo: boolean }
 
@@ -141,6 +142,99 @@ function PrevisaoModal({ orcLabel, dataInicial, onCancelar, onConfirmar }: {
   )
 }
 
+// Itens de um pedido relevantes pra medir Corte (têm área) ou Acabamento (têm ao menos um lado com acabamento)
+function itensRelevantesCorte(itens: OrcamentoItem[]): OrcamentoItem[] {
+  return itens.filter(i => (i.area || 0) > 0)
+}
+function itensRelevantesAcabamento(itens: OrcamentoItem[]): OrcamentoItem[] {
+  return itens.filter(i => mlAcabamentoItens([i]) > 0)
+}
+
+function RegistrarProducaoModal({ orcLabel, etapa, itensPendentes, funcionarios, onCancelar, onSalvar }: {
+  orcLabel: string
+  etapa: 'corte' | 'acabamento'
+  itensPendentes: OrcamentoItem[]
+  funcionarios: Funcionario[]
+  onCancelar: () => void
+  onSalvar: (itensSelecionadosIds: string[], funcionarioId: string, data: string) => void
+}) {
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set(itensPendentes.map(i => i.id!)))
+  const [funcionarioId, setFuncionarioId] = useState('')
+  const [data, setData] = useState(new Date().toISOString().split('T')[0])
+  const [erro, setErro] = useState('')
+
+  function toggle(id: string) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  const itensSelecionados = itensPendentes.filter(i => selecionados.has(i.id!))
+  const totalMedido = etapa === 'corte' ? areaCortadaItens(itensSelecionados) : mlAcabamentoItens(itensSelecionados)
+  const unidade = etapa === 'corte' ? 'm²' : 'ml'
+  const cargoLabel = etapa === 'corte' ? 'Serrador' : 'Acabador'
+
+  function confirmar() {
+    if (selecionados.size === 0) { setErro('Selecione ao menos uma peça'); return }
+    if (!funcionarioId) { setErro(`Selecione o ${cargoLabel.toLowerCase()} responsável`); return }
+    onSalvar(Array.from(selecionados), funcionarioId, data)
+  }
+
+  return (
+    <div className="modal-overlay open" style={{ zIndex: 9000 }}>
+      <div className="modal" style={{ maxWidth: 480 }}>
+        <div className="modal-header">
+          <div className="modal-title">Registrar {etapa === 'corte' ? 'Corte' : 'Acabamento'}</div>
+          <button className="btn-close" onClick={onCancelar}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <div style={{ fontSize: 12, color: 'var(--gray)', marginBottom: 12 }}>Orçamento: <b>{orcLabel}</b></div>
+
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 6 }}>
+            Peças concluídas hoje (desmarque as que ainda não)
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}>
+            {itensPendentes.map(i => (
+              <label key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 8px', background: 'var(--light)', borderRadius: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={selecionados.has(i.id!)} onChange={() => toggle(i.id!)} />
+                <span style={{ flex: 1 }}>{i.descricao}</span>
+                <span style={{ color: 'var(--gray)', fontSize: 12 }}>
+                  {etapa === 'corte' ? `${((i.area || 0) * (i.quantidade || 1)).toFixed(2)} m²` : `${mlAcabamentoItens([i]).toFixed(2)} ml`}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">{cargoLabel.toUpperCase()} RESPONSÁVEL</label>
+            <select className="form-select" value={funcionarioId} onChange={e => setFuncionarioId(e.target.value)}>
+              <option value="">— Selecionar —</option>
+              {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">DATA</label>
+            <input className="form-input" type="date" value={data} onChange={e => setData(e.target.value)} />
+          </div>
+
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)', marginTop: 4 }}>
+            Total: {totalMedido.toFixed(2)} {unidade}
+          </div>
+          {erro && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>{erro}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onCancelar}>Cancelar</button>
+          <button className="btn btn-gold" onClick={confirmar}>💾 Registrar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Dias entre hoje e uma data (positivo = no futuro, negativo = atrasado)
 function diasAte(dataStr: string): number {
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0)
@@ -187,15 +281,21 @@ const FILA_TO_ETAPA: Record<string, string> = {
 
 export default function FilaPage() {
   const { orcamentos, clientes, marmoraria, loadOrcamentos, toast } = useApp()
-  const [instaladores, setInstaladores] = useState<Funcionario[]>([])
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
+  const [itensPorOrc, setItensPorOrc] = useState<Record<string, OrcamentoItem[]>>({})
   const [instalarModal, setInstalarModal] = useState<{ open: boolean; orcId: string; orcLabel: string }>({ open: false, orcId: '', orcLabel: '' })
   const [previsaoModal, setPrevisaoModal] = useState<{ open: boolean; orcId: string; orcLabel: string; dataAtual: string }>({ open: false, orcId: '', orcLabel: '', dataAtual: '' })
+  const [registrarModal, setRegistrarModal] = useState<{ open: boolean; orcId: string; orcLabel: string; etapa: 'corte' | 'acabamento'; itensPendentes: OrcamentoItem[] }>({ open: false, orcId: '', orcLabel: '', etapa: 'corte', itensPendentes: [] })
   const [projetoMap, setProjetoMap] = useState<Record<string, string>>({})
+
+  const instaladores = funcionarios.filter(f => f.cargo === 'instalador')
+  const serradores = funcionarios.filter(f => f.cargo === 'serrador')
+  const acabadores = funcionarios.filter(f => f.cargo === 'acabador')
 
   useEffect(() => {
     fetch('/api/funcionarios', { credentials: 'include' })
       .then(r => r.ok ? r.json() : [])
-      .then((data: Funcionario[]) => setInstaladores(data.filter(f => f.ativo && f.cargo === 'instalador')))
+      .then((data: Funcionario[]) => setFuncionarios(data.filter(f => f.ativo)))
     fetch('/api/projetos', { credentials: 'include' })
       .then(r => r.ok ? r.json() : [])
       .then((data: { id: string; orcamento_id?: string | null }[]) => {
@@ -206,6 +306,35 @@ export default function FilaPage() {
   }, [])
 
   const ativos = orcamentos.filter(o => o.crm_status !== 'perdido' && (o.crm_status === 'fechado' || o.producao_status))
+
+  // Carrega os itens dos pedidos que estão em Corte ou Acabamento (é o que
+  // precisa da checklist por peça). Recarrega sempre que a lista de pedidos
+  // nessas duas etapas mudar.
+  const idsCorteAcabamento = ativos
+    .filter(o => ((o.producao_status || 'comercial') as string) === 'corte' || ((o.producao_status || 'comercial') as string) === 'acabamento')
+    .map(o => o.id)
+    .sort()
+    .join(',')
+
+  useEffect(() => {
+    const ids = idsCorteAcabamento ? idsCorteAcabamento.split(',') : []
+    if (ids.length === 0) { setItensPorOrc({}); return }
+    supabase.from('orcamento_itens').select('*').in('orcamento_id', ids).then(({ data }) => {
+      const porOrc: Record<string, OrcamentoItem[]> = {}
+      for (const i of (data || [])) {
+        const oid = i.orcamento_id as string
+        if (!porOrc[oid]) porOrc[oid] = []
+        porOrc[oid].push(i)
+      }
+      setItensPorOrc(porOrc)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsCorteAcabamento])
+
+  async function recarregarItensOrc(orcId: string) {
+    const { data } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcId)
+    setItensPorOrc(prev => ({ ...prev, [orcId]: data || [] }))
+  }
 
   // Pedidos com instalação prevista pra até 7 dias (ou já atrasados) — usados no banner de alerta
   const alertasInstalacao = ativos
@@ -229,27 +358,69 @@ export default function FilaPage() {
     await avancarConfirmado(orcId, novoStatus, etapaAtual)
   }
 
-  // Apontamento automático de PCP: ao sair de Corte ou Acabamento, mede
-  // quanto foi processado usando os próprios itens do orçamento — sem
-  // precisar de nenhum preenchimento manual.
-  async function registrarApontamentoPCP(orcId: string, etapaSaindo: string) {
-    if (etapaSaindo !== 'corte' && etapaSaindo !== 'acabamento') return
-    if (!marmoraria) return
-    const { data: itensOrc } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcId)
-    if (!itensOrc || itensOrc.length === 0) return
+  // Abre o registro de produção por peça pra Corte/Acabamento. Se não há
+  // peças pendentes pra medir nessa etapa (ex: pedido só com itens de
+  // serviço/frete), avança direto sem checklist.
+  function abrirRegistrarProducao(o: Orcamento, etapaId: 'corte' | 'acabamento') {
+    const todosItens = itensPorOrc[o.id] || []
+    const relevantes = etapaId === 'corte' ? itensRelevantesCorte(todosItens) : itensRelevantesAcabamento(todosItens)
+    const pendentes = relevantes.filter(i => etapaId === 'corte' ? !i.cortado_em : !i.acabado_em)
+    const proxEtapaId = etapaId === 'corte' ? 'acabamento' : 'aguardando_data'
 
-    const quantidade = etapaSaindo === 'corte' ? areaCortadaItens(itensOrc) : mlAcabamentoItens(itensOrc)
-    if (quantidade <= 0) return
-
-    await supabase.from('producao_apontamentos').insert({
-      marmoraria_id: marmoraria.id,
-      orcamento_id: orcId,
-      etapa: etapaSaindo,
-      quantidade,
-      unidade: etapaSaindo === 'corte' ? 'm2' : 'ml',
-      data: new Date().toISOString().split('T')[0],
-      origem: 'automatico',
+    if (relevantes.length === 0) {
+      avancarConfirmado(o.id, proxEtapaId, etapaId)
+      return
+    }
+    setRegistrarModal({
+      open: true,
+      orcId: o.id,
+      orcLabel: o.descricao || `Orç. #${o.numero || o.id.slice(0, 6)}`,
+      etapa: etapaId,
+      itensPendentes: pendentes,
     })
+  }
+
+  // Salva o apontamento das peças marcadas (com quem fez e quando) e, se
+  // essas eram as últimas peças pendentes dessa etapa, avança o pedido
+  // inteiro automaticamente pra próxima.
+  async function onProducaoSalva(itensIds: string[], funcionarioId: string, data: string) {
+    const { orcId, etapa, itensPendentes } = registrarModal
+    setRegistrarModal({ open: false, orcId: '', orcLabel: '', etapa: 'corte', itensPendentes: [] })
+    if (!marmoraria) return
+
+    const itensSelecionados = itensPendentes.filter(i => itensIds.includes(i.id!))
+    const quantidade = etapa === 'corte' ? areaCortadaItens(itensSelecionados) : mlAcabamentoItens(itensSelecionados)
+    const campoData = etapa === 'corte' ? 'cortado_em' : 'acabado_em'
+    const campoPor = etapa === 'corte' ? 'cortado_por' : 'acabado_por'
+
+    await supabase.from('orcamento_itens')
+      .update({ [campoData]: new Date().toISOString(), [campoPor]: funcionarioId })
+      .in('id', itensIds)
+
+    if (quantidade > 0) {
+      await supabase.from('producao_apontamentos').insert({
+        marmoraria_id: marmoraria.id,
+        orcamento_id: orcId,
+        etapa,
+        quantidade,
+        unidade: etapa === 'corte' ? 'm2' : 'ml',
+        data,
+        origem: 'automatico',
+        funcionario_id: funcionarioId,
+      })
+    }
+
+    const restantes = itensPendentes.filter(i => !itensIds.includes(i.id!))
+    await recarregarItensOrc(orcId)
+
+    if (restantes.length === 0) {
+      // Não sobrou nenhuma peça pendente — o pedido inteiro avança de etapa
+      const proxEtapaId = etapa === 'corte' ? 'acabamento' : 'aguardando_data'
+      await avancarConfirmado(orcId, proxEtapaId, etapa)
+    } else {
+      await loadOrcamentos()
+      toast(`Produção registrada — ${restantes.length} peça${restantes.length > 1 ? 's' : ''} ainda pendente${restantes.length > 1 ? 's' : ''}`, 'ok2')
+    }
   }
 
   async function avancarConfirmado(orcId: string, novoStatus: string, etapaAtual: string, dataPrevista?: string) {
@@ -261,7 +432,8 @@ export default function FilaPage() {
 
     const { error } = await supabase.from('orcamentos').update(payload).eq('id', orcId)
     if (error) { toast('Erro: ' + error.message, 'err'); return }
-    await registrarApontamentoPCP(orcId, etapaAtual)
+    // Produção de Corte/Acabamento já é registrada peça a peça em
+    // onProducaoSalva — não duplicar apontamento aqui.
     const etapa = FILA_TO_ETAPA[novoStatus]
     const projetoId = projetoMap[orcId]
     if (etapa && projetoId) {
@@ -345,6 +517,12 @@ export default function FilaPage() {
                   const totalVal = orcTotal(o)
                   const dataPrevista = (o as any).data_prevista_instalacao as string | undefined
                   const diasParado = diasNaEtapa((o as any).producao_status_atualizado_em)
+
+                  const isCorteOuAcabamento = etapa.id === 'corte' || etapa.id === 'acabamento'
+                  const todosItens = itensPorOrc[o.id] || []
+                  const relevantes = etapa.id === 'corte' ? itensRelevantesCorte(todosItens) : etapa.id === 'acabamento' ? itensRelevantesAcabamento(todosItens) : []
+                  const concluidos = relevantes.filter(i => etapa.id === 'corte' ? i.cortado_em : i.acabado_em)
+
                   return (
                     <div key={o.id} style={{ background: '#fff', borderRadius: 8, padding: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${etapa.cor}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -360,6 +538,18 @@ export default function FilaPage() {
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{cli?.nome || '—'}</div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: etapa.cor, marginBottom: 4 }}>{fmt(totalVal)}</div>
+
+                      {isCorteOuAcabamento && relevantes.length > 1 && (
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+                          {relevantes.map(i => (
+                            <div key={i.id} style={{ display: 'flex', gap: 4 }}>
+                              <span>{(etapa.id === 'corte' ? i.cortado_em : i.acabado_em) ? '✅' : '⬜'}</span>
+                              <span>{i.descricao}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {dataPrevista && (
                         <div style={{ fontSize: 10, fontWeight: 700, color: corPrevisao(diasAte(dataPrevista)), marginBottom: 8 }}>
                           📅 Instalação: {new Date(dataPrevista + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -390,7 +580,14 @@ export default function FilaPage() {
                           ← {etapaAnterior.label}
                         </button>
                       )}
-                      {proxEtapa ? (
+                      {isCorteOuAcabamento ? (
+                        <button
+                          onClick={() => abrirRegistrarProducao(o, etapa.id as 'corte' | 'acabamento')}
+                          style={{ width: '100%', background: etapa.cor, border: 'none', borderRadius: 6, padding: 6, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          {relevantes.length > 1 ? `📋 Registrar (${concluidos.length}/${relevantes.length})` : '📋 Registrar Produção'}
+                        </button>
+                      ) : proxEtapa ? (
                         <button
                           onClick={() => avancar(o.id, proxEtapa.id, etapa.id)}
                           style={{ width: '100%', background: etapa.cor, border: 'none', borderRadius: 6, padding: 6, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
@@ -428,6 +625,17 @@ export default function FilaPage() {
             avancarConfirmado(previsaoModal.orcId, 'corte', 'comercial', data)
             setPrevisaoModal({ open: false, orcId: '', orcLabel: '', dataAtual: '' })
           }}
+        />
+      )}
+
+      {registrarModal.open && (
+        <RegistrarProducaoModal
+          orcLabel={registrarModal.orcLabel}
+          etapa={registrarModal.etapa}
+          itensPendentes={registrarModal.itensPendentes}
+          funcionarios={registrarModal.etapa === 'corte' ? serradores : acabadores}
+          onCancelar={() => setRegistrarModal({ open: false, orcId: '', orcLabel: '', etapa: 'corte', itensPendentes: [] })}
+          onSalvar={onProducaoSalva}
         />
       )}
     </div>
