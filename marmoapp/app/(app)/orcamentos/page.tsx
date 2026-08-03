@@ -88,7 +88,10 @@ export default function OrcamentosPage() {
     const cycle = ['rascunho', 'enviado', 'aprovado', 'recusado'] as const
     const idx = cycle.indexOf(o.status as typeof cycle[number])
     const newStatus = cycle[(idx + 1) % cycle.length]
-    await supabase.from('orcamentos').update({ status: newStatus }).eq('id', o.id)
+    const payload: Record<string, unknown> = { status: newStatus }
+    // Marca quando a venda foi confirmada — usado pro filtro por período em Relatórios
+    if (newStatus === 'aprovado') payload.data_fechamento = new Date().toISOString().split('T')[0]
+    await supabase.from('orcamentos').update(payload).eq('id', o.id)
     await loadOrcamentos()
     toast(`Status: ${newStatus}`, 'ok2')
   }

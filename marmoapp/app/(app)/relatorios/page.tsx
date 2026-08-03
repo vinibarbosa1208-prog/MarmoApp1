@@ -73,11 +73,43 @@ export default function RelatoriosPage() {
     .filter(f => f.media > 0)
     .sort((a, b) => b.media - a.media)
 
+  const [tipoPeriodo, setTipoPeriodo] = useState<'dia' | 'semana' | 'mes' | 'ano'>('mes')
+  const [dataRef, setDataRef] = useState(new Date().toISOString().split('T')[0])
+
+  // Calcula o início/fim do período selecionado, sempre em torno da dataRef
+  function calcularIntervalo(tipo: typeof tipoPeriodo, refStr: string): { inicio: string; fim: string } {
+    const ref = new Date(refStr + 'T00:00:00')
+    let inicio: Date, fim: Date
+    if (tipo === 'dia') {
+      inicio = ref; fim = ref
+    } else if (tipo === 'semana') {
+      const diaSemana = ref.getDay() // 0 = domingo
+      const offsetSegunda = diaSemana === 0 ? 6 : diaSemana - 1
+      inicio = new Date(ref); inicio.setDate(ref.getDate() - offsetSegunda)
+      fim = new Date(inicio); fim.setDate(inicio.getDate() + 6)
+    } else if (tipo === 'mes') {
+      inicio = new Date(ref.getFullYear(), ref.getMonth(), 1)
+      fim = new Date(ref.getFullYear(), ref.getMonth() + 1, 0)
+    } else {
+      inicio = new Date(ref.getFullYear(), 0, 1)
+      fim = new Date(ref.getFullYear(), 11, 31)
+    }
+    return { inicio: inicio.toISOString().split('T')[0], fim: fim.toISOString().split('T')[0] }
+  }
+
+  const { inicio: inicioPeriodo, fim: fimPeriodo } = calcularIntervalo(tipoPeriodo, dataRef)
+
+  // Vendas confirmadas = orçamentos aprovados cuja data_fechamento cai dentro do período selecionado
+  const vendasPeriodo = orcamentos.filter(o => {
+    const df = (o as any).data_fechamento as string | null | undefined
+    return o.status === 'aprovado' && !!df && df >= inicioPeriodo && df <= fimPeriodo
+  })
+
   const totalOrcs = orcamentos.length
   const aprovados = orcamentos.filter(o => o.status === 'aprovado')
   const recusados = orcamentos.filter(o => o.status === 'recusado')
-  const receita = aprovados.reduce((s, o) => s + orcTotal(o), 0)
-  const ticketMedio = aprovados.length ? receita / aprovados.length : 0
+  const receitaPeriodo = vendasPeriodo.reduce((s, o) => s + orcTotal(o), 0)
+  const ticketMedioPeriodo = vendasPeriodo.length ? receitaPeriodo / vendasPeriodo.length : 0
   const taxaConv = totalOrcs ? Math.round(aprovados.length / totalOrcs * 100) : 0
 
   const porStatus = ['rascunho', 'enviado', 'aprovado', 'recusado', 'expired'].map(s => ({
@@ -87,7 +119,7 @@ export default function RelatoriosPage() {
   }))
 
   const topClientes = clientes.map(c => {
-    const orcs = orcamentos.filter(o => (o.clienteId || o.cliente_id) === c.id && o.status === 'aprovado')
+    const orcs = vendasPeriodo.filter(o => (o.clienteId || o.cliente_id) === c.id)
     return { nome: c.nome, total: orcs.reduce((s, o) => s + orcTotal(o), 0), count: orcs.length }
   }).filter(c => c.total > 0).sort((a, b) => b.total - a.total).slice(0, 5)
 
@@ -99,33 +131,56 @@ export default function RelatoriosPage() {
         <h1 className="page-title">Relatórios</h1>
       </div>
 
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Vendas confirmadas por período</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['dia', 'semana', 'mes', 'ano'] as const).map(t => (
+              <button
+                key={t}
+                className={`btn btn-sm ${tipoPeriodo === t ? 'btn-gold' : 'btn-outline'}`}
+                onClick={() => setTipoPeriodo(t)}
+              >
+                {{ dia: 'Dia', semana: 'Semana', mes: 'Mês', ano: 'Ano' }[t]}
+              </button>
+            ))}
+          </div>
+          <input className="form-input" type="date" style={{ width: 160 }} value={dataRef} onChange={e => setDataRef(e.target.value)} />
+          <span style={{ fontSize: 12, color: 'var(--gray)' }}>
+            {inicioPeriodo === fimPeriodo
+              ? new Date(inicioPeriodo + 'T00:00:00').toLocaleDateString('pt-BR')
+              : `${new Date(inicioPeriodo + 'T00:00:00').toLocaleDateString('pt-BR')} – ${new Date(fimPeriodo + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+          </span>
+        </div>
+      </div>
+
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon">📊</div>
           <div className="stat-info">
-            <div className="stat-value">{totalOrcs}</div>
-            <div className="stat-label">Total de orçamentos</div>
+            <div className="stat-value">{vendasPeriodo.length}</div>
+            <div className="stat-label">Vendas confirmadas no período</div>
           </div>
         </div>
         <div className="stat-card" style={{ borderLeftColor: 'var(--green)' }}>
           <div className="stat-icon" style={{ background: 'rgba(39,174,96,0.12)', fontSize: 22 }}>💰</div>
           <div className="stat-info">
-            <div className="stat-value">{fmt(receita)}</div>
-            <div className="stat-label">Receita total aprovada</div>
+            <div className="stat-value">{fmt(receitaPeriodo)}</div>
+            <div className="stat-label">Receita confirmada no período</div>
           </div>
         </div>
         <div className="stat-card" style={{ borderLeftColor: 'var(--blue)' }}>
           <div className="stat-icon" style={{ background: 'rgba(41,128,185,0.12)', fontSize: 22 }}>🎯</div>
           <div className="stat-info">
             <div className="stat-value">{taxaConv}%</div>
-            <div className="stat-label">Taxa de conversão</div>
+            <div className="stat-label">Taxa de conversão (geral)</div>
           </div>
         </div>
         <div className="stat-card" style={{ borderLeftColor: 'var(--gold)' }}>
           <div className="stat-icon" style={{ fontSize: 22 }}>📈</div>
           <div className="stat-info">
-            <div className="stat-value">{fmt(ticketMedio)}</div>
-            <div className="stat-label">Ticket médio</div>
+            <div className="stat-value">{fmt(ticketMedioPeriodo)}</div>
+            <div className="stat-label">Ticket médio no período</div>
           </div>
         </div>
       </div>
@@ -149,7 +204,7 @@ export default function RelatoriosPage() {
         </div>
 
         <div className="card">
-          <div className="card-header"><span className="card-title">Top Clientes</span></div>
+          <div className="card-header"><span className="card-title">Top Clientes no Período</span></div>
           <div className="card-body" style={{ padding: 0 }}>
             <table>
               <thead><tr><th>Cliente</th><th>Orçamentos</th><th>Total</th></tr></thead>
