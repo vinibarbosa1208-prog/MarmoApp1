@@ -78,6 +78,8 @@ export interface Orcamento {
   status: 'rascunho' | 'enviado' | 'aprovado' | 'recusado' | 'expired'
   crm_status?: 'novo' | 'enviado' | 'visualizado' | 'em_negociacao' | 'fechado' | 'perdido'
   producao_status?: ProducaoStatus
+  producao_status_atualizado_em?: string
+  data_prevista_instalacao?: string
   titulo?: string
   data_validade?: string
   descricao?: string
