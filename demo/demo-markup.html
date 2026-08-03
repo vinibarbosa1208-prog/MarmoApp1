@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarmoApp — Markup e Precificação</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;font-family:'DM Sans',sans-serif}
+.shell{display:flex;width:100%;height:100%}
+.sb{width:216px;min-width:216px;background:#111;border-right:1px solid #1f1f1f;display:flex;flex-direction:column;height:100%}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid #1f1f1f;display:flex;align-items:center;gap:10px}
+.sb-mark{width:32px;height:32px;flex-shrink:0}
+.sb-name{font-size:12px;color:#555;letter-spacing:.3px}
+.sb-nav{padding:10px 0;flex:1}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:13px;color:#4a4a4a;border-left:2.5px solid transparent;cursor:pointer;transition:.2s}
+.ni svg{width:15px;height:15px;flex-shrink:0;opacity:.5}
+.ni.active{color:#C9A84C;background:rgba(201,168,76,.07);border-left-color:#C9A84C}
+.ni.active svg{opacity:1}
+.ni-ai{font-size:9px;font-weight:700;background:rgba(201,168,76,.18);color:#C9A84C;padding:1px 5px;border-radius:4px;margin-left:2px}
+.sb-foot{padding:14px 16px;border-top:1px solid #1f1f1f}
+.sb-foot-name{font-size:13px;font-weight:600;color:#e0d8cc;margin-bottom:2px}
+.sb-foot-links{font-size:11px;color:#444}
+.sb-foot-links a{color:#C9A84C;text-decoration:none}
+.main{flex:1;display:flex;flex-direction:column;background:#f5f2ee;overflow:hidden;position:relative}
+.ph{background:#fff;border-bottom:1px solid #e8e2d8;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ph-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#1a1511;letter-spacing:-.3px}
+.ph-right{display:flex;align-items:center;gap:10px}
+.ph-badge{font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:7px}
+.ph-badge.green{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
+.ph-badge.gold{background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.25)}
+
+/* SCENES */
+.scene{display:none;flex:1;flex-direction:column;overflow:hidden}
+.scene.on{display:flex}
+
+/* ── PRICING TABLE ── */
+.tbl-wrap{flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.tbl-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;flex-shrink:0}
+.tbl-hint{font-size:11.5px;color:#a09890}
+.tbl-hint strong{color:#C9A84C}
+.tbl{background:#fff;border:1px solid #e8e2d8;border-radius:10px;overflow:hidden;flex:1}
+.tbl-head{display:grid;grid-template-columns:2.2fr 1fr 1fr 1.2fr 1fr;padding:10px 16px;background:#faf8f5;border-bottom:1.5px solid #e8e2d8;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#b0a89e;gap:8px;align-items:center}
+.tbl-row{display:grid;grid-template-columns:2.2fr 1fr 1fr 1.2fr 1fr;padding:13px 16px;border-bottom:1px solid #f5f0e8;align-items:center;gap:8px;opacity:0;transform:translateY(5px);transition:.35s}
+.tbl-row.in{opacity:1;transform:translateY(0)}
+.tbl-row:last-child{border-bottom:none}
+.tbl-row.hl{background:rgba(201,168,76,.04)}
+.mat-name{font-size:13px;font-weight:600;color:#1a1511}
+.mat-cat{font-size:10.5px;color:#a09890;margin-top:1px}
+.tbl-val{font-size:13px;color:#1a1511;font-weight:500}
+.tbl-val.muted{color:#a09890}
+
+/* markup input */
+.mkp-cell{display:flex;align-items:center;gap:6px}
+.mkp-inp{background:#faf8f5;border:1.5px solid #e8e2d8;border-radius:6px;padding:5px 9px;font-size:13px;font-weight:700;color:#1a1511;width:68px;font-family:'DM Sans',sans-serif;text-align:right}
+.mkp-inp.active{border-color:#C9A84C;background:#fff;box-shadow:0 0 0 3px rgba(201,168,76,.1);color:#C9A84C}
+.mkp-inp.saved{border-color:#22c55e;color:#22c55e;background:#fff}
+.mkp-x{font-size:11px;color:#b0a89e}
+
+/* sale price with animation */
+.sp-val{font-size:13px;font-weight:700;color:#1a1511;transition:color .3s}
+.sp-val.updated{color:#C9A84C}
+.margin-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.mg-hi{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.mg-mid{background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.2)}
+
+/* ── QUOTE MARGIN VIEW ── */
+.qwrap{flex:1;padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.qcard{background:#fff;border:1px solid #e8e2d8;border-radius:10px;padding:18px;opacity:0;transform:translateY(6px);transition:.4s}
+.qcard.in{opacity:1;transform:translateY(0)}
+.qcard-title{font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#b0a89e;margin-bottom:14px}
+.q-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f5f0e8}
+.q-item:last-child{border-bottom:none}
+.qi-left{}
+.qi-name{font-size:13px;font-weight:600;color:#1a1511}
+.qi-sub{font-size:11px;color:#a09890;margin-top:2px}
+.qi-right{text-align:right}
+.qi-sale{font-size:13.5px;font-weight:700;color:#1a1511}
+.qi-margin{font-size:10.5px;font-weight:700;color:#22c55e;margin-top:2px}
+
+.margin-box{background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(201,168,76,.06));border:1.5px solid rgba(34,197,94,.2);border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.mbox-item{}
+.mbox-label{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#b0a89e;margin-bottom:6px}
+.mbox-val{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1a1511}
+.mbox-val.green{color:#22c55e}
+.mbox-val.gold{color:#C9A84C}
+
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cur{display:inline-block;width:1.5px;height:13px;background:#C9A84C;margin-left:1px;vertical-align:middle;animation:blink .8s infinite}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="sb">
+  <div class="sb-logo">
+    <svg class="sb-mark" viewBox="0 0 32 32" fill="none">
+      <path d="M4 26L10 8L16 18L22 8L28 26" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 26L10 8" stroke="rgba(201,168,76,.35)" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    <span class="sb-name">Real Pedras</span>
+  </div>
+  <div class="sb-nav">
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>Dashboard</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Antonio <span class="ni-ai">AI</span></div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5" stroke="#111" stroke-width="1.2"/><line x1="5" y1="8" x2="11" y2="8" stroke="#111" stroke-width="1.2"/><line x1="5" y1="11" x2="8" y2="11" stroke="#111" stroke-width="1.2"/></svg>Orçamentos</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Clientes</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="12" rx="1.5"/><line x1="1" y1="7" x2="15" y2="7" stroke="#111" stroke-width="1.2"/><line x1="5" y1="1" x2="5" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1" x2="11" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Agenda</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="2,12 5,7 8,9 11,4 14,6"/></svg>Centro de Custos</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="1.5" rx=".75"/><rect x="1" y="7.5" width="14" height="1.5" rx=".75"/><rect x="1" y="11" width="14" height="1.5" rx=".75"/></svg>Fila de Serviços</div>
+    <div class="ni active" id="ni-est"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 4v4l2.5 2.5"/></svg>Estoque</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="6" width="3" height="9" rx="1"/><rect x="11" y="3" width="3" height="12" rx="1"/></svg>Relatórios</div>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-name">Real Pedras</div>
+    <div class="sb-foot-links"><a href="#">Configurações</a> · <a href="#">Sair</a></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- CENA 1: TABELA DE PREÇOS -->
+  <div class="scene on" id="sc1">
+    <div class="ph">
+      <span class="ph-title">Tabela de Preços</span>
+      <div class="ph-right">
+        <span class="ph-badge gold">Markup médio: 3,1×</span>
+        <span class="ph-badge green">Margem média: 68%</span>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-top">
+        <span class="tbl-hint">Defina o <strong>markup</strong> de cada material — o preço de venda é calculado automaticamente</span>
+      </div>
+      <div class="tbl">
+        <div class="tbl-head">
+          <span>Material</span>
+          <span>Custo / m²</span>
+          <span>Markup</span>
+          <span>Preço Venda</span>
+          <span>Margem</span>
+        </div>
+        <div class="tbl-row" id="r0">
+          <div><div class="mat-name">Granito Preto São Gabriel</div><div class="mat-cat">Granito importado</div></div>
+          <div class="tbl-val">R$ 280</div>
+          <div class="mkp-cell"><div class="mkp-inp" id="mk0">3,2×</div></div>
+          <div class="sp-val" id="sp0">R$ 896</div>
+          <span class="margin-pill mg-hi">69%</span>
+        </div>
+        <div class="tbl-row hl" id="r1">
+          <div><div class="mat-name">Mármore Carrara</div><div class="mat-cat">Mármore importado</div></div>
+          <div class="tbl-val">R$ 420</div>
+          <div class="mkp-cell"><div class="mkp-inp" id="mk1">2,9×</div></div>
+          <div class="sp-val" id="sp1">R$ 1.218</div>
+          <span class="margin-pill mg-hi">66%</span>
+        </div>
+        <div class="tbl-row" id="r2">
+          <div><div class="mat-name">Granito Cinza Andorinha</div><div class="mat-cat">Granito nacional</div></div>
+          <div class="tbl-val">R$ 165</div>
+          <div class="mkp-cell"><div class="mkp-inp" id="mk2">3,5×</div></div>
+          <div class="sp-val" id="sp2">R$ 578</div>
+          <span class="margin-pill mg-hi">71%</span>
+        </div>
+        <div class="tbl-row" id="r3">
+          <div><div class="mat-name">Mármore Travertino Nacional</div><div class="mat-cat">Mármore nacional</div></div>
+          <div class="tbl-val">R$ 310</div>
+          <div class="mkp-cell"><div class="mkp-inp" id="mk3">2,8×</div></div>
+          <div class="sp-val" id="sp3">R$ 868</div>
+          <span class="margin-pill mg-mid">64%</span>
+        </div>
+        <div class="tbl-row" id="r4">
+          <div><div class="mat-name">Quartzito Branco Macaúbas</div><div class="mat-cat">Quartzito importado</div></div>
+          <div class="tbl-val">R$ 580</div>
+          <div class="mkp-cell"><div class="mkp-inp" id="mk4">3,0×</div></div>
+          <div class="sp-val" id="sp4">R$ 1.740</div>
+          <span class="margin-pill mg-hi">67%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENA 2: ORÇAMENTO COM MARGEM -->
+  <div class="scene" id="sc2">
+    <div class="ph">
+      <span class="ph-title">Orçamento #044</span>
+      <div class="ph-right">
+        <span class="ph-badge gold">João Silva</span>
+      </div>
+    </div>
+    <div class="qwrap">
+      <div class="qcard" id="qc0">
+        <div class="qcard-title">Itens e Precificação</div>
+        <div class="q-item">
+          <div class="qi-left">
+            <div class="qi-name">Bancada Mármore Carrara — 1,56 m²</div>
+            <div class="qi-sub">Custo: 1,56 × R$420 = R$655 &nbsp;·&nbsp; Markup 2,9×</div>
+          </div>
+          <div class="qi-right">
+            <div class="qi-sale" id="qs0">R$ 1.900</div>
+            <div class="qi-margin">↑ 66% de margem</div>
+          </div>
+        </div>
+        <div class="q-item">
+          <div class="qi-left">
+            <div class="qi-name">Cuba Inox Embutida por Baixo</div>
+            <div class="qi-sub">Custo: R$390 &nbsp;·&nbsp; Markup mão de obra R$280</div>
+          </div>
+          <div class="qi-right">
+            <div class="qi-sale">R$ 670</div>
+            <div class="qi-margin">↑ 42% de margem</div>
+          </div>
+        </div>
+      </div>
+      <div class="margin-box" id="qc1" style="opacity:0;transform:translateY(6px);transition:.4s">
+        <div class="mbox-item">
+          <div class="mbox-label">Total Venda</div>
+          <div class="mbox-val gold" id="mv-total">R$ 0</div>
+        </div>
+        <div class="mbox-item">
+          <div class="mbox-label">Custo Real</div>
+          <div class="mbox-val" id="mv-cost">R$ 0</div>
+        </div>
+        <div class="mbox-item">
+          <div class="mbox-label">Lucro Estimado</div>
+          <div class="mbox-val green" id="mv-profit">R$ 0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function go(id){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+
+function counter(el,from,to,prefix,dur,onDone){
+  const step=(to-from)/60;
+  let v=from;
+  const iv=setInterval(()=>{
+    v+=step;
+    if(v>=to){v=to;clearInterval(iv);if(onDone)onDone()}
+    el.textContent=prefix+Math.round(v).toLocaleString('pt-BR');
+  },dur/60);
+}
+
+// ── SCENE 1 ──
+function scene1(){
+  go('sc1');
+  // Fade rows in
+  [0,1,2,3,4].forEach(i=>document.getElementById('r'+i).classList.remove('in'));
+  [0,1,2,3,4].forEach(i=>setTimeout(()=>document.getElementById('r'+i).classList.add('in'),200+i*150));
+
+  // After rows visible: animate markup edit on row 0 (Granito Preto)
+  setTimeout(editMarkup, 2000);
+}
+
+function editMarkup(){
+  const inp=document.getElementById('mk0');
+  const sp=document.getElementById('sp0');
+  // Activate field
+  inp.classList.add('active');
+  inp.textContent='';
+
+  // Type "3,5×"
+  const newVal='3,5×';
+  let i=0;
+  const iv=setInterval(()=>{
+    i++;
+    inp.textContent=newVal.slice(0,i)+(i<newVal.length?'':'')+'​';
+    if(i>=newVal.length){
+      clearInterval(iv);
+      setTimeout(()=>{
+        // Update price live
+        sp.classList.add('updated');
+        counter(sp, 896, 980, 'R$ ', 700, ()=>{
+          // Save state
+          inp.classList.remove('active');
+          inp.classList.add('saved');
+          setTimeout(()=>{
+            inp.classList.remove('saved');
+            inp.textContent='3,5×';
+            sp.classList.remove('updated');
+            // Also animate row 3 (Travertino)
+            setTimeout(editMarkup2, 600);
+          },800);
+        });
+      },350);
+    }
+  },90);
+}
+
+function editMarkup2(){
+  const inp=document.getElementById('mk3');
+  const sp=document.getElementById('sp3');
+  inp.classList.add('active');
+  inp.textContent='';
+  const newVal='3,1×';
+  let i=0;
+  const iv=setInterval(()=>{
+    i++;inp.textContent=newVal.slice(0,i);
+    if(i>=newVal.length){
+      clearInterval(iv);
+      setTimeout(()=>{
+        sp.classList.add('updated');
+        counter(sp,868,961,'R$ ',700,()=>{
+          inp.classList.remove('active');inp.classList.add('saved');
+          setTimeout(()=>{
+            inp.classList.remove('saved');
+            inp.textContent='3,1×';
+            sp.classList.remove('updated');
+            setTimeout(scene2, 1200);
+          },700);
+        });
+      },350);
+    }
+  },90);
+}
+
+// ── SCENE 2 ──
+function scene2(){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('ni-est').style.color='#4a4a4a';
+  // Switch to Orçamentos nav
+  document.querySelectorAll('.ni')[2].classList.add('active');
+
+  go('sc2');
+  document.getElementById('qc0').classList.remove('in');
+  document.getElementById('qc1').style.opacity='0';
+  document.getElementById('qc1').style.transform='translateY(6px)';
+  document.getElementById('mv-total').textContent='R$ 0';
+  document.getElementById('mv-cost').textContent='R$ 0';
+  document.getElementById('mv-profit').textContent='R$ 0';
+
+  setTimeout(()=>document.getElementById('qc0').classList.add('in'),200);
+  setTimeout(()=>{
+    const mb=document.getElementById('qc1');
+    mb.style.opacity='1';mb.style.transform='translateY(0)';
+    // Count up values
+    counter(document.getElementById('mv-total'),0,2570,'R$ ',900);
+    setTimeout(()=>counter(document.getElementById('mv-cost'),0,1045,'R$ ',700),300);
+    setTimeout(()=>counter(document.getElementById('mv-profit'),0,1525,'R$ ',800),600);
+  },1200);
+
+  // Back to scene 1
+  setTimeout(reset, 6000);
+}
+
+function reset(){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('ni-est').classList.add('active');
+  // Reset markups
+  document.getElementById('mk0').textContent='3,2×';
+  document.getElementById('sp0').textContent='R$ 896';
+  document.getElementById('mk3').textContent='2,8×';
+  document.getElementById('sp3').textContent='R$ 868';
+  document.getElementById('qc0').classList.remove('in');
+  setTimeout(scene1, 400);
+}
+
+scene1();
+
+// Auto-scale
+(function(){function f(){document.documentElement.style.zoom=window.innerHeight/360}window.addEventListener('resize',f);f()})()
+</script>
+</body>
+</html>

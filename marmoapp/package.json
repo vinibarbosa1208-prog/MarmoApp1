@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predeploy": "npm run build",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -19,6 +20,7 @@
     "openai": "^6.37.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "resend": "^6.14.0",
     "stripe": "^22.2.0"
   },
   "devDependencies": {

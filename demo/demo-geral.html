@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarmoApp — Demo Geral</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;font-family:'DM Sans',sans-serif}
+.shell{display:flex;width:100%;height:100%}
+.sb{width:216px;min-width:216px;background:#111;border-right:1px solid #1f1f1f;display:flex;flex-direction:column;height:100%}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid #1f1f1f;display:flex;align-items:center;gap:10px}
+.sb-mark{width:32px;height:32px;flex-shrink:0}
+.sb-name{font-size:12px;color:#555;letter-spacing:.3px}
+.sb-nav{padding:10px 0;flex:1}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:13px;color:#4a4a4a;border-left:2.5px solid transparent;cursor:pointer;transition:.2s}
+.ni svg{width:15px;height:15px;flex-shrink:0;opacity:.5}
+.ni.active{color:#C9A84C;background:rgba(201,168,76,.07);border-left-color:#C9A84C}
+.ni.active svg{opacity:1}
+.ni-ai{font-size:9px;font-weight:700;background:rgba(201,168,76,.18);color:#C9A84C;padding:1px 5px;border-radius:4px;margin-left:2px}
+.sb-foot{padding:14px 16px;border-top:1px solid #1f1f1f}
+.sb-foot-name{font-size:13px;font-weight:600;color:#e0d8cc;margin-bottom:2px}
+.sb-foot-links{font-size:11px;color:#444}
+.sb-foot-links a{color:#C9A84C;text-decoration:none}
+.main{flex:1;display:flex;flex-direction:column;background:#f5f2ee;overflow:hidden}
+.ph{background:#fff;border-bottom:1px solid #e8e2d8;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ph-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#1a1511;letter-spacing:-.3px}
+.ph-date{font-size:12px;color:#b0a89e}
+.content{flex:1;padding:22px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+
+/* KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:#fff;border:1px solid #e8e2d8;border-radius:10px;padding:18px 16px;opacity:0;transform:translateY(8px);transition:.4s}
+.kpi.in{opacity:1;transform:translateY(0)}
+.kpi-label{font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#b0a89e;margin-bottom:10px}
+.kpi-val{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#1a1511;line-height:1}
+.kpi-sub{font-size:11px;color:#a09890;margin-top:6px}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:6px}
+.up{background:rgba(34,197,94,.1);color:#22c55e}
+.gold{background:rgba(201,168,76,.1);color:#C9A84C}
+
+/* Section row */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}
+.panel{background:#fff;border:1px solid #e8e2d8;border-radius:10px;padding:18px;opacity:0;transform:translateY(8px);transition:.4s}
+.panel.in{opacity:1;transform:translateY(0)}
+.panel-title{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#b0a89e;margin-bottom:14px}
+
+/* Recent orçamentos */
+.orc-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f5f0e8;opacity:0;transform:translateX(-5px);transition:.3s}
+.orc-item.in{opacity:1;transform:translateX(0)}
+.orc-item:last-child{border-bottom:none}
+.orc-name{font-size:13px;font-weight:600;color:#1a1511}
+.orc-desc{font-size:11px;color:#a09890;margin-top:1px}
+.orc-val{font-size:13px;font-weight:700;color:#1a1511}
+.orc-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:2px;text-align:right}
+.b-pend{background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.25)}
+.b-aprov{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.25)}
+.b-prod{background:rgba(99,102,241,.1);color:#6366f1;border:1px solid rgba(99,102,241,.25)}
+
+/* Chart bars */
+.chart{display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:8px}
+.bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.bar{width:100%;background:rgba(201,168,76,.15);border-radius:4px 4px 0 0;transition:height .6s ease;position:relative;overflow:hidden}
+.bar::after{content:'';position:absolute;bottom:0;left:0;right:0;background:#C9A84C;border-radius:4px 4px 0 0;transition:height .8s ease}
+.bar-lbl{font-size:9.5px;color:#b0a89e;font-weight:600}
+
+/* Activity feed */
+.act{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f5f0e8;opacity:0;transform:translateX(-4px);transition:.3s}
+.act.in{opacity:1;transform:translateX(0)}
+.act:last-child{border-bottom:none}
+.act-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.act-text{font-size:12.5px;color:#3a3028;line-height:1.4}
+.act-time{font-size:11px;color:#b0a89e;margin-top:2px}
+
+/* highlight pulse */
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0)}50%{box-shadow:0 0 0 4px rgba(201,168,76,.18)}}
+.ni.hl{animation:pulse .7s ease}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="sb">
+  <div class="sb-logo">
+    <svg class="sb-mark" viewBox="0 0 32 32" fill="none">
+      <path d="M4 26L10 8L16 18L22 8L28 26" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 26L10 8" stroke="rgba(201,168,76,.35)" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    <span class="sb-name">Real Pedras</span>
+  </div>
+  <div class="sb-nav" id="nav">
+    <div class="ni active" id="ni0"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>Dashboard</div>
+    <div class="ni" id="ni1"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Antonio <span class="ni-ai">AI</span></div>
+    <div class="ni" id="ni2"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5" stroke="#111" stroke-width="1.2"/><line x1="5" y1="8" x2="11" y2="8" stroke="#111" stroke-width="1.2"/><line x1="5" y1="11" x2="8" y2="11" stroke="#111" stroke-width="1.2"/></svg>Orçamentos</div>
+    <div class="ni" id="ni3"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Clientes</div>
+    <div class="ni" id="ni4"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="12" rx="1.5"/><line x1="1" y1="7" x2="15" y2="7" stroke="#111" stroke-width="1.2"/><line x1="5" y1="1" x2="5" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1" x2="11" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Agenda</div>
+    <div class="ni" id="ni5"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="2,12 5,7 8,9 11,4 14,6"/></svg>Centro de Custos</div>
+    <div class="ni" id="ni6"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="1.5" rx=".75"/><rect x="1" y="7.5" width="14" height="1.5" rx=".75"/><rect x="1" y="11" width="14" height="1.5" rx=".75"/></svg>Fila de Serviços</div>
+    <div class="ni" id="ni7"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 4v4l2.5 2.5"/></svg>Estoque</div>
+    <div class="ni" id="ni8"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="6" width="3" height="9" rx="1"/><rect x="11" y="3" width="3" height="12" rx="1"/></svg>Relatórios</div>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-name">Real Pedras</div>
+    <div class="sb-foot-links"><a href="#">Configurações</a> · <a href="#">Sair</a></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="ph">
+    <span class="ph-title">Dashboard</span>
+    <span class="ph-date">Segunda-feira, 20 de julho de 2026</span>
+  </div>
+  <div class="content">
+    <div class="kpis">
+      <div class="kpi" id="k0">
+        <div class="kpi-label">Orçamentos Ativos</div>
+        <div class="kpi-val" id="kv0">0</div>
+        <div><span class="kpi-delta up">↑ 3 esta semana</span></div>
+      </div>
+      <div class="kpi" id="k1">
+        <div class="kpi-label">Receita do Mês</div>
+        <div class="kpi-val" id="kv1">R$ 0</div>
+        <div><span class="kpi-delta up">↑ 18% vs mês ant.</span></div>
+      </div>
+      <div class="kpi" id="k2">
+        <div class="kpi-label">Obras em Andamento</div>
+        <div class="kpi-val" id="kv2">0</div>
+        <div><span class="kpi-delta gold">2 entregando hoje</span></div>
+      </div>
+      <div class="kpi" id="k3">
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-val" id="kv3">R$ 0</div>
+        <div><span class="kpi-delta up">↑ R$ 340 vs jul/25</span></div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="panel" id="p0">
+        <div class="panel-title">Orçamentos Recentes</div>
+        <div class="orc-item" id="o0"><div><div class="orc-name">João Silva</div><div class="orc-desc">Bancada cozinha — Granito Preto São Gabriel</div></div><div style="text-align:right"><div class="orc-val">R$ 2.074</div><div class="orc-badge b-aprov">Aprovado</div></div></div>
+        <div class="orc-item" id="o1"><div><div class="orc-name">Maria Oliveira</div><div class="orc-desc">Banheiro suíte — Mármore Branco Paraná</div></div><div style="text-align:right"><div class="orc-val">R$ 3.180</div><div class="orc-badge b-prod">Em produção</div></div></div>
+        <div class="orc-item" id="o2"><div><div class="orc-name">Construtora ABC</div><div class="orc-desc">Soleira + peitoril — Granito Cinza Andorinha</div></div><div style="text-align:right"><div class="orc-val">R$ 1.540</div><div class="orc-badge b-pend">Pendente</div></div></div>
+        <div class="orc-item" id="o3"><div><div class="orc-name">Fernanda Costa</div><div class="orc-desc">Lavabo — Mármore Travertino Nacional</div></div><div style="text-align:right"><div class="orc-val">R$ 1.890</div><div class="orc-badge b-pend">Pendente</div></div></div>
+      </div>
+
+      <div class="panel" id="p1">
+        <div class="panel-title">Receita — Últimos 7 dias</div>
+        <div class="chart" id="chart">
+          <div class="bar-wrap"><div class="bar" id="b0" style="height:70%"></div><div class="bar-lbl">Seg</div></div>
+          <div class="bar-wrap"><div class="bar" id="b1" style="height:55%"></div><div class="bar-lbl">Ter</div></div>
+          <div class="bar-wrap"><div class="bar" id="b2" style="height:85%"></div><div class="bar-lbl">Qua</div></div>
+          <div class="bar-wrap"><div class="bar" id="b3" style="height:40%"></div><div class="bar-lbl">Qui</div></div>
+          <div class="bar-wrap"><div class="bar" id="b4" style="height:95%"></div><div class="bar-lbl">Sex</div></div>
+          <div class="bar-wrap"><div class="bar" id="b5" style="height:65%"></div><div class="bar-lbl">Sáb</div></div>
+          <div class="bar-wrap"><div class="bar" id="b6" style="height:30%"></div><div class="bar-lbl">Dom</div></div>
+        </div>
+        <div class="panel-title" style="margin-top:16px">Atividade Recente</div>
+        <div class="act" id="ac0"><div class="act-dot" style="background:#22c55e"></div><div><div class="act-text">Orçamento #041 aprovado — João Silva</div><div class="act-time">Hoje 09:14</div></div></div>
+        <div class="act" id="ac1"><div class="act-dot" style="background:#C9A84C"></div><div><div class="act-text">Nova medição agendada — Maria Oliveira</div><div class="act-time">Hoje 08:50</div></div></div>
+        <div class="act" id="ac2"><div class="act-dot" style="background:#6366f1"></div><div><div class="act-text">Bancada concluída — entrega amanhã</div><div class="act-time">Ontem 17:32</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// Counter animation
+function counter(el,target,prefix,suffix,dur){
+  let start=0,step=target/60;
+  const iv=setInterval(()=>{
+    start+=step;
+    if(start>=target){start=target;clearInterval(iv)}
+    el.textContent=prefix+Math.round(start).toLocaleString('pt-BR')+suffix;
+  },dur/60);
+}
+
+function animBars(){
+  const bars=document.querySelectorAll('.bar');
+  const heights=['70%','55%','85%','40%','95%','65%','30%'];
+  bars.forEach((b,i)=>{
+    b.style.height='0%';
+    b.style.setProperty('--h',heights[i]);
+    setTimeout(()=>{
+      b.style.transition='height .7s ease';
+      b.style.height=heights[i];
+      // gold fill
+      b.style.background='#C9A84C';
+      b.style.opacity='.85';
+      if(i===4)b.style.opacity='1';
+    },200+i*90);
+  });
+}
+
+function start(){
+  // KPIs fade in
+  [0,1,2,3].forEach(i=>setTimeout(()=>document.getElementById('k'+i).classList.add('in'),200+i*120));
+
+  // Counter
+  setTimeout(()=>{
+    counter(document.getElementById('kv0'),14,'','',800);
+    counter(document.getElementById('kv1'),28400,'R$ ','',1000);
+    counter(document.getElementById('kv2'),7,'','',600);
+    counter(document.getElementById('kv3'),2885,'R$ ','',1000);
+  },400);
+
+  // Panels
+  setTimeout(()=>document.getElementById('p0').classList.add('in'),700);
+  setTimeout(()=>document.getElementById('p1').classList.add('in'),850);
+
+  // Orc items
+  [0,1,2,3].forEach(i=>setTimeout(()=>document.getElementById('o'+i).classList.add('in'),900+i*160));
+
+  // Bars
+  setTimeout(animBars,1000);
+
+  // Activity
+  [0,1,2].forEach(i=>setTimeout(()=>document.getElementById('ac'+i).classList.add('in'),1300+i*200));
+
+  // Nav highlight cycle
+  setTimeout(navCycle, 3200);
+}
+
+let navIdx=0;
+const navItems=[0,2,1,6,7,0];
+function navCycle(){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  const id=navItems[navIdx%navItems.length];
+  const el=document.getElementById('ni'+id);
+  el.classList.add('active','hl');
+  setTimeout(()=>el.classList.remove('hl'),800);
+  navIdx++;
+  if(navIdx<navItems.length) setTimeout(navCycle,900);
+  else setTimeout(()=>{
+    document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+    document.getElementById('ni0').classList.add('active');
+    // reset and loop
+    setTimeout(resetAll, 1200);
+  },900);
+}
+
+function resetAll(){
+  // fade out everything
+  document.querySelectorAll('.kpi,.panel,.orc-item,.act').forEach(el=>{
+    el.classList.remove('in');
+  });
+  document.querySelectorAll('.bar').forEach(b=>{b.style.height='0%';b.style.transition='height .3s'});
+  document.getElementById('kv0').textContent='0';
+  document.getElementById('kv1').textContent='R$ 0';
+  document.getElementById('kv2').textContent='0';
+  document.getElementById('kv3').textContent='R$ 0';
+  navIdx=0;
+  setTimeout(start,600);
+}
+
+start();
+
+// Auto-scale: renderiza como 360px de altura e escala para caber no iframe
+(function(){function f(){document.documentElement.style.zoom=window.innerHeight/360}window.addEventListener("resize",f);f()})()
+</script>
+</body>
+</html>

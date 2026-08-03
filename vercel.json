@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/MarmoApp Cadastro.dc.html",
+      "destination": "https://app.marmoapp.com/cadastro",
+      "permanent": false
+    },
+    {
+      "source": "/cadastro",
+      "destination": "https://app.marmoapp.com/cadastro",
+      "permanent": false
+    }
+  ]
+}

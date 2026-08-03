@@ -68,7 +68,19 @@ function ClienteModal({
       onClose()
     } catch (err: any) {
       console.error('Erro ao salvar cliente:', err)
-      setError(err?.message || err?.details || 'Erro ao salvar. Tente novamente.')
+      // Erros de RLS/JWT expirado (ex: sessão caiu no meio da edição) chegam
+      // como 401/403 ou código do Postgrest — nesse caso a mensagem genérica
+      // confunde o usuário, então orientamos a recarregar para renovar a sessão.
+      const isAuthError =
+        err?.code === 'PGRST301' ||
+        err?.code === '42501' ||
+        err?.status === 401 ||
+        /jwt|token/i.test(err?.message || '')
+      setError(
+        isAuthError
+          ? 'Sua sessão expirou. Recarregue a página e faça login novamente.'
+          : err?.message || err?.details || 'Erro ao salvar. Tente novamente.'
+      )
     } finally {
       setLoading(false)
     }

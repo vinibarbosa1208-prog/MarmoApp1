@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import { fmt, formatPhone, sbSave } from '@/lib/utils'
@@ -505,6 +505,66 @@ export default function NovoOrcamentoPage() {
   const [servicoIdSel, setServicodeIdSel] = useState('')
   const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
 
+  // Rascunho automático local: salva o progresso do orçamento no navegador
+  // pra não perder tudo se der erro ao salvar (timeout, sessão caiu, etc.)
+  // ou se a aba for fechada sem querer no meio do preenchimento.
+  const DRAFT_KEY = marmoraria?.id ? `marmoapp_orc_rascunho_${marmoraria.id}` : null
+
+  const [draftDisponivel, setDraftDisponivel] = useState(() => {
+    if (typeof window === 'undefined' || !DRAFT_KEY) return false
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return false
+      const draft = JSON.parse(raw)
+      return !!(draft?.form?.cliente_id || draft?.ambientes?.length > 0 || draft?.itens?.length > 0)
+    } catch {
+      return false
+    }
+  })
+
+  // Salva automaticamente (debounced) sempre que form/ambientes/itens/step mudam.
+  // Só começa a salvar depois que o usuário decidiu sobre um rascunho anterior,
+  // pra não sobrescrever esse rascunho com o estado vazio inicial da página.
+  useEffect(() => {
+    if (!DRAFT_KEY || draftDisponivel) return
+    const temConteudo = form.cliente_id || ambientes.length > 0 || itens.length > 0
+    if (!temConteudo) return
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, ambientes, itens, step, savedAt: Date.now() }))
+      } catch (err) {
+        console.error('[Orçamento] Erro ao salvar rascunho local:', err)
+      }
+    }, 800)
+    return () => clearTimeout(t)
+  }, [DRAFT_KEY, form, ambientes, itens, step, draftDisponivel])
+
+  function restaurarRascunho() {
+    if (!DRAFT_KEY) return
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (raw) {
+        const draft = JSON.parse(raw)
+        if (draft.form) setForm(draft.form)
+        if (draft.ambientes) setAmbientes(draft.ambientes)
+        if (draft.itens) setItens(draft.itens)
+        if (draft.step) setStep(draft.step)
+      }
+    } catch (err) {
+      console.error('[Orçamento] Erro ao restaurar rascunho local:', err)
+    }
+    setDraftDisponivel(false)
+  }
+
+  function descartarRascunho() {
+    if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY)
+    setDraftDisponivel(false)
+  }
+
+  function limparRascunho() {
+    if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY)
+  }
+
   function up(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
   function upItem(updates: Partial<ItemForm>) {
@@ -754,6 +814,7 @@ export default function NovoOrcamentoPage() {
       }
 
       await loadOrcamentos()
+      limparRascunho()
       toast('Orçamento salvo!', 'ok2')
       router.push('/orcamentos/' + orc.id)
     } catch (err: any) {
@@ -1241,12 +1302,27 @@ export default function NovoOrcamentoPage() {
       <div className="page-header">
         <h1 className="page-title">Novo Orçamento</h1>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          <button className="btn btn-outline" onClick={() => router.push('/orcamentos')}>Cancelar</button>
+          <button className="btn btn-outline" onClick={() => { limparRascunho(); router.push('/orcamentos') }}>Cancelar</button>
           {erro && <div style={{ color: 'var(--red)', fontSize: 13 }}>{erro}</div>}
         </div>
       </div>
 
       <WizardProgress step={step} onJump={setStep} />
+
+      {draftDisponivel && (
+        <div className="card" style={{ borderColor: 'var(--gold)', marginBottom: 16 }}>
+          <div className="card-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <strong>Encontramos um rascunho não finalizado</strong>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Deseja continuar de onde parou ou começar um orçamento novo?</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-outline" onClick={descartarRascunho}>Descartar</button>
+              <button className="btn btn-gold" onClick={restaurarRascunho}>Continuar rascunho</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ETAPA 1 — Cliente e Dados Gerais */}
       {step === 1 && (

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarmoApp — Demo Orçamento</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;font-family:'DM Sans',sans-serif}
+
+/* ── SHELL ── */
+.shell{display:flex;width:100%;height:100%;min-height:600px}
+
+/* ── SIDEBAR ── */
+.sb{width:216px;min-width:216px;background:#111;border-right:1px solid #1f1f1f;display:flex;flex-direction:column;height:100%}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid #1f1f1f;display:flex;align-items:center;gap:10px}
+.sb-mark{width:32px;height:32px;flex-shrink:0}
+.sb-name{font-size:12px;color:#555;letter-spacing:.3px}
+.sb-nav{padding:10px 0;flex:1}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:13px;color:#4a4a4a;border-left:2.5px solid transparent;cursor:pointer;transition:.15s}
+.ni svg{width:15px;height:15px;flex-shrink:0;opacity:.5}
+.ni.active{color:#C9A84C;background:rgba(201,168,76,.07);border-left-color:#C9A84C}
+.ni.active svg{opacity:1}
+.ni-ai{font-size:9px;font-weight:700;background:rgba(201,168,76,.18);color:#C9A84C;padding:1px 5px;border-radius:4px;margin-left:2px}
+.sb-foot{padding:14px 16px;border-top:1px solid #1f1f1f}
+.sb-foot-name{font-size:13px;font-weight:600;color:#e0d8cc;margin-bottom:2px}
+.sb-foot-links{font-size:11px;color:#444}
+.sb-foot-links a{color:#C9A84C;text-decoration:none}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;background:#f5f2ee;overflow:hidden}
+
+/* Page header */
+.ph{background:#fff;border-bottom:1px solid #e8e2d8;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ph-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#1a1511;letter-spacing:-.3px}
+.ph-cancel{font-size:13px;color:#9a9186;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* Steps */
+.steps{background:#fff;border-bottom:1px solid #e8e2d8;padding:14px 28px;display:flex;align-items:center;gap:0;flex-shrink:0}
+.st{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#b0a89e;font-weight:500}
+.st-n{width:26px;height:26px;border-radius:50%;background:#e8e2d8;color:#b0a89e;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.st.active .st-n{background:#C9A84C;color:#fff}
+.st.active{color:#1a1511;font-weight:600}
+.st.done .st-n{background:#22c55e;color:#fff;font-size:12px}
+.st.done{color:#22c55e}
+.st-arr{font-size:12px;color:#d0c9c0;margin:0 10px}
+
+/* Content */
+.content{flex:1;padding:24px 28px;overflow-y:auto}
+.card{background:#fff;border:1px solid #e8e2d8;border-radius:10px;padding:22px}
+.card-title{font-size:14px;font-weight:700;color:#1a1511;margin-bottom:18px}
+
+/* Form */
+.fg{margin-bottom:16px}
+.fg-row{display:grid;gap:14px;margin-bottom:16px}
+.fg-row.c2{grid-template-columns:1fr 1fr}
+.fl{font-size:10.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#a09890;margin-bottom:5px;display:block}
+.fi{width:100%;background:#faf8f5;border:1.5px solid #e8e2d8;border-radius:7px;padding:9px 13px;font-size:13.5px;color:#1a1511;font-family:'DM Sans',sans-serif;transition:border-color .2s}
+.fi.focused{border-color:#C9A84C;background:#fff;box-shadow:0 0 0 3px rgba(201,168,76,.1)}
+.fi.ph-text{color:#c0b9b0}
+.fi.val{color:#1a1511}
+.fi-btn{padding:9px 14px;font-size:13px;color:#C9A84C;background:#fff;border:1.5px solid rgba(201,168,76,.35);border-radius:7px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
+
+/* Footer nav */
+.fnav{background:#fff;border-top:1px solid #e8e2d8;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.btn-prev{font-size:13px;color:#9a9186;background:#fff;border:1.5px solid #e8e2d8;padding:9px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;cursor:pointer}
+.btn-next{font-size:13px;font-weight:700;color:#2C2922;background:#C9A84C;border:none;padding:10px 24px;border-radius:8px;font-family:'DM Sans',sans-serif;cursor:pointer}
+.btn-next.green{background:#22c55e;color:#fff}
+
+/* Ambiente card */
+.amb{background:#fff;border:1.5px solid #e8e2d8;border-radius:9px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;opacity:0;transform:translateY(6px);transition:.35s}
+.amb.in{opacity:1;transform:translateY(0)}
+.amb-name{font-size:14px;font-weight:600;color:#1a1511}
+.amb-sub{font-size:11.5px;color:#a09890;margin-top:2px}
+.amb-tag{font-size:11px;background:#f0ece6;color:#9a9186;padding:4px 10px;border-radius:6px}
+.btn-add{display:flex;align-items:center;gap:8px;width:100%;background:rgba(201,168,76,.05);border:1.5px dashed rgba(201,168,76,.35);border-radius:9px;padding:13px 16px;font-size:13px;color:#C9A84C;font-weight:600;cursor:pointer;margin-top:4px;font-family:'DM Sans',sans-serif}
+
+/* Item card */
+.itm{background:#fff;border:1.5px solid #e8e2d8;border-radius:9px;padding:16px;margin-bottom:10px;opacity:0;transform:translateY(6px);transition:.35s}
+.itm.in{opacity:1;transform:translateY(0)}
+.itm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.itm-name{font-size:14px;font-weight:600;color:#1a1511}
+.itm-badge{font-size:10.5px;font-weight:700;background:rgba(201,168,76,.1);color:#C9A84C;border:1px solid rgba(201,168,76,.25);padding:2px 8px;border-radius:20px}
+.itm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.itm-ml{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#b0a89e;margin-bottom:3px}
+.itm-mv{font-size:14px;font-weight:600;color:#1a1511}
+.itm-mv.gold{color:#C9A84C}
+.itm-total{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #f0ece6}
+.itm-tl{font-size:12px;color:#a09890}
+.itm-tv{font-size:15px;font-weight:700;color:#1a1511}
+
+/* Review */
+.rev-s{background:#fff;border:1.5px solid #e8e2d8;border-radius:9px;padding:18px;margin-bottom:12px}
+.rev-st{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#b0a89e;margin-bottom:12px}
+.rev-r{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f0e8;font-size:13px}
+.rev-r:last-child{border-bottom:none}
+.rev-rl{color:#7a7168}
+.rev-rv{color:#1a1511;font-weight:500}
+.rev-tot{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:rgba(201,168,76,.05);border:1.5px solid rgba(201,168,76,.2);border-radius:10px;margin-top:4px}
+.rev-totl{font-size:14px;font-weight:700;color:#1a1511}
+.rev-totv{font-size:22px;font-weight:700;color:#C9A84C;font-family:'Playfair Display',serif}
+
+/* Toast */
+.toast{position:fixed;top:18px;right:18px;background:#1a1511;border:1px solid rgba(34,197,94,.3);border-radius:11px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.35);opacity:0;transform:translateY(-8px);transition:.35s;z-index:99;pointer-events:none}
+.toast.in{opacity:1;transform:translateY(0)}
+.t-ico{font-size:20px}
+.t-ttl{font-size:13.5px;font-weight:700;color:#f0ebe3}
+.t-sub{font-size:11.5px;color:#5a5248;margin-top:1px}
+
+/* cursor */
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cur{display:inline-block;width:1.5px;height:14px;background:#C9A84C;margin-left:1px;vertical-align:middle;animation:blink .8s infinite}
+
+.scene{display:none;flex-direction:column;height:100%}
+.scene.on{display:flex}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sb">
+  <div class="sb-logo">
+    <svg class="sb-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 26L10 8L16 18L22 8L28 26" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 26L10 8" stroke="rgba(201,168,76,.35)" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    <span class="sb-name">Real Pedras</span>
+  </div>
+  <div class="sb-nav">
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>
+      Dashboard
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      Antonio <span class="ni-ai">AI</span>
+    </div>
+    <div class="ni active">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5" stroke="#111" stroke-width="1.2"/><line x1="5" y1="8" x2="11" y2="8" stroke="#111" stroke-width="1.2"/><line x1="5" y1="11" x2="8" y2="11" stroke="#111" stroke-width="1.2"/></svg>
+      Orçamentos
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      Clientes
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="12" rx="1.5"/><line x1="1" y1="7" x2="15" y2="7" stroke="#111" stroke-width="1.2"/><line x1="5" y1="1" x2="5" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1" x2="11" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Agenda
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="2,12 5,7 8,9 11,4 14,6"/></svg>
+      Centro de Custos
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="1.5" rx=".75"/><rect x="1" y="7.5" width="14" height="1.5" rx=".75"/><rect x="1" y="11" width="14" height="1.5" rx=".75"/></svg>
+      Fila de Serviços
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 4v4l2.5 2.5"/></svg>
+      Estoque
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/></svg>
+      Insumos
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      Funcionários
+    </div>
+    <div class="ni">
+      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="6" width="3" height="9" rx="1"/><rect x="11" y="3" width="3" height="12" rx="1"/></svg>
+      Relatórios
+    </div>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-name">Real Pedras</div>
+    <div class="sb-foot-links"><a href="#">Configurações</a> · <a href="#">Sair</a></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- STEP 1 -->
+  <div class="scene on" id="s1">
+    <div class="ph"><span class="ph-title">Novo Orçamento</span><button class="ph-cancel">Cancelar</button></div>
+    <div class="steps">
+      <div class="st active"><div class="st-n">1</div>1. Cliente</div>
+      <span class="st-arr">→</span>
+      <div class="st"><div class="st-n">2</div>2. Ambientes</div>
+      <span class="st-arr">→</span>
+      <div class="st"><div class="st-n">3</div>3. Itens</div>
+      <span class="st-arr">→</span>
+      <div class="st"><div class="st-n">4</div>4. Revisão</div>
+    </div>
+    <div class="content">
+      <div class="card">
+        <div class="card-title">Cliente e Dados Gerais</div>
+        <div class="fg-row c2" style="margin-bottom:16px">
+          <div class="fg">
+            <span class="fl">Cliente *</span>
+            <div style="display:flex;gap:8px">
+              <div class="fi val" style="flex:1">Maria Oliveira</div>
+              <button class="fi-btn">+ Novo Cliente</button>
+            </div>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:16px">
+          <span class="fl">Título / Descrição do Serviço *</span>
+          <div class="fi focused" id="tf"><span class="cur"></span></div>
+        </div>
+        <div class="fg-row c2">
+          <div class="fg">
+            <span class="fl">Condição de Pagamento</span>
+            <div class="fi val">50% entrada + 50% na entrega</div>
+          </div>
+          <div class="fg">
+            <span class="fl">Validade do Orçamento</span>
+            <div class="fi val">19/08/2026</div>
+          </div>
+        </div>
+        <div class="fg" style="margin-top:4px">
+          <span class="fl">Observações</span>
+          <div class="fi val" style="min-height:52px">Acabamento polido. Entrega em 15 dias após aprovação.</div>
+        </div>
+      </div>
+    </div>
+    <div class="fnav"><div></div><button class="btn-next">Próximo →</button></div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="scene" id="s2">
+    <div class="ph"><span class="ph-title">Novo Orçamento</span><button class="ph-cancel">Cancelar</button></div>
+    <div class="steps">
+      <div class="st done"><div class="st-n">✓</div>1. Cliente</div>
+      <span class="st-arr">→</span>
+      <div class="st active"><div class="st-n">2</div>2. Ambientes</div>
+      <span class="st-arr">→</span>
+      <div class="st"><div class="st-n">3</div>3. Itens</div>
+      <span class="st-arr">→</span>
+      <div class="st"><div class="st-n">4</div>4. Revisão</div>
+    </div>
+    <div class="content">
+      <div class="card-title" style="margin-bottom:14px">Ambientes do Projeto</div>
+      <div class="amb" id="a1"><div><div class="amb-name">Cozinha</div><div class="amb-sub">Bancada principal</div></div><span class="amb-tag">Bancada</span></div>
+      <div class="amb" id="a2"><div><div class="amb-name">Banheiro Suíte</div><div class="amb-sub">Pia e nicho</div></div><span class="amb-tag">Pia + Nicho</span></div>
+      <button class="btn-add">＋ Adicionar ambiente</button>
+    </div>
+    <div class="fnav"><button class="btn-prev">← Anterior</button><button class="btn-next">Próximo →</button></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="scene" id="s3">
+    <div class="ph"><span class="ph-title">Novo Orçamento</span><button class="ph-cancel">Cancelar</button></div>
+    <div class="steps">
+      <div class="st done"><div class="st-n">✓</div>1. Cliente</div>
+      <span class="st-arr">→</span>
+      <div class="st done"><div class="st-n">✓</div>2. Ambientes</div>
+      <span class="st-arr">→</span>
+      <div class="st active"><div class="st-n">3</div>3. Itens</div>
+      <span class="st-arr">→</span>
+      <div class="st"><div class="st-n">4</div>4. Revisão</div>
+    </div>
+    <div class="content">
+      <div class="card-title" style="margin-bottom:14px">Itens — Cozinha</div>
+      <div class="itm" id="i1">
+        <div class="itm-hdr"><span class="itm-name">Bancada Mármore Carrara</span><span class="itm-badge">Polido</span></div>
+        <div class="itm-grid">
+          <div><div class="itm-ml">Comprimento</div><div class="itm-mv">2,40 m</div></div>
+          <div><div class="itm-ml">Largura</div><div class="itm-mv">0,65 m</div></div>
+          <div><div class="itm-ml">Área</div><div class="itm-mv">1,56 m²</div></div>
+          <div><div class="itm-ml">Preço / m²</div><div class="itm-mv gold">R$ 1.200</div></div>
+        </div>
+        <div class="itm-total"><span class="itm-tl">Subtotal</span><span class="itm-tv">R$ 1.872,00</span></div>
+      </div>
+      <div class="itm" id="i2">
+        <div class="itm-hdr"><span class="itm-name">Cuba Inox Embutida por Baixo</span><span class="itm-badge">Serviço</span></div>
+        <div class="itm-grid">
+          <div><div class="itm-ml">Quantidade</div><div class="itm-mv">1 un</div></div>
+          <div><div class="itm-ml">Preço unit.</div><div class="itm-mv">R$ 390</div></div>
+          <div><div class="itm-ml">Mão de obra</div><div class="itm-mv gold">R$ 280</div></div>
+          <div></div>
+        </div>
+        <div class="itm-total"><span class="itm-tl">Subtotal</span><span class="itm-tv">R$ 670,00</span></div>
+      </div>
+    </div>
+    <div class="fnav"><button class="btn-prev">← Anterior</button><button class="btn-next">Próximo →</button></div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="scene" id="s4">
+    <div class="ph"><span class="ph-title">Novo Orçamento</span><button class="ph-cancel">Cancelar</button></div>
+    <div class="steps">
+      <div class="st done"><div class="st-n">✓</div>1. Cliente</div>
+      <span class="st-arr">→</span>
+      <div class="st done"><div class="st-n">✓</div>2. Ambientes</div>
+      <span class="st-arr">→</span>
+      <div class="st done"><div class="st-n">✓</div>3. Itens</div>
+      <span class="st-arr">→</span>
+      <div class="st active"><div class="st-n">4</div>4. Revisão</div>
+    </div>
+    <div class="content">
+      <div class="rev-s">
+        <div class="rev-st">Dados Gerais</div>
+        <div class="rev-r"><span class="rev-rl">Cliente</span><span class="rev-rv">Maria Oliveira</span></div>
+        <div class="rev-r"><span class="rev-rl">Serviço</span><span class="rev-rv">Bancada Cozinha — Mármore Carrara</span></div>
+        <div class="rev-r"><span class="rev-rl">Pagamento</span><span class="rev-rv">50% entrada + 50% na entrega</span></div>
+        <div class="rev-r"><span class="rev-rl">Validade</span><span class="rev-rv">19/08/2026</span></div>
+      </div>
+      <div class="rev-s">
+        <div class="rev-st">Itens</div>
+        <div class="rev-r"><span class="rev-rl">Bancada Mármore Carrara (1,56 m²)</span><span class="rev-rv">R$ 1.872,00</span></div>
+        <div class="rev-r"><span class="rev-rl">Cuba inox embutida + instalação</span><span class="rev-rv">R$ 670,00</span></div>
+      </div>
+      <div class="rev-tot"><span class="rev-totl">Total do Orçamento</span><span class="rev-totv">R$ 2.542,00</span></div>
+    </div>
+    <div class="fnav"><button class="btn-prev">← Anterior</button><button class="btn-next green" id="bg">✓ Gerar Orçamento</button></div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">
+    <div class="t-ico">✅</div>
+    <div><div class="t-ttl">Orçamento #043 gerado com sucesso!</div><div class="t-sub">PDF disponível · Enviando para Maria Oliveira via WhatsApp…</div></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+const TITLE='Bancada Cozinha — Mármore Carrara';
+let T=null,I=null;
+
+const go=id=>{document.querySelectorAll('.scene').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on')};
+
+function s1(){
+  go('s1');
+  const f=document.getElementById('tf');
+  f.innerHTML='<span class="cur"></span>';
+  let i=0;
+  I=setInterval(()=>{i++;f.innerHTML=TITLE.slice(0,i)+'<span class="cur"></span>';if(i>=TITLE.length){clearInterval(I);T=setTimeout(s2,1600)}},44);
+}
+
+function s2(){
+  go('s2');
+  const a1=document.getElementById('a1'),a2=document.getElementById('a2');
+  a1.classList.remove('in');a2.classList.remove('in');
+  requestAnimationFrame(()=>{
+    setTimeout(()=>a1.classList.add('in'),100);
+    setTimeout(()=>a2.classList.add('in'),320);
+  });
+  T=setTimeout(s3,2600);
+}
+
+function s3(){
+  go('s3');
+  const i1=document.getElementById('i1'),i2=document.getElementById('i2');
+  i1.classList.remove('in');i2.classList.remove('in');
+  requestAnimationFrame(()=>{
+    setTimeout(()=>i1.classList.add('in'),100);
+    setTimeout(()=>i2.classList.add('in'),340);
+  });
+  T=setTimeout(s4,2800);
+}
+
+function s4(){
+  go('s4');
+  T=setTimeout(()=>{
+    const b=document.getElementById('bg');
+    b.style.transform='scale(.96)';
+    setTimeout(()=>{b.style.transform='';showToast()},180);
+  },1800);
+}
+
+function showToast(){
+  const t=document.getElementById('toast');
+  t.classList.add('in');
+  T=setTimeout(()=>{t.classList.remove('in');setTimeout(()=>{s1()},600)},3000);
+}
+
+s1();
+
+// Auto-scale: renderiza como 360px de altura e escala para caber no iframe
+(function(){function f(){document.documentElement.style.zoom=window.innerHeight/360}window.addEventListener("resize",f);f()})()
+</script>
+</body>
+</html>

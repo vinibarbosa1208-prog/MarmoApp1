@@ -16,26 +16,43 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
 })
 
-async function fetchMarmorariaId(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('usuarios')
-    .select('marmoraria_id')
-    .eq('id', userId)
-    .single()
-  if (!error) return data?.marmoraria_id ?? null
+// Nunca deixa uma chamada ao Supabase travar o loading pra sempre
+// (sessão corrompida/token de refresh inválido no localStorage de uma máquina
+// específica podia deixar getSession() pendurado e a tela presa em "carregando")
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`[AuthContext] Timeout em ${label} (${ms}ms)`)), ms)
+    ),
+  ])
+}
 
-  console.error('[AuthContext] Erro ao buscar marmoraria_id, tentando novamente em 1s:', error)
-  await new Promise(r => setTimeout(r, 1000))
-  const retry = await supabase
-    .from('usuarios')
-    .select('marmoraria_id')
-    .eq('id', userId)
-    .single()
-  if (retry.error) {
-    console.error('[AuthContext] Erro ao buscar marmoraria_id (retry falhou):', retry.error)
+async function fetchMarmorariaId(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from('usuarios').select('marmoraria_id').eq('id', userId).single(),
+      8000,
+      'fetchMarmorariaId'
+    )
+    if (!error) return data?.marmoraria_id ?? null
+
+    console.error('[AuthContext] Erro ao buscar marmoraria_id, tentando novamente em 1s:', error)
+    await new Promise(r => setTimeout(r, 1000))
+    const retry = await withTimeout(
+      supabase.from('usuarios').select('marmoraria_id').eq('id', userId).single(),
+      8000,
+      'fetchMarmorariaId (retry)'
+    )
+    if (retry.error) {
+      console.error('[AuthContext] Erro ao buscar marmoraria_id (retry falhou):', retry.error)
+      return null
+    }
+    return retry.data?.marmoraria_id ?? null
+  } catch (err) {
+    console.error('[AuthContext] fetchMarmorariaId estourou o timeout:', err)
     return null
   }
-  return retry.data?.marmoraria_id ?? null
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -45,17 +62,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchedRef = useRef(false)
 
   useEffect(() => {
-    // Buscar sessão UMA vez no mount (getSession é local — não faz network call)
+    // Buscar sessão UMA vez no mount. Usamos getUser() em vez de getSession():
+    // getUser() valida o token contra o servidor da Supabase, então se o token
+    // salvo no localStorage dessa máquina estiver expirado/corrompido, ele
+    // retorna erro em vez de "pendurar" a chamada — é isso que causava a tela
+    // presa em "carregando" em algumas máquinas e não em outras.
     const initAuth = async () => {
       if (fetchedRef.current) return
       fetchedRef.current = true
 
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUser(session.user)
-        setMarmorariaId(await fetchMarmorariaId(session.user.id))
+      try {
+        const { data: { user: authedUser }, error } = await withTimeout(
+          supabase.auth.getUser(),
+          10000,
+          'getUser'
+        )
+        if (error || !authedUser) {
+          if (error) console.error('[AuthContext] Sessão inválida, limpando:', error)
+          await supabase.auth.signOut()
+          setUser(null)
+          setMarmorariaId(null)
+        } else {
+          setUser(authedUser)
+          setMarmorariaId(await fetchMarmorariaId(authedUser.id))
+        }
+      } catch (err) {
+        // getUser() nem respondeu a tempo — provável sessão local corrompida.
+        // Limpa e deixa o layout redirecionar pro /login em vez de travar.
+        console.error('[AuthContext] initAuth estourou o timeout, limpando sessão local:', err)
+        await supabase.auth.signOut().catch(() => {})
+        setUser(null)
+        setMarmorariaId(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     initAuth()

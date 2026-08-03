@@ -1,0 +1,205 @@
+{
+  "name": "MarmoApp — Presença WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evolution-presenca",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook Evolution API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "evolution-presenca"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ─── Parse do payload da Evolution API ───────────────────────\nconst body = $input.first().json.body ?? $input.first().json;\n\n// Ignora mensagens enviadas pelo próprio bot\nconst fromMe = body?.data?.key?.fromMe ?? false;\nif (fromMe) return [];\n\n// Extrai telefone do remetente (formato: 5511999999999@s.whatsapp.net)\nconst jid = body?.data?.key?.remoteJid ?? '';\nconst telefoneRaw = jid.replace('@s.whatsapp.net', '').replace('@c.us', '');\n\n// Extrai texto da mensagem\nconst texto =\n  body?.data?.message?.conversation ??\n  body?.data?.message?.extendedTextMessage?.text ??\n  '';\n\n// Nome exibido no WhatsApp\nconst pushName = body?.data?.pushName ?? 'Funcionário';\n\n// ID da instância Evolution (para enviar resposta)\nconst instance = body?.instance ?? '';\n\nreturn [{\n  json: {\n    telefone: telefoneRaw,\n    texto: texto.trim(),\n    pushName,\n    instance,\n    jid,\n  }\n}];"
+      },
+      "id": "node-parse",
+      "name": "Parsear Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "check-texto",
+              "leftValue": "={{ $json.texto }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "isNotEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-check-msg",
+      "name": "Tem texto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://marmoapp.com/api/whatsapp/presenca?secret={{ $env.WHATSAPP_WEBHOOK_SECRET }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"telefone\": \"{{ $json.telefone }}\",\n  \"texto\": \"{{ $json.texto }}\",\n  \"marmoraria_id\": \"{{ $env.MARMORARIA_ID }}\"\n}",
+        "options": {}
+      },
+      "id": "node-marmoapp",
+      "name": "Registrar Presença MarmoApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "id": "check-ok",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equal" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-check-result",
+      "name": "Presença registrada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta mensagem de confirmação\nconst nome = $input.first().json.nome ?? 'Funcionário';\nconst data = $input.first().json.data ?? '';\nconst valor = $input.first().json.valor_diaria ?? 0;\n\nconst dataFormatada = data\n  ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR')\n  : '';\n\nconst valorFormatado = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });\n\nreturn [{\n  json: {\n    mensagem: `✅ Olá, ${nome}! Presença registrada para hoje (${dataFormatada}).\\n💰 Diária: ${valorFormatado}\\n\\nBom trabalho! 💪`,\n    jid: $('Parsear Mensagem').first().json.jid,\n    instance: $('Parsear Mensagem').first().json.instance,\n  }\n}];"
+      },
+      "id": "node-msg-ok",
+      "name": "Montar Confirmação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta mensagem de erro/não encontrado\nconst motivo = $input.first().json.motivo ?? '';\nconst jid = $('Parsear Mensagem').first().json.jid;\nconst instance = $('Parsear Mensagem').first().json.instance;\n\nlet mensagem = '';\nif (motivo === 'funcionario_nao_encontrado') {\n  mensagem = '❌ Seu número não está cadastrado no sistema.\\n\\nPeça ao responsável para cadastrar seu telefone no MarmoApp.';\n} else if (motivo === 'mensagem_ignorada') {\n  // Não responde mensagens que não são de presença\n  return [];\n} else {\n  mensagem = '⚠️ Não foi possível registrar sua presença. Tente novamente ou avise o responsável.';\n}\n\nreturn [{ json: { mensagem, jid, instance } }];"
+      },
+      "id": "node-msg-erro",
+      "name": "Montar Erro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/{{ $json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.jid }}\",\n  \"text\": \"{{ $json.mensagem }}\"\n}",
+        "options": {}
+      },
+      "id": "node-send-confirmacao",
+      "name": "Enviar Confirmação WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1680, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/{{ $json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.jid }}\",\n  \"text\": \"{{ $json.mensagem }}\"\n}",
+        "options": {}
+      },
+      "id": "node-send-erro",
+      "name": "Enviar Erro WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "Responder Evolution API",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [720, 460]
+    }
+  ],
+  "connections": {
+    "Webhook Evolution API": {
+      "main": [[{ "node": "Parsear Mensagem", "type": "main", "index": 0 }]]
+    },
+    "Parsear Mensagem": {
+      "main": [
+        [
+          { "node": "Tem texto?", "type": "main", "index": 0 },
+          { "node": "Responder Evolution API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Tem texto?": {
+      "main": [
+        [{ "node": "Registrar Presença MarmoApp", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Registrar Presença MarmoApp": {
+      "main": [[{ "node": "Presença registrada?", "type": "main", "index": 0 }]]
+    },
+    "Presença registrada?": {
+      "main": [
+        [{ "node": "Montar Confirmação", "type": "main", "index": 0 }],
+        [{ "node": "Montar Erro", "type": "main", "index": 0 }]
+      ]
+    },
+    "Montar Confirmação": {
+      "main": [[{ "node": "Enviar Confirmação WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Montar Erro": {
+      "main": [[{ "node": "Enviar Erro WhatsApp", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-25T00:00:00.000Z",
+  "versionId": "1"
+}

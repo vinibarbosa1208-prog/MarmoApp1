@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarmoApp — Orçamento Auto Save</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;font-family:'DM Sans',sans-serif}
+.shell{display:flex;width:100%;height:100%}
+.sb{width:216px;min-width:216px;background:#111;border-right:1px solid #1f1f1f;display:flex;flex-direction:column;height:100%}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid #1f1f1f;display:flex;align-items:center;gap:10px}
+.sb-mark{width:32px;height:32px;flex-shrink:0}
+.sb-name{font-size:12px;color:#555;letter-spacing:.3px}
+.sb-nav{padding:10px 0;flex:1}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:13px;color:#4a4a4a;border-left:2.5px solid transparent;cursor:pointer}
+.ni svg{width:15px;height:15px;flex-shrink:0;opacity:.5}
+.ni.active{color:#C9A84C;background:rgba(201,168,76,.07);border-left-color:#C9A84C}
+.ni.active svg{opacity:1}
+.ni-ai{font-size:9px;font-weight:700;background:rgba(201,168,76,.18);color:#C9A84C;padding:1px 5px;border-radius:4px;margin-left:2px}
+.sb-foot{padding:14px 16px;border-top:1px solid #1f1f1f}
+.sb-foot-name{font-size:13px;font-weight:600;color:#e0d8cc;margin-bottom:2px}
+.sb-foot-links{font-size:11px;color:#444}
+.sb-foot-links a{color:#C9A84C;text-decoration:none}
+.main{flex:1;display:flex;flex-direction:column;background:#f5f2ee;overflow:hidden;position:relative}
+.ph{background:#fff;border-bottom:1px solid #e8e2d8;padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ph-left{display:flex;flex-direction:column;gap:2px}
+.ph-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#1a1511;letter-spacing:-.3px}
+.ph-draft{font-size:11px;color:#b0a89e;display:flex;align-items:center;gap:5px}
+.ph-draft-dot{width:6px;height:6px;border-radius:50%;background:#b0a89e}
+.ph-draft-dot.saving{background:#C9A84C;animation:savepulse .5s ease}
+.ph-draft-dot.saved{background:#22c55e}
+@keyframes savepulse{0%{transform:scale(1)}50%{transform:scale(1.6)}100%{transform:scale(1)}}
+.ph-cancel{font-size:13px;color:#9a9186;background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+.content{flex:1;padding:24px 28px;overflow-y:auto}
+.card{background:#fff;border:1px solid #e8e2d8;border-radius:10px;padding:22px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#b0a89e;margin-bottom:18px}
+.fg{margin-bottom:16px}
+.fg-row{display:grid;gap:14px;margin-bottom:16px}
+.fg-row.c2{grid-template-columns:1fr 1fr}
+.fg-row.c3{grid-template-columns:1fr 1fr 1fr}
+.fl{font-size:10.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:#a09890;margin-bottom:5px;display:block}
+.fi{width:100%;background:#faf8f5;border:1.5px solid #e8e2d8;border-radius:7px;padding:9px 13px;font-size:13.5px;color:#1a1511;font-family:'DM Sans',sans-serif;transition:border-color .2s,background .2s}
+.fi.focused{border-color:#C9A84C;background:#fff;box-shadow:0 0 0 3px rgba(201,168,76,.1)}
+.fi.done{border-color:#22c55e;background:#fff;box-shadow:0 0 0 2px rgba(34,197,94,.08)}
+.fi-client{display:flex;gap:8px}
+.fi-client .fi{flex:1}
+.fi-btn{padding:9px 14px;font-size:13px;color:#C9A84C;background:#fff;border:1.5px solid rgba(201,168,76,.35);border-radius:7px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap}
+
+/* item row */
+.itm-row{background:#faf8f5;border:1.5px solid #e8e2d8;border-radius:8px;padding:14px;margin-bottom:10px}
+.itm-row.focus-item{border-color:#C9A84C;background:#fff;box-shadow:0 0 0 3px rgba(201,168,76,.08)}
+.itm-name{font-size:13px;font-weight:600;color:#1a1511;margin-bottom:10px}
+.itm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.itm-ml{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#b0a89e;margin-bottom:3px}
+.itm-mv{font-size:14px;font-weight:700;color:#1a1511}
+.itm-mv.gold{color:#C9A84C}
+.itm-total-row{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #f0ece6}
+.itm-tl{font-size:12px;color:#a09890}
+.itm-tv{font-size:15px;font-weight:700;color:#1a1511}
+.btn-add-itm{display:flex;align-items:center;gap:7px;background:rgba(201,168,76,.05);border:1.5px dashed rgba(201,168,76,.3);border-radius:8px;padding:11px 14px;font-size:13px;color:#C9A84C;font-weight:600;width:100%;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px}
+
+/* auto-save toast */
+.save-toast{position:absolute;top:72px;right:20px;background:#fff;border:1px solid #e8e2d8;border-radius:9px;padding:8px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 24px rgba(0,0,0,.1);opacity:0;transform:translateY(-4px);transition:.25s;z-index:50;font-size:12.5px;font-weight:600}
+.save-toast.in{opacity:1;transform:translateY(0)}
+.save-toast.saving{color:#C9A84C;border-color:rgba(201,168,76,.3)}
+.save-toast.saved{color:#22c55e;border-color:rgba(34,197,94,.3)}
+
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cur{display:inline-block;width:1.5px;height:14px;background:#C9A84C;margin-left:1px;vertical-align:middle;animation:blink .8s infinite}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="sb">
+  <div class="sb-logo">
+    <svg class="sb-mark" viewBox="0 0 32 32" fill="none">
+      <path d="M4 26L10 8L16 18L22 8L28 26" stroke="#C9A84C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 26L10 8" stroke="rgba(201,168,76,.35)" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    <span class="sb-name">Real Pedras</span>
+  </div>
+  <div class="sb-nav">
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.2"/><rect x="9" y="1" width="6" height="6" rx="1.2"/><rect x="1" y="9" width="6" height="6" rx="1.2"/><rect x="9" y="9" width="6" height="6" rx="1.2"/></svg>Dashboard</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Antonio <span class="ni-ai">AI</span></div>
+    <div class="ni active"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="1" width="12" height="14" rx="1.5"/><line x1="5" y1="5" x2="11" y2="5" stroke="#111" stroke-width="1.2"/><line x1="5" y1="8" x2="11" y2="8" stroke="#111" stroke-width="1.2"/><line x1="5" y1="11" x2="8" y2="11" stroke="#111" stroke-width="1.2"/></svg>Orçamentos</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>Clientes</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="12" rx="1.5"/><line x1="1" y1="7" x2="15" y2="7" stroke="#111" stroke-width="1.2"/><line x1="5" y1="1" x2="5" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1" x2="11" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Agenda</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><polyline points="2,12 5,7 8,9 11,4 14,6"/></svg>Centro de Custos</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="1.5" rx=".75"/><rect x="1" y="7.5" width="14" height="1.5" rx=".75"/><rect x="1" y="11" width="14" height="1.5" rx=".75"/></svg>Fila de Serviços</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/><path d="M8 4v4l2.5 2.5"/></svg>Estoque</div>
+    <div class="ni"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="6" width="3" height="9" rx="1"/><rect x="11" y="3" width="3" height="12" rx="1"/></svg>Relatórios</div>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-foot-name">Real Pedras</div>
+    <div class="sb-foot-links"><a href="#">Configurações</a> · <a href="#">Sair</a></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="ph">
+    <div class="ph-left">
+      <span class="ph-title">Novo Orçamento</span>
+      <div class="ph-draft"><div class="ph-draft-dot" id="dd"></div><span id="ds">Rascunho</span></div>
+    </div>
+    <button class="ph-cancel">Cancelar</button>
+  </div>
+
+  <div class="save-toast" id="st">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" id="st-ico"><path d="M13.5 4.5L6.5 11.5L2.5 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    <span id="st-txt">Salvando rascunho...</span>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div class="card-title">Cliente e Dados Gerais</div>
+      <div class="fg-row c2" style="margin-bottom:16px">
+        <div class="fg">
+          <span class="fl">Cliente *</span>
+          <div class="fi-client">
+            <div class="fi" id="f-cliente">Selecionar cliente...</div>
+            <button class="fi-btn">+ Novo</button>
+          </div>
+        </div>
+        <div class="fg">
+          <span class="fl">Condição de Pagamento</span>
+          <div class="fi" id="f-pgto">Selecionar...</div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:16px">
+        <span class="fl">Título / Descrição *</span>
+        <div class="fi" id="f-titulo"><span class="cur"></span></div>
+      </div>
+      <div class="fg-row c2">
+        <div class="fg">
+          <span class="fl">Ambiente</span>
+          <div class="fi" id="f-amb">Cozinha</div>
+        </div>
+        <div class="fg">
+          <span class="fl">Validade</span>
+          <div class="fi" id="f-val">19/08/2026</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Itens do Orçamento</div>
+      <div class="itm-row" id="itm0">
+        <div class="itm-name">Bancada Mármore Carrara — Polido</div>
+        <div class="itm-grid">
+          <div><div class="itm-ml">Comprimento</div><div class="itm-mv" id="comp">—</div></div>
+          <div><div class="itm-ml">Largura</div><div class="itm-mv" id="larg">—</div></div>
+          <div><div class="itm-ml">Área (m²)</div><div class="itm-mv" id="area">—</div></div>
+          <div><div class="itm-ml">Preço / m²</div><div class="itm-mv gold" id="preco">—</div></div>
+        </div>
+        <div class="itm-total-row"><span class="itm-tl">Subtotal</span><span class="itm-tv" id="sub1">—</span></div>
+      </div>
+      <div class="itm-row" id="itm1" style="display:none">
+        <div class="itm-name">Cuba Inox Embutida por Baixo</div>
+        <div class="itm-grid">
+          <div><div class="itm-ml">Qtd</div><div class="itm-mv">1 un</div></div>
+          <div><div class="itm-ml">Preço unit.</div><div class="itm-mv">R$ 390</div></div>
+          <div><div class="itm-ml">Mão de obra</div><div class="itm-mv gold">R$ 280</div></div>
+          <div></div>
+        </div>
+        <div class="itm-total-row"><span class="itm-tl">Subtotal</span><span class="itm-tv">R$ 670,00</span></div>
+      </div>
+      <button class="btn-add-itm" id="addBtn" style="display:none">＋ Adicionar item</button>
+    </div>
+
+    <div id="totalCard" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:rgba(201,168,76,.05);border:1.5px solid rgba(201,168,76,.2);border-radius:10px">
+        <span style="font-size:14px;font-weight:700;color:#1a1511">Total do Orçamento</span>
+        <span style="font-size:22px;font-weight:700;color:#C9A84C;font-family:'Playfair Display',serif" id="totalVal">R$ 2.542,00</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const T_TITULO = 'Bancada Cozinha — Mármore Carrara';
+let timer=null;
+
+function showSaveToast(msg,type,dur){
+  const st=document.getElementById('st');
+  const dd=document.getElementById('dd');
+  const ds=document.getElementById('ds');
+  st.className='save-toast in '+type;
+  document.getElementById('st-txt').textContent=msg;
+  if(type==='saving'){
+    dd.className='ph-draft-dot saving';
+    ds.textContent='Salvando...';
+  } else {
+    dd.className='ph-draft-dot saved';
+    ds.textContent='Salvo automaticamente';
+  }
+  setTimeout(()=>st.classList.remove('in'),dur||1800);
+}
+
+function focusField(id){document.getElementById(id).classList.add('focused')}
+function doneField(id,val){
+  const el=document.getElementById(id);
+  el.classList.remove('focused');
+  el.classList.add('done');
+  if(val!==undefined)el.textContent=val;
+}
+
+function typeInto(id,text,cb,speed){
+  const el=document.getElementById(id);
+  el.classList.add('focused');
+  el.innerHTML='<span class="cur"></span>';
+  let i=0;
+  const iv=setInterval(()=>{
+    i++;el.innerHTML=text.slice(0,i)+'<span class="cur"></span>';
+    if(i>=text.length){
+      clearInterval(iv);
+      setTimeout(()=>{el.classList.remove('focused');el.classList.add('done');cb&&cb()},350);
+    }
+  },speed||38);
+}
+
+function run(){
+  // Step 1: Cliente fills in
+  setTimeout(()=>{
+    focusField('f-cliente');
+    setTimeout(()=>{doneField('f-cliente','João Silva');showSaveToast('Salvando rascunho...','saving');
+      setTimeout(()=>showSaveToast('Rascunho salvo','saved'),900);
+    },900);
+  },400);
+
+  // Step 2: Pagamento
+  setTimeout(()=>{
+    focusField('f-pgto');
+    setTimeout(()=>{doneField('f-pgto','50% entrada + 50% na entrega');
+      showSaveToast('Salvando rascunho...','saving');
+      setTimeout(()=>showSaveToast('Rascunho salvo','saved'),900);
+    },800);
+  },1800);
+
+  // Step 3: Título typing
+  setTimeout(()=>{
+    typeInto('f-titulo',T_TITULO,()=>{
+      showSaveToast('Salvando rascunho...','saving');
+      setTimeout(()=>showSaveToast('Rascunho salvo','saved'),900);
+    },36);
+  },3000);
+
+  // Step 4: Item dimensions appear
+  setTimeout(()=>{
+    document.getElementById('itm0').classList.add('focus-item');
+    document.getElementById('comp').textContent='2,40 m';
+  },5200);
+  setTimeout(()=>{document.getElementById('larg').textContent='0,65 m'},5600);
+  setTimeout(()=>{document.getElementById('area').textContent='1,56 m²'},6000);
+  setTimeout(()=>{
+    document.getElementById('preco').textContent='R$ 1.200';
+    document.getElementById('sub1').textContent='R$ 1.872,00';
+    document.getElementById('itm0').classList.remove('focus-item');
+    showSaveToast('Salvando rascunho...','saving');
+    setTimeout(()=>showSaveToast('Rascunho salvo','saved'),900);
+  },6400);
+
+  // Step 5: Second item + total
+  setTimeout(()=>{
+    const itm1=document.getElementById('itm1');
+    itm1.style.display='block';
+    itm1.style.opacity='0';itm1.style.transform='translateY(6px)';itm1.style.transition='.35s';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{itm1.style.opacity='1';itm1.style.transform='translateY(0)'}));
+    document.getElementById('addBtn').style.display='flex';
+    showSaveToast('Salvando rascunho...','saving');
+    setTimeout(()=>showSaveToast('Rascunho salvo','saved'),900);
+  },7800);
+
+  setTimeout(()=>{
+    const tc=document.getElementById('totalCard');
+    tc.style.display='block';tc.style.opacity='0';tc.style.transform='translateY(6px)';tc.style.transition='.4s';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{tc.style.opacity='1';tc.style.transform='translateY(0)'}));
+  },8600);
+
+  // Reset loop
+  setTimeout(resetLoop, 12000);
+}
+
+function resetLoop(){
+  ['f-cliente','f-pgto','f-titulo','f-amb','f-val'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('focused','done');
+  });
+  document.getElementById('f-cliente').textContent='Selecionar cliente...';
+  document.getElementById('f-pgto').textContent='Selecionar...';
+  document.getElementById('f-titulo').innerHTML='<span class="cur"></span>';
+  document.getElementById('comp').textContent='—';
+  document.getElementById('larg').textContent='—';
+  document.getElementById('area').textContent='—';
+  document.getElementById('preco').textContent='—';
+  document.getElementById('sub1').textContent='—';
+  document.getElementById('itm1').style.display='none';
+  document.getElementById('addBtn').style.display='none';
+  document.getElementById('totalCard').style.display='none';
+  document.getElementById('dd').className='ph-draft-dot';
+  document.getElementById('ds').textContent='Rascunho';
+  setTimeout(run,600);
+}
+
+run();
+
+// Auto-scale: renderiza como 360px de altura e escala para caber no iframe
+(function(){function f(){document.documentElement.style.zoom=window.innerHeight/360}window.addEventListener("resize",f);f()})()
+</script>
+</body>
+</html>

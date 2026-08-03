@@ -1,0 +1,2930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarmoApp — Gestão de Marmoraria</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════
+const SUPABASE_URL = 'https://pptkgbhmnvhsrffqyfmn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwdGtnYmhtbnZoc3JmZnF5Zm1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NjU0MTEsImV4cCI6MjA5MzA0MTQxMX0.Fmi-wzhZJ267boc3vMsrgh_ZkqbcUHOqFFBLZzTxnLA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentMarmoraria = null;
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --dark: #1A1A2E;
+    --dark2: #252540;
+    --gold: #C9A84C;
+    --gold2: #E8C96A;
+    --marble: #F4F1EB;
+    --marble2: #E8E4DC;
+    --white: #FFFFFF;
+    --gray: #8B8B9A;
+    --gray2: #D5D0C8;
+    --red: #C0392B;
+    --green: #27AE60;
+    --green2: #1E8449;
+    --blue: #2980B9;
+    --sidebar-w: 240px;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--marble); color: var(--dark); min-height: 100vh; }
+
+  /* ── AUTH ── */
+  #auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--dark);
+    background-image: repeating-linear-gradient(45deg, rgba(201,168,76,0.03) 0px, rgba(201,168,76,0.03) 1px, transparent 1px, transparent 60px),
+                      repeating-linear-gradient(-45deg, rgba(201,168,76,0.03) 0px, rgba(201,168,76,0.03) 1px, transparent 1px, transparent 60px);
+  }
+  .auth-card {
+    background: #23233A; border-radius: 18px; padding: 48px 40px; width: 380px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4); border: 1px solid rgba(201,168,76,0.15);
+  }
+  .auth-logo { text-align: center; margin-bottom: 36px; }
+  .auth-logo .logo-text { font-family: 'Playfair Display', serif; font-size: 38px; font-weight: 700; }
+  .auth-logo .logo-marmo { color: var(--white); }
+  .auth-logo .logo-app { color: var(--gold); }
+  .auth-logo p { color: var(--gray); font-size: 13px; margin-top: 4px; }
+  .auth-form label { display: block; color: var(--gray2); font-size: 12px; font-weight: 500; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .auth-form input {
+    width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 12px 14px; color: var(--white); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; margin-bottom: 16px; outline: none; transition: border 0.2s;
+  }
+  .auth-form input:focus { border-color: var(--gold); }
+  .btn-primary {
+    width: 100%; background: var(--gold); color: var(--dark); border: none; border-radius: 8px;
+    padding: 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background 0.2s, transform 0.1s; letter-spacing: 0.3px;
+  }
+  .btn-primary:hover { background: var(--gold2); transform: translateY(-1px); }
+  .auth-hint { color: var(--gray); font-size: 12px; text-align: center; margin-top: 14px; }
+
+  /* ── LAYOUT ── */
+  #app { display: none; min-height: 100vh; }
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
+    background: var(--dark); display: flex; flex-direction: column; z-index: 100;
+    border-right: 1px solid rgba(201,168,76,0.12);
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .sidebar-logo .logo-text { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; }
+  .sidebar-logo .logo-marmo { color: var(--white); }
+  .sidebar-logo .logo-app { color: var(--gold); }
+  .sidebar-logo small { display: block; color: var(--gray); font-size: 11px; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+  .nav-section { color: var(--gray); font-size: 10px; font-weight: 600; letter-spacing: 1px; padding: 12px 20px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 11px 20px;
+    color: rgba(255,255,255,0.6); cursor: pointer; transition: all 0.15s;
+    font-size: 13.5px; font-weight: 400; border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.04); color: var(--white); }
+  .nav-item.active { background: rgba(201,168,76,0.12); color: var(--gold); border-left-color: var(--gold); font-weight: 500; }
+  .nav-item svg { flex-shrink: 0; opacity: 0.8; }
+  .sidebar-user {
+    padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--dark); font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { color: var(--white); font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-role { color: var(--gray); font-size: 11px; }
+  .btn-logout { background: none; border: none; color: var(--gray); cursor: pointer; padding: 4px; }
+  .btn-logout:hover { color: var(--red); }
+
+  /* ── MAIN ── */
+  .main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+  .topbar {
+    background: var(--white); border-bottom: 1px solid var(--marble2);
+    padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--dark); }
+  .topbar-actions { display: flex; align-items: center; gap: 10px; }
+  .content { padding: 28px; flex: 1; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px;
+    border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13.5px;
+    font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-gold { background: var(--gold); color: var(--dark); }
+  .btn-gold:hover { background: var(--gold2); transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--dark); border: 1.5px solid var(--marble2); }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-danger { background: var(--red); color: var(--white); }
+  .btn-danger:hover { background: #a93226; }
+  .btn-ghost { background: transparent; color: var(--gray); border: none; padding: 7px 12px; }
+  .btn-ghost:hover { color: var(--dark); background: var(--marble2); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-icon { padding: 7px; border-radius: 7px; }
+
+  /* ── CARDS ── */
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-header { padding: 18px 22px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; }
+  .card-body { padding: 22px; }
+
+  /* ── STATS ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--white); border-radius: var(--radius); padding: 20px 22px;
+    box-shadow: var(--shadow); border-left: 4px solid var(--gold);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .stat-icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(201,168,76,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .stat-info {}
+  .stat-value { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--dark); }
+  .stat-label { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 11px 16px; font-size: 11.5px; font-weight: 600; color: var(--gray); letter-spacing: 0.5px; border-bottom: 2px solid var(--marble2); background: var(--marble); }
+  td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid var(--marble2); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(244,241,235,0.5); }
+
+  /* ── BADGES ── */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
+  .badge-draft { background: rgba(139,139,154,0.15); color: var(--gray); }
+  .badge-sent { background: rgba(41,128,185,0.12); color: var(--blue); }
+  .badge-approved { background: rgba(39,174,96,0.12); color: var(--green2); }
+  .badge-rejected { background: rgba(192,57,43,0.12); color: var(--red); }
+  .badge-expired { background: rgba(201,168,76,0.15); color: #a07820; }
+  .badge-prod { background: rgba(41,128,185,0.12); color: var(--blue); }
+  .badge-ready { background: rgba(201,168,76,0.15); color: #a07820; }
+  .badge-done { background: rgba(39,174,96,0.12); color: var(--green2); }
+  .badge-low { background: rgba(192,57,43,0.12); color: var(--red); }
+  .badge-ok { background: rgba(39,174,96,0.12); color: var(--green2); }
+
+  /* ── FORMS ── */
+  .form-group { margin-bottom: 18px; }
+  .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--gray); letter-spacing: 0.4px; margin-bottom: 6px; }
+  .form-input, .form-select, .form-textarea {
+    width: 100%; padding: 10px 13px; border: 1.5px solid var(--marble2); border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 13.5px; color: var(--dark);
+    background: var(--white); outline: none; transition: border 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--gold); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; gap: 14px; }
+  .form-row-2 { grid-template-columns: 1fr 1fr; }
+  .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row-4 { grid-template-columns: 2fr 1fr 1fr 1fr; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 14px; width: 100%; max-width: 760px;
+    max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+  }
+  .modal-lg { max-width: 960px; }
+  .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--marble2); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; }
+  .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--marble2); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
+  .btn-close { background: none; border: none; cursor: pointer; color: var(--gray); padding: 4px; border-radius: 6px; }
+  .btn-close:hover { background: var(--marble2); color: var(--dark); }
+
+  /* ── BUDGET ITEMS ── */
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .items-table th { background: var(--dark); color: var(--white); padding: 10px 12px; font-size: 12px; font-weight: 500; text-align: left; }
+  .items-table th:first-child { border-radius: 8px 0 0 0; }
+  .items-table th:last-child { border-radius: 0 8px 0 0; }
+  .items-table td { padding: 8px 6px; border-bottom: 1px solid var(--marble2); vertical-align: middle; }
+  .items-table input, .items-table select {
+    width: 100%; padding: 7px 9px; border: 1.5px solid var(--marble2); border-radius: 6px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; background: var(--white); outline: none;
+  }
+  .items-table input:focus, .items-table select:focus { border-color: var(--gold); }
+  .item-total { font-weight: 600; color: var(--dark); font-size: 13.5px; }
+  .btn-remove { background: none; border: none; cursor: pointer; color: var(--gray); padding: 4px 8px; border-radius: 5px; font-size: 16px; }
+  .btn-remove:hover { color: var(--red); background: rgba(192,57,43,0.1); }
+
+  /* ── TOTAL BOX ── */
+  .total-box { background: var(--dark); border-radius: 10px; padding: 18px 22px; margin-top: 16px; }
+  .total-line { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; }
+  .total-line span:first-child { color: rgba(255,255,255,0.6); font-size: 13px; }
+  .total-line span:last-child { color: var(--white); font-size: 13px; font-weight: 500; }
+  .total-line.final span:first-child { color: var(--gold); font-size: 15px; font-weight: 600; }
+  .total-line.final span:last-child { color: var(--gold); font-size: 20px; font-weight: 700; font-family: 'Playfair Display', serif; }
+  .total-margin { color: var(--green) !important; font-weight: 600 !important; }
+
+  /* ── SEARCH ── */
+  .search-bar { position: relative; }
+  .search-bar input { padding-left: 36px; }
+  .search-bar svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--gray); pointer-events: none; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 60px 20px; }
+  .empty-state svg { opacity: 0.2; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 16px; color: var(--gray); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; color: var(--gray2); }
+
+  /* ── ALERT ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .alert-warn { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.3); color: #a07820; }
+  .alert-danger { background: rgba(192,57,43,0.1); border: 1px solid rgba(192,57,43,0.3); color: var(--red); }
+  .alert-success { background: rgba(39,174,96,0.1); border: 1px solid rgba(39,174,96,0.3); color: var(--green2); }
+
+  /* ── DASHBOARD CHARTS ── */
+  .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .pipeline-bar { height: 28px; border-radius: 6px; background: var(--marble2); overflow: hidden; display: flex; margin-top: 8px; }
+  .pipeline-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--white); transition: width 0.4s; }
+
+  /* ── PDF PREVIEW ── */
+  .pdf-preview { background: var(--white); border: 1px solid var(--marble2); border-radius: 10px; padding: 32px; font-family: 'DM Sans', sans-serif; max-width: 700px; margin: 0 auto; }
+  .pdf-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid var(--gold); }
+  .pdf-company { font-family: 'Playfair Display', serif; }
+  .pdf-company .co-name { font-size: 24px; font-weight: 700; color: var(--dark); }
+  .pdf-company .co-sub { color: var(--gray); font-size: 12px; margin-top: 2px; }
+  .pdf-meta { text-align: right; }
+  .pdf-meta .ref { font-size: 18px; font-weight: 600; color: var(--dark); }
+  .pdf-meta small { display: block; color: var(--gray); font-size: 11px; }
+  .pdf-section { margin-bottom: 20px; }
+  .pdf-section h4 { font-size: 10px; font-weight: 600; color: var(--gray); letter-spacing: 1px; margin-bottom: 8px; }
+  .pdf-table { width: 100%; border-collapse: collapse; }
+  .pdf-table th { background: var(--dark); color: var(--white); padding: 9px 12px; font-size: 11px; text-align: left; }
+  .pdf-table td { padding: 9px 12px; border-bottom: 1px solid var(--marble2); font-size: 12px; }
+  .pdf-totals { margin-top: 16px; }
+  .pdf-total-line { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .pdf-total-line.big { font-weight: 700; font-size: 16px; border-top: 2px solid var(--gold); margin-top: 6px; padding-top: 10px; color: var(--dark); }
+  .pdf-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--marble2); font-size: 11px; color: var(--gray); }
+  .pdf-sign { margin-top: 32px; display: flex; gap: 40px; }
+  .pdf-sign-line { flex: 1; border-top: 1px solid var(--dark); padding-top: 6px; font-size: 11px; color: var(--gray); text-align: center; }
+
+  /* ── AGENDA ── */
+  .kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .kanban-col { background: var(--marble); border-radius: 10px; padding: 14px; min-height: 300px; }
+  .kanban-col-title { font-size: 12px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .kanban-card { background: var(--white); border-radius: 8px; padding: 13px 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 3px solid var(--gold); cursor: pointer; transition: box-shadow 0.15s; }
+  .kanban-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); }
+  .kanban-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .kanban-card p { font-size: 11.5px; color: var(--gray); }
+  .kanban-card .card-date { font-size: 11px; color: var(--gold); margin-top: 6px; font-weight: 500; }
+
+  /* ── ESTOQUE ── */
+  .stock-bar { height: 6px; border-radius: 3px; background: var(--marble2); overflow: hidden; margin-top: 4px; }
+  .stock-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+
+  /* ── AGENTE IA ── */
+  .agent-panel {
+    position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--white);
+    box-shadow:-8px 0 40px rgba(0,0,0,0.12);z-index:200;display:flex;flex-direction:column;
+    transform:translateX(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    border-left:1px solid var(--marble2);
+  }
+  .agent-panel.open { transform:translateX(0); }
+  .agent-header {
+    background:var(--dark);padding:16px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+  }
+  .agent-avatar {
+    width:36px;height:36px;border-radius:50%;background:var(--gold);
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+  .agent-info { flex:1; }
+  .agent-name { color:var(--white);font-weight:600;font-size:14px; }
+  .agent-status { font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:5px; }
+  .agent-dot { width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+  .agent-messages { flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--marble); }
+  .msg { display:flex;flex-direction:column;max-width:88%; }
+  .msg-agent { align-self:flex-start; }
+  .msg-user { align-self:flex-end; }
+  .msg-bubble {
+    padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.5;
+  }
+  .msg-agent .msg-bubble { background:var(--white);color:var(--dark);border-radius:4px 14px 14px 14px;box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+  .msg-user .msg-bubble { background:var(--dark);color:var(--white);border-radius:14px 4px 14px 14px; }
+  .msg-time { font-size:10px;color:var(--gray);margin-top:3px;padding:0 4px; }
+  .msg-agent .msg-time { text-align:left; }
+  .msg-user .msg-time { text-align:right; }
+  .agent-typing { display:flex;gap:4px;padding:14px 16px;background:var(--white);border-radius:4px 14px 14px 14px;width:fit-content;box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+  .agent-typing span { width:7px;height:7px;border-radius:50%;background:var(--gray);animation:typing 1.2s infinite; }
+  .agent-typing span:nth-child(2){animation-delay:.2s}
+  .agent-typing span:nth-child(3){animation-delay:.4s}
+  @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  .agent-input-area { padding:14px 16px;border-top:1px solid var(--marble2);background:var(--white);flex-shrink:0; }
+  .agent-input-row { display:flex;gap:8px;align-items:flex-end; }
+  .agent-input {
+    flex:1;border:1.5px solid var(--marble2);border-radius:10px;padding:10px 13px;
+    font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--dark);
+    resize:none;outline:none;min-height:42px;max-height:120px;line-height:1.4;
+    transition:border 0.2s;overflow-y:auto;
+  }
+  .agent-input:focus { border-color:var(--gold); }
+  .agent-send {
+    width:40px;height:40px;border-radius:10px;background:var(--gold);border:none;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;transition:all 0.15s;
+  }
+  .agent-send:hover { background:var(--gold2);transform:scale(1.05); }
+  .agent-send:disabled { background:var(--marble2);cursor:not-allowed;transform:none; }
+  .agent-actions { display:flex;gap:6px;margin-top:8px;flex-wrap:wrap; }
+  .agent-action-btn {
+    font-size:11px;padding:5px 10px;border-radius:6px;border:1.5px solid var(--marble2);
+    background:var(--marble);cursor:pointer;color:var(--dark);font-family:'DM Sans',sans-serif;
+    transition:all 0.15s;
+  }
+  .agent-action-btn:hover { border-color:var(--gold);color:var(--gold); }
+  .orcamento-card {
+    background:var(--dark);border-radius:12px;padding:16px;margin-top:4px;
+    border-left:4px solid var(--gold);
+  }
+  .orcamento-card-title { color:var(--gold);font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:6px; }
+  .orcamento-card-item { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.07);font-size:12px; }
+  .orcamento-card-item:last-child { border-bottom:none; }
+  .orcamento-card-item span:first-child { color:rgba(255,255,255,0.7); }
+  .orcamento-card-item span:last-child { color:var(--white);font-weight:500; }
+  .orcamento-card-total { display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(201,168,76,0.4); }
+  .orcamento-card-total span:first-child { color:var(--gold);font-weight:600; }
+  .orcamento-card-total span:last-child { color:var(--gold);font-weight:700;font-size:17px; }
+  .btn-import-orc { width:100%;margin-top:10px;padding:9px;background:var(--gold);color:var(--dark);border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s; }
+  .btn-import-orc:hover { background:var(--gold2); }
+  .agent-toggle {
+    position:fixed;right:24px;bottom:24px;z-index:199;
+    width:54px;height:54px;border-radius:50%;background:var(--dark);border:none;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);transition:all 0.2s;
+  }
+  .agent-toggle:hover { transform:scale(1.08);background:var(--dark2); }
+  .agent-toggle .badge-notif {
+    position:absolute;top:-2px;right:-2px;width:18px;height:18px;
+    border-radius:50%;background:var(--gold);color:var(--dark);
+    font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  }
+  .api-warning { background:rgba(201,168,76,0.12);border:1.5px solid rgba(201,168,76,0.3);border-radius:8px;padding:12px 14px;font-size:12px;color:#a07820;margin-bottom:12px; }
+  .main-shifted { margin-right:420px;transition:margin-right 0.3s; }
+
+  /* ── PRICING ── */
+  .markup-badge { display:inline-flex;align-items:center;gap:5px;background:rgba(201,168,76,0.15);color:#a07820;border-radius:6px;padding:3px 9px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid rgba(201,168,76,0.3);transition:all 0.15s; }
+  .markup-badge:hover { background:rgba(201,168,76,0.25); }
+  .servico-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px; }
+  .servico-card { border:2px solid var(--marble2);border-radius:9px;padding:12px;cursor:pointer;transition:all 0.15s;background:var(--marble); }
+  .servico-card:hover { border-color:var(--gold);background:rgba(201,168,76,0.07); }
+  .servico-card.selected { border-color:var(--gold);background:rgba(201,168,76,0.12); }
+  .servico-card-icon { font-size:22px;margin-bottom:5px; }
+  .servico-card-name { font-size:12px;font-weight:600;color:var(--dark);margin-bottom:3px; }
+  .servico-card-price { font-size:11px;color:var(--gray); }
+  .pricing-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1200;display:none;align-items:center;justify-content:center;padding:20px; }
+  .pricing-modal-overlay.open { display:flex; }
+  .pricing-modal { background:var(--white);border-radius:14px;width:100%;max-width:520px;box-shadow:0 32px 80px rgba(0,0,0,0.3); }
+  .config-section { background:var(--marble);border-radius:10px;padding:16px;margin-bottom:14px; }
+  .config-section-title { font-size:12px;font-weight:700;color:var(--gray);letter-spacing:0.5px;margin-bottom:12px; }
+  .servico-config-row { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--marble2); }
+  .servico-config-row:last-child { border-bottom:none; }
+  .servico-config-row label { flex:1;font-size:13px;font-weight:500;color:var(--dark); }
+  .servico-config-row input { width:100px;padding:7px 10px;border:1.5px solid var(--marble2);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;text-align:right; }
+  .servico-config-row input:focus { border-color:var(--gold); }
+  .servico-config-row span { font-size:12px;color:var(--gray);width:60px; }
+  .markup-row { display:flex;align-items:center;gap:12px; }
+  .markup-input { width:80px;padding:8px 10px;border:1.5px solid var(--marble2);border-radius:7px;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;text-align:center;color:var(--dark); }
+  .markup-input:focus { border-color:var(--gold); }
+  .markup-presets { display:flex;gap:6px;flex-wrap:wrap; }
+  .markup-preset { background:var(--marble2);border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--dark);transition:all 0.15s; }
+  .markup-preset:hover,.markup-preset.active { background:var(--gold);color:var(--dark); }
+  .auto-price-wrap { background:rgba(39,174,96,0.08);border:1.5px solid rgba(39,174,96,0.25);border-radius:8px;padding:10px 14px;margin-top:8px;display:flex;align-items:center;gap:10px; }
+  .auto-price-wrap span { font-size:13px;color:var(--green2); }
+  .auto-price-wrap strong { font-size:15px;color:var(--green2); }
+
+  /* ── DESENHOS PADRÃO ── */
+  .desenhos-modal-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1100;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .desenhos-modal-overlay.open { display:flex; }
+  .desenhos-modal {
+    background:var(--white);border-radius:14px;width:100%;max-width:900px;
+    max-height:92vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.3);
+  }
+  .desenho-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px; }
+  .desenho-card {
+    border:2px solid var(--marble2);border-radius:10px;padding:12px 10px;cursor:pointer;
+    transition:all 0.15s;text-align:center;background:var(--marble);
+  }
+  .desenho-card:hover { border-color:var(--gold);background:rgba(201,168,76,0.07); }
+  .desenho-card.selected { border-color:var(--gold);background:rgba(201,168,76,0.12);box-shadow:0 0 0 3px rgba(201,168,76,0.2); }
+  .desenho-card svg { display:block;margin:0 auto 7px; }
+  .desenho-card span { font-size:12px;font-weight:600;color:var(--dark);display:block; }
+  .desenho-config { background:var(--marble);border-radius:10px;padding:18px;margin-top:4px; }
+  .desenho-preview-wrap { display:flex;gap:24px;align-items:flex-start; }
+  .desenho-preview-svg { flex-shrink:0;background:var(--white);border-radius:8px;padding:12px;border:1px solid var(--marble2); }
+  .desenho-fields { flex:1; }
+  .field-row { display:grid;gap:10px;margin-bottom:10px; }
+  .field-row-2 { grid-template-columns:1fr 1fr; }
+  .field-row-3 { grid-template-columns:1fr 1fr 1fr; }
+  .field-mini label { font-size:11px;font-weight:600;color:var(--gray);letter-spacing:0.4px;display:block;margin-bottom:4px; }
+  .field-mini input,.field-mini select { width:100%;padding:8px 10px;border:1.5px solid var(--marble2);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;color:var(--dark); }
+  .field-mini input:focus,.field-mini select:focus { border-color:var(--gold); }
+  .area-result { background:var(--dark);border-radius:8px;padding:12px 16px;margin-top:14px;color:var(--white);font-size:13px; }
+  .area-result strong { color:var(--gold);font-size:17px; }
+  .desenho-btn-bar { display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--marble2);flex-shrink:0; }
+
+  /* Notifications */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: var(--dark); color: var(--white); padding: 13px 20px;
+    border-radius: 10px; font-size: 13.5px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transform: translateY(100px); opacity: 0; transition: all 0.3s; pointer-events: none;
+    border-left: 4px solid var(--gold);
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  .hidden { display: none !important; }
+  .flex { display: flex; }
+  .gap-2 { gap: 8px; }
+  .mt-4 { margin-top: 16px; }
+  .text-right { text-align: right; }
+  .font-bold { font-weight: 600; }
+  .text-gold { color: var(--gold); }
+  .text-green { color: var(--green2); }
+  .text-red { color: var(--red); }
+  .text-gray { color: var(--gray); }
+  .text-sm { font-size: 12px; }
+  hr.divider { border: none; border-top: 1px solid var(--marble2); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-text"><span class="logo-marmo">marmo</span><span class="logo-app">app</span></div>
+      <p>Gestão inteligente para marmorarias</p>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="auth-login-form">
+      <div class="auth-form">
+        <label>E-MAIL</label>
+        <input type="email" id="login-email" placeholder="seu@email.com">
+        <label>SENHA</label>
+        <input type="password" id="login-pass" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') doLogin()">
+        <div id="auth-error" style="color:#e74c3c;font-size:12px;margin-bottom:10px;display:none"></div>
+        <button class="btn-primary" onclick="doLogin()" id="btn-login">Entrar no sistema</button>
+        <p class="auth-hint" style="cursor:pointer;margin-top:14px" onclick="showRegister()">
+          Não tem conta? <span style="color:var(--gold-2,#E8C96A)">Cadastrar minha marmoraria →</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="auth-register-form" style="display:none">
+      <div class="auth-form">
+        <label>NOME DA MARMORARIA</label>
+        <input type="text" id="reg-marmoraria" placeholder="Ex: Real Pedras Marmoraria">
+        <label>SEU NOME</label>
+        <input type="text" id="reg-nome" placeholder="Seu nome completo">
+        <label>E-MAIL</label>
+        <input type="email" id="reg-email" placeholder="seu@email.com">
+        <label>SENHA (mínimo 6 caracteres)</label>
+        <input type="password" id="reg-pass" placeholder="••••••••">
+        <div id="reg-error" style="color:#e74c3c;font-size:12px;margin-bottom:10px;display:none"></div>
+        <button class="btn-primary" onclick="doRegister()" id="btn-register">Criar minha conta</button>
+        <p class="auth-hint" style="cursor:pointer;margin-top:14px" onclick="showLogin()">
+          ← Voltar para o login
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text"><span class="logo-marmo">marmo</span><span class="logo-app">app</span></div>
+      <small id="company-name-sidebar">Marmoraria Demo</small>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">PRINCIPAL</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-section">COMERCIAL</div>
+      <div class="nav-item" onclick="showPage('orcamentos')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Orçamentos
+      </div>
+      <div class="nav-item" onclick="showPage('clientes')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Clientes
+      </div>
+      <div class="nav-section">OPERACIONAL</div>
+      <div class="nav-item" onclick="showPage('agenda')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Agenda / OS
+      </div>
+      <div class="nav-item" onclick="showPage('estoque')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Estoque
+      </div>
+      <div class="nav-section">INTELIGÊNCIA</div>
+      <div class="nav-item" onclick="if(!agentOpen)toggleAgent()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        MarmoIA
+        <span style="margin-left:auto;background:var(--gold);color:var(--dark);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px">IA</span>
+      </div>
+      <div class="nav-section">CONFIGURAÇÕES</div>
+      <div class="nav-item" onclick="openPricingConfig()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Preços e Serviços
+      </div>
+      <div class="nav-section">FINANCEIRO</div>
+      <div class="nav-item" onclick="showPage('relatorios')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Relatórios
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar-init">V</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-username">Vinicius</div>
+        <div class="user-role">Administrador</div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()" title="Sair">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </div>
+    <div class="content" id="page-content"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-orcamento">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-orc-title">Novo Orçamento</div>
+      <button class="btn-close" onclick="closeModal('modal-orcamento')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-orc-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-orcamento')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveOrcamento()">💾 Salvar Orçamento</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cliente">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-cli-title">Novo Cliente</div>
+      <button class="btn-close" onclick="closeModal('modal-cliente')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-cli-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveCliente()">💾 Salvar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pdf">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Visualizar Orçamento</div>
+      <button class="btn-close" onclick="closeModal('modal-pdf')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-pdf-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-pdf')">Fechar</button>
+      <button class="btn btn-gold" onclick="printPDF()">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-estoque">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-est-title">Novo Material</div>
+      <button class="btn-close" onclick="closeModal('modal-estoque')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-est-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-estoque')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveEstoque()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-os">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-os-title">Nova Ordem de Serviço</div>
+      <button class="btn-close" onclick="closeModal('modal-os')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modal-os-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-os')">Cancelar</button>
+      <button class="btn btn-gold" onclick="saveOS()">💾 Salvar OS</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING CONFIG MODAL -->
+<div class="pricing-modal-overlay" id="modal-pricing">
+  <div class="pricing-modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Configurar Preços e Serviços</div>
+      <button class="btn-close" onclick="closePricingModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="pricing-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePricingModal()">Cancelar</button>
+      <button class="btn btn-gold" onclick="savePricingConfig()">💾 Salvar Configurações</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICOS MODAL -->
+<div class="pricing-modal-overlay" id="modal-servicos">
+  <div class="pricing-modal" style="max-width:620px">
+    <div class="modal-header">
+      <div class="modal-title">🔧 Adicionar Serviço / Acabamento</div>
+      <button class="btn-close" onclick="document.getElementById('modal-servicos').classList.remove('open')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="servicos-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-servicos').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-gold" onclick="inserirServico()">✅ Inserir no Orçamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- DESENHOS PADRÃO MODAL -->
+<div class="desenhos-modal-overlay" id="modal-desenhos">
+  <div class="desenhos-modal">
+    <div class="modal-header">
+      <div class="modal-title">📐 Inserir Desenho Padrão</div>
+      <button class="btn-close" onclick="closeModal('modal-desenhos')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="desenho-grid" id="desenho-grid"></div>
+      <div class="desenho-config" id="desenho-config" style="display:none">
+        <div class="desenho-preview-wrap">
+          <div class="desenho-preview-svg"><canvas id="desenho-canvas" width="220" height="180"></canvas></div>
+          <div class="desenho-fields" id="desenho-fields"></div>
+        </div>
+        <div class="area-result" id="area-result"></div>
+      </div>
+    </div>
+    <div class="desenho-btn-bar">
+      <button class="btn btn-outline" onclick="closeModal('modal-desenhos')">Cancelar</button>
+      <button class="btn btn-gold" id="btn-inserir-desenho" onclick="inserirDesenho()">✅ Inserir no Orçamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- AGENTE IA -->
+<div class="agent-panel" id="agent-panel">
+  <div class="agent-header">
+    <div class="agent-avatar">🤖</div>
+    <div class="agent-info">
+      <div class="agent-name">MarmoIA — Assistente de Orçamento</div>
+      <div class="agent-status"><div class="agent-dot"></div> Online</div>
+    </div>
+    <button class="btn-close" onclick="toggleAgent()" style="color:rgba(255,255,255,0.5)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="agent-messages" id="agent-messages"></div>
+  <div class="agent-input-area">
+    <div class="agent-input-row">
+      <textarea class="agent-input" id="agent-input" placeholder="Descreva o projeto ou responda o agente..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAgentMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+      <button class="agent-send" id="agent-send-btn" onclick="sendAgentMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <div class="agent-actions">
+      <button class="agent-action-btn" onclick="agentQuickSend('Novo orçamento')">🆕 Novo orçamento</button>
+      <button class="agent-action-btn" onclick="agentQuickSend('Calcular margem do orçamento atual')">📊 Ver margem</button>
+      <button class="agent-action-btn" onclick="agentQuickSend('Limpar conversa')">🗑️ Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOGGLE BUTTON -->
+<button class="agent-toggle" id="agent-toggle" onclick="toggleAgent()" title="Assistente IA">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</button>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let state = {
+  user: null,
+  company: { name: 'Marmoraria Demo', phone: '(11) 99999-0000', email: 'contato@demo.com' },
+  clientes: [
+    { id: 1, nome: 'João Silva', tipo: 'pf', doc: '123.456.789-00', tel: '(11) 98765-4321', email: 'joao@email.com', origem: 'indicação', obs: '' },
+    { id: 2, nome: 'Construtora ABC', tipo: 'pj', doc: '12.345.678/0001-00', tel: '(11) 3333-4444', email: 'obras@abc.com', origem: 'google', obs: 'Cliente VIP' },
+    { id: 3, nome: 'Maria Souza', tipo: 'pf', doc: '987.654.321-00', tel: '(11) 91234-5678', email: 'maria@email.com', origem: 'instagram', obs: '' },
+  ],
+  orcamentos: [
+    { id: 1, titulo: 'Bancada Cozinha - João Silva', clienteId: 1, data: '2025-04-10', validade: '2025-05-10', status: 'aprovado', pagamento: 'À vista', obs: 'Granito Preto São Gabriel', itens: [
+      { desc: 'Bancada Cozinha Granito Preto São Gabriel 3cm', mat: 'Granito', largura: 2.5, altura: 0.6, esp: '3cm', qtd: 1, vlrm2: 850, total: 1275 },
+      { desc: 'Mão de obra instalação', mat: '-', largura: 0, altura: 0, esp: '-', qtd: 1, vlrm2: 0, total: 400 },
+    ], maoObra: 0, desconto: 0 },
+    { id: 2, titulo: 'Revestimento Banheiro - Construtora ABC', clienteId: 2, data: '2025-04-15', validade: '2025-05-15', status: 'enviado', pagamento: '50% entrada + 50% entrega', obs: '', itens: [
+      { desc: 'Porcelanato Bianco 60x60', mat: 'Porcelanato', largura: 3.0, altura: 2.4, esp: '10mm', qtd: 2, vlrm2: 120, total: 1728 },
+      { desc: 'Rejunte e Instalação', mat: '-', largura: 0, altura: 0, esp: '-', qtd: 1, vlrm2: 0, total: 600 },
+    ], maoObra: 0, desconto: 200 },
+    { id: 3, titulo: 'Soleira Sala - Maria Souza', clienteId: 3, data: '2025-04-20', validade: '2025-05-20', status: 'rascunho', pagamento: 'A combinar', obs: '', itens: [
+      { desc: 'Mármore Branco Carrara Soleira', mat: 'Mármore', largura: 1.2, altura: 0.15, esp: '2cm', qtd: 3, vlrm2: 1200, total: 648 },
+    ], maoObra: 150, desconto: 0 },
+  ],
+  os: [
+    { id: 1, orcId: 1, titulo: 'Bancada João Silva', cliente: 'João Silva', dataProd: '2025-04-22', dataInst: '2025-04-26', endInst: 'Rua das Flores, 100', resp: 'Carlos', status: 'ready', obs: '' },
+    { id: 2, orcId: 2, titulo: 'Revestimento Construtora ABC', cliente: 'Construtora ABC', dataProd: '2025-04-28', dataInst: '2025-05-02', endInst: 'Av. Brasil, 500', resp: 'Marcos', status: 'prod', obs: 'Aguardar liberação do andar' },
+  ],
+  materiais: [
+    { id: 1, nome: 'Granito Preto São Gabriel', cat: 'chapa', unid: 'm²', custo: 280, estoque: 45, minimo: 20 },
+    { id: 2, nome: 'Mármore Branco Carrara', cat: 'chapa', unid: 'm²', custo: 620, estoque: 8, minimo: 15 },
+    { id: 3, nome: 'Porcelanato Bianco 60x60', cat: 'chapa', unid: 'm²', custo: 75, estoque: 120, minimo: 30 },
+    { id: 4, nome: 'Cola para pedras', cat: 'insumo', unid: 'kg', custo: 18, estoque: 40, minimo: 20 },
+    { id: 5, nome: 'Rejunte Branco', cat: 'insumo', unid: 'kg', custo: 12, estoque: 15, minimo: 10 },
+    { id: 6, nome: 'Perfil Alumínio 3m', cat: 'acessório', unid: 'peça', custo: 45, estoque: 30, minimo: 10 },
+  ],
+  nextOrcId: 4, nextCliId: 4, nextOsId: 3, nextMatId: 7,
+  editingOrcId: null, editingCliId: null, editingOsId: null, editingMatId: null,
+  orcItems: [],
+};
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+// ─── AUTH UI HELPERS ───────────────────────────────────────
+function showRegister() {
+  document.getElementById('auth-login-form').style.display = 'none';
+  document.getElementById('auth-register-form').style.display = 'block';
+}
+function showLogin() {
+  document.getElementById('auth-register-form').style.display = 'none';
+  document.getElementById('auth-login-form').style.display = 'block';
+}
+function authError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+// ─── LOGIN ────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { authError('auth-error','Preencha e-mail e senha'); return; }
+  const btn = document.getElementById('btn-login');
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    await bootApp(data.user);
+  } catch(e) {
+    authError('auth-error', e.message || 'Erro ao entrar');
+  } finally {
+    btn.textContent = 'Entrar no sistema'; btn.disabled = false;
+  }
+}
+
+// ─── REGISTER ─────────────────────────────────────────────
+async function doRegister() {
+  const nome_marmoraria = document.getElementById('reg-marmoraria').value.trim();
+  const nome_usuario    = document.getElementById('reg-nome').value.trim();
+  const email           = document.getElementById('reg-email').value.trim();
+  const pass            = document.getElementById('reg-pass').value;
+  if (!nome_marmoraria || !nome_usuario || !email || !pass) {
+    authError('reg-error','Preencha todos os campos'); return;
+  }
+  if (pass.length < 6) { authError('reg-error','Senha mínimo 6 caracteres'); return; }
+  const btn = document.getElementById('btn-register');
+  btn.textContent = 'Criando conta...'; btn.disabled = true;
+  try {
+    // 1. Criar usuário no Auth
+    const { data: authData, error: authErr } = await sb.auth.signUp({ email, password: pass });
+    if (authErr) throw authErr;
+    const userId = authData.user.id;
+    // 2. Chamar função de onboarding
+    const { data: marmId, error: fnErr } = await sb.rpc('criar_marmoraria', {
+      p_user_id:      userId,
+      p_nome:         nome_marmoraria,
+      p_email:        email,
+      p_usuario_nome: nome_usuario,
+    });
+    if (fnErr) throw fnErr;
+    showToast('Conta criada! Fazendo login...', 'ok2');
+    setTimeout(() => doLogin(), 1000);
+  } catch(e) {
+    authError('reg-error', e.message || 'Erro ao criar conta');
+  } finally {
+    btn.textContent = 'Criar minha conta'; btn.disabled = false;
+  }
+}
+
+// ─── BOOT APP ─────────────────────────────────────────────
+async function bootApp(user) {
+  currentUser = user;
+  try {
+    // Query 1 — buscar usuario
+    const { data: usuario, error: uErr } = await sb
+      .from('usuarios')
+      .select('id, nome, email, perfil, marmoraria_id')
+      .eq('id', user.id)
+      .single();
+
+    if (uErr || !usuario) {
+      authError('auth-error', 'Erro usuario: ' + (uErr?.message||'nao encontrado'));
+      await sb.auth.signOut();
+      return;
+    }
+
+    // Query 2 — buscar marmoraria separadamente
+    const { data: marmoraria, error: mErr } = await sb
+      .from('marmorarias')
+      .select('id, nome, cep, markup_padrao, email, telefone')
+      .eq('id', usuario.marmoraria_id)
+      .single();
+
+    if (mErr || !marmoraria) {
+      authError('auth-error', 'Erro marmoraria: ' + (mErr?.message||'nao encontrada'));
+      await sb.auth.signOut();
+      return;
+    }
+
+    currentMarmoraria = marmoraria;
+    state.pricing.markup = currentMarmoraria.markup_padrao || 3;
+    state.pricing.cep    = currentMarmoraria.cep || '';
+
+    // Atualizar UI
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('company-name-sidebar').textContent = currentMarmoraria.nome;
+    document.getElementById('sidebar-username').textContent = usuario.nome;
+    document.getElementById('user-avatar-init').textContent = usuario.nome.charAt(0).toUpperCase();
+
+    // Carregar dados do banco
+    await Promise.all([
+      loadClientes(),
+      loadMateriais(),
+      loadOrcamentos(),
+      loadOS(),
+      loadServicos(),
+    ]);
+
+    showPage('dashboard');
+
+  } catch(e) {
+    authError('auth-error', 'Erro ao carregar: ' + e.message);
+    await sb.auth.signOut();
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null; currentMarmoraria = null;
+  // Reset state
+  state.clientes = []; state.orcamentos = []; state.materiais = [];
+  state.os = []; state.nextOrcId = 1; state.nextCliId = 1;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ─── LOAD DATA FROM SUPABASE ──────────────────────────────
+async function loadClientes() {
+  const { data } = await sb.from('clientes').select('*').eq('ativo', true).order('nome');
+  if (data) state.clientes = data.map(c => ({
+    id: c.id, nome: c.nome, tipo: c.tipo, doc: c.cpf_cnpj,
+    tel: c.telefone, email: c.email, origem: c.origem, obs: c.observacoes,
+  }));
+}
+
+async function loadMateriais() {
+  const { data } = await sb.from('materiais').select('*').eq('ativo', true).order('nome');
+  if (data) state.materiais = data.map(m => ({
+    id: m.id, nome: m.nome, cat: m.categoria, unid: m.unidade,
+    custo: m.custo_unitario, estoque: m.estoque_atual, minimo: m.estoque_minimo,
+  }));
+}
+
+async function loadOrcamentos() {
+  const { data } = await sb
+    .from('orcamentos')
+    .select('*, orcamento_itens(*)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (data) state.orcamentos = data.map(o => ({
+    id: o.id, titulo: o.titulo, clienteId: o.cliente_id,
+    data: o.data_emissao, validade: o.data_validade,
+    status: o.status, pagamento: o.condicao_pagamento, obs: o.observacoes,
+    maoObra: o.mao_obra, desconto: o.desconto_rs,
+    itens: (o.orcamento_itens || []).map(i => ({
+      desc: i.descricao, mat: i.descricao, largura: i.largura_m,
+      altura: i.altura_m, qtd: i.quantidade, vlrm2: i.preco_m2, total: i.total_item,
+    })),
+  }));
+}
+
+async function loadOS() {
+  const { data } = await sb.from('ordens_servico').select('*').order('created_at', { ascending: false });
+  if (data) state.os = data.map(o => ({
+    id: o.id, orcId: o.orcamento_id, titulo: o.titulo, cliente: '',
+    dataProd: o.data_producao, dataInst: o.data_instalacao,
+    endInst: o.endereco_inst, resp: o.responsavel, status: o.status, obs: o.observacoes_tec,
+  }));
+}
+
+async function loadServicos() {
+  const { data } = await sb.from('servicos').select('*').eq('ativo', true).order('ordem');
+  if (data && data.length > 0) {
+    state.pricing.servicos = data.map(s => ({
+      id: s.id, nome: s.nome, icon: s.icone, unid: s.unidade, preco: s.preco_padrao,
+    }));
+  }
+}
+
+// ─── SAVE TO SUPABASE ─────────────────────────────────────
+async function sbSaveCliente(data) {
+  const payload = {
+    marmoraria_id: currentMarmoraria.id,
+    nome: data.nome, tipo: data.tipo, cpf_cnpj: data.doc,
+    telefone: data.tel, email: data.email, origem: data.origem, observacoes: data.obs,
+  };
+  if (state.editingCliId && typeof state.editingCliId === 'string') {
+    return sb.from('clientes').update(payload).eq('id', state.editingCliId);
+  }
+  const { data: res, error } = await sb.from('clientes').insert(payload).select().single();
+  return { data: res, error };
+}
+
+async function sbSaveOrcamento(orc, itens) {
+  const payload = {
+    marmoraria_id: currentMarmoraria.id,
+    cliente_id: orc.clienteId || null,
+    usuario_id: currentUser.id,
+    titulo: orc.titulo,
+    data_emissao: orc.data,
+    data_validade: orc.validade || null,
+    condicao_pagamento: orc.pagamento,
+    observacoes: orc.obs,
+    mao_obra: orc.maoObra || 0,
+    desconto_rs: orc.desconto || 0,
+    status: orc.status || 'rascunho',
+  };
+  let orcId;
+  if (state.editingOrcId && typeof state.editingOrcId === 'string') {
+    await sb.from('orcamentos').update(payload).eq('id', state.editingOrcId);
+    await sb.from('orcamento_itens').delete().eq('orcamento_id', state.editingOrcId);
+    orcId = state.editingOrcId;
+  } else {
+    const { data: res, error } = await sb.from('orcamentos').insert(payload).select().single();
+    if (error) throw error;
+    orcId = res.id;
+  }
+  // Insert items
+  if (itens && itens.length > 0) {
+    const itemPayload = itens.map((item, idx) => ({
+      orcamento_id: orcId,
+      marmoraria_id: currentMarmoraria.id,
+      descricao: item.desc,
+      largura_m: item.largura || 0,
+      altura_m: item.altura || 0,
+      area_m2: (item.largura || 0) * (item.altura || 0),
+      quantidade: item.qtd || 1,
+      preco_m2: item.vlrm2 || 0,
+      total_item: item.total || 0,
+      tipo: item._servico ? 'servico' : item.desc?.toLowerCase().includes('frete') ? 'frete' : 'material',
+      desenho_tipo: item._desenho || null,
+      ordem: idx,
+    }));
+    await sb.from('orcamento_itens').insert(itemPayload);
+  }
+  return orcId;
+}
+
+async function sbSaveOS(data) {
+  const payload = {
+    marmoraria_id: currentMarmoraria.id,
+    orcamento_id: data.orcId || null,
+    usuario_id: currentUser.id,
+    titulo: data.titulo,
+    data_producao: data.dataProd || null,
+    data_instalacao: data.dataInst || null,
+    endereco_inst: data.endInst,
+    responsavel: data.resp,
+    status: data.status,
+    observacoes_tec: data.obs,
+  };
+  if (state.editingOsId && typeof state.editingOsId === 'string') {
+    return sb.from('ordens_servico').update(payload).eq('id', state.editingOsId);
+  }
+  return sb.from('ordens_servico').insert(payload).select().single();
+}
+
+async function sbSaveMaterial(data) {
+  const payload = {
+    marmoraria_id: currentMarmoraria.id,
+    nome: data.nome, categoria: data.cat, unidade: data.unid,
+    custo_unitario: data.custo, estoque_atual: data.estoque, estoque_minimo: data.minimo,
+  };
+  if (state.editingMatId && typeof state.editingMatId === 'string') {
+    return sb.from('materiais').update(payload).eq('id', state.editingMatId);
+  }
+  return sb.from('materiais').insert(payload).select().single();
+}
+
+// ─── CHECK SESSION ON LOAD ────────────────────────────────
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    await bootApp(session.user);
+  }
+  // else: auth screen already visible
+}
+
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showPage(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navMap = { dashboard: 0, orcamentos: 1, clientes: 2, agenda: 3, estoque: 4, relatorios: 5 };
+  document.querySelectorAll('.nav-item')[navMap[page]]?.classList.add('active');
+  const pages = { dashboard: renderDashboard, orcamentos: renderOrcamentos, clientes: renderClientes, agenda: renderAgenda, estoque: renderEstoque, relatorios: renderRelatorios };
+  if (pages[page]) pages[page]();
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function fmt(v) { return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }); }
+function orcTotal(o) { return o.itens.reduce((s, i) => s + (i.total || 0), 0) + (o.maoObra || 0) - (o.desconto || 0); }
+function statusBadge(s) {
+  const map = { rascunho: ['badge-draft','Rascunho'], enviado: ['badge-sent','Enviado'], aprovado: ['badge-approved','Aprovado'], recusado: ['badge-rejected','Recusado'], expired: ['badge-expired','Expirado'] };
+  const [cls, label] = map[s] || ['badge-draft', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function osBadge(s) {
+  const map = { prod: ['badge-prod','Em Produção'], ready: ['badge-ready','Pronto p/ Instalar'], sched: ['badge-sent','Agendado'], done: ['badge-done','Concluído'] };
+  const [cls, label] = map[s] || ['badge-draft', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function clienteNome(id) { const c = state.clientes.find(c => c.id === id); return c ? c.nome : '—'; }
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderLeftColor = type === 'err' ? 'var(--red)' : type === 'ok2' ? 'var(--green)' : 'var(--gold)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+function setPage(title, actionsHTML, contentHTML) {
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('topbar-actions').innerHTML = actionsHTML;
+  document.getElementById('page-content').innerHTML = contentHTML;
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  const totalOrc = state.orcamentos.length;
+  const aprovados = state.orcamentos.filter(o => o.status === 'aprovado');
+  const receita = aprovados.reduce((s, o) => s + orcTotal(o), 0);
+  const pipeline = state.orcamentos.filter(o => o.status === 'enviado').reduce((s, o) => s + orcTotal(o), 0);
+  const alertas = state.materiais.filter(m => m.estoque < m.minimo).length;
+  const taxaConv = totalOrc ? Math.round(aprovados.length / totalOrc * 100) : 0;
+
+  const recentOrcs = [...state.orcamentos].slice(-4).reverse();
+
+  setPage('Dashboard',
+    `<button class="btn btn-gold" onclick="openNovoOrcamento()">+ Novo Orçamento</button>`,
+    `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg></div>
+        <div class="stat-info"><div class="stat-value">${totalOrc}</div><div class="stat-label">Orçamentos no mês</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:var(--green)">
+        <div class="stat-icon" style="background:rgba(39,174,96,0.12)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="stat-info"><div class="stat-value">${fmt(receita)}</div><div class="stat-label">Receita aprovada</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:var(--blue)">
+        <div class="stat-icon" style="background:rgba(41,128,185,0.12)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+        <div class="stat-info"><div class="stat-value">${fmt(pipeline)}</div><div class="stat-label">Em pipeline</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:${alertas > 0 ? 'var(--red)' : 'var(--green)'}">
+        <div class="stat-icon" style="background:rgba(${alertas > 0 ? '192,57,43' : '39,174,96'},0.12)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${alertas > 0 ? 'var(--red)' : 'var(--green)'}" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="stat-info"><div class="stat-value">${alertas}</div><div class="stat-label">Alertas de estoque</div></div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Orçamentos Recentes</span></div>
+        <div class="card-body" style="padding:0">
+          <table><thead><tr><th>Título</th><th>Cliente</th><th>Total</th><th>Status</th></tr></thead><tbody>
+          ${recentOrcs.map(o => `<tr>
+            <td style="font-weight:500">${o.titulo}</td>
+            <td class="text-gray text-sm">${clienteNome(o.clienteId)}</td>
+            <td class="font-bold">${fmt(orcTotal(o))}</td>
+            <td>${statusBadge(o.status)}</td>
+          </tr>`).join('')}
+          </tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Pipeline de Orçamentos</span></div>
+        <div class="card-body">
+          ${['rascunho','enviado','aprovado','recusado'].map(s => {
+            const count = state.orcamentos.filter(o => o.status === s).length;
+            const pct = totalOrc ? count/totalOrc*100 : 0;
+            const colors = { rascunho:'#8B8B9A', enviado:'#2980B9', aprovado:'#27AE60', recusado:'#C0392B' };
+            const labels = { rascunho:'Rascunho', enviado:'Enviado', aprovado:'Aprovado', recusado:'Recusado' };
+            return `<div style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                <span>${labels[s]}</span><span class="font-bold">${count}</span>
+              </div>
+              <div class="pipeline-bar"><div class="pipeline-seg" style="width:${pct}%;background:${colors[s]}"></div></div>
+            </div>`;
+          }).join('')}
+          <hr class="divider">
+          <div style="font-size:13px;color:var(--gray)">Taxa de conversão: <strong class="text-green">${taxaConv}%</strong></div>
+        </div>
+      </div>
+    </div>
+
+    ${alertas > 0 ? `<div class="alert alert-danger mt-4">⚠️ ${alertas} material(is) abaixo do estoque mínimo — <a href="#" onclick="showPage('estoque')" style="color:inherit;font-weight:600">ver estoque</a></div>` : ''}
+    `
+  );
+}
+
+// ═══════════════════════════════════════════
+// ORÇAMENTOS
+// ═══════════════════════════════════════════
+function renderOrcamentos() {
+  setPage('Orçamentos',
+    `<button class="btn btn-gold" onclick="openNovoOrcamento()">+ Novo Orçamento</button>`,
+    `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Todos os Orçamentos</span>
+        <div class="search-bar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="form-input" style="width:220px;padding-left:32px" placeholder="Buscar..." oninput="filterOrcamentos(this.value)">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="orc-table">
+          <thead><tr><th>#</th><th>Título</th><th>Cliente</th><th>Data</th><th>Validade</th><th>Total</th><th>Margem</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="orc-tbody"></tbody>
+        </table>
+      </div>
+    </div>`
+  );
+  renderOrcTable(state.orcamentos);
+}
+
+function renderOrcTable(list) {
+  const tb = document.getElementById('orc-tbody');
+  if (!tb) return;
+  if (!list.length) { tb.innerHTML = `<tr><td colspan="9"><div class="empty-state"><h3>Nenhum orçamento</h3><p>Crie seu primeiro orçamento</p></div></td></tr>`; return; }
+  tb.innerHTML = list.map(o => {
+    const total = orcTotal(o);
+    const custo = o.itens.reduce((s, i) => {
+      const mat = state.materiais.find(m => m.nome === i.mat);
+      return s + (mat ? mat.custo * (i.largura * i.altura * (i.qtd || 1)) : 0);
+    }, 0);
+    const margem = custo > 0 ? Math.round((total - custo) / total * 100) : null;
+    return `<tr>
+      <td class="text-gray text-sm">#${o.id}</td>
+      <td style="font-weight:500;max-width:200px">${o.titulo}</td>
+      <td class="text-gray">${clienteNome(o.clienteId)}</td>
+      <td class="text-sm">${o.data}</td>
+      <td class="text-sm">${o.validade}</td>
+      <td class="font-bold">${fmt(total)}</td>
+      <td>${margem !== null ? `<span class="${margem >= 30 ? 'text-green' : margem >= 15 ? 'text-gold' : 'text-red'}">${margem}%</span>` : '<span class="text-gray">—</span>'}</td>
+      <td>${statusBadge(o.status)}</td>
+      <td>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Visualizar PDF" onclick="viewPDF(${o.id})">📄</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editOrcamento(${o.id})">✏️</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Status" onclick="cycleStatus(${o.id})">🔄</button>
+          ${o.status === 'aprovado' ? `<button class="btn btn-ghost btn-sm btn-icon" title="Criar OS" onclick="criarOS(${o.id})">📋</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterOrcamentos(q) {
+  const filtered = state.orcamentos.filter(o => o.titulo.toLowerCase().includes(q.toLowerCase()) || clienteNome(o.clienteId).toLowerCase().includes(q.toLowerCase()));
+  renderOrcTable(filtered);
+}
+
+async function cycleStatus(id) {
+  const o = state.orcamentos.find(o => o.id === id);
+  const cycle = ['rascunho','enviado','aprovado','recusado'];
+  const newStatus = cycle[(cycle.indexOf(o.status) + 1) % cycle.length];
+  try {
+    await sb.from('orcamentos').update({ status: newStatus }).eq('id', id);
+    o.status = newStatus;
+    renderOrcamentos();
+    showToast(`Status: ${newStatus}`, 'ok2');
+  } catch(e) {
+    showToast('Erro ao atualizar status', 'err');
+  }
+}
+
+function openNovoOrcamento() {
+  state.editingOrcId = null;
+  state.orcItems = [];
+  document.getElementById('modal-orc-title').textContent = 'Novo Orçamento';
+  renderOrcForm();
+  openModal('modal-orcamento');
+}
+
+function editOrcamento(id) {
+  const o = state.orcamentos.find(o => o.id === id);
+  state.editingOrcId = id;
+  state.orcItems = JSON.parse(JSON.stringify(o.itens));
+  document.getElementById('modal-orc-title').textContent = 'Editar Orçamento';
+  renderOrcForm(o);
+  openModal('modal-orcamento');
+}
+
+function renderOrcForm(o = null) {
+  const cliOptions = state.clientes.map(c => `<option value="${c.id}" ${o && o.clienteId === c.id ? 'selected' : ''}>${c.nome}</option>`).join('');
+  document.getElementById('modal-orc-body').innerHTML = `
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">TÍTULO DO ORÇAMENTO</label>
+        <input class="form-input" id="orc-titulo" placeholder="Ex: Bancada Cozinha - Cliente" value="${o ? o.titulo : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CLIENTE</label>
+        <select class="form-select" id="orc-cliente"><option value="">Selecionar cliente...</option>${cliOptions}</select>
+      </div>
+    </div>
+    <div class="form-row form-row-3">
+      <div class="form-group">
+        <label class="form-label">DATA</label>
+        <input class="form-input" type="date" id="orc-data" value="${o ? o.data : new Date().toISOString().split('T')[0]}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">VALIDADE</label>
+        <input class="form-input" type="date" id="orc-validade" value="${o ? o.validade : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">PAGAMENTO</label>
+        <select class="form-select" id="orc-pagamento">
+          ${['À vista','50% entrada + 50% entrega','30/60 dias','A combinar'].map(p => `<option ${o && o.pagamento === p ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <hr class="divider">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-size:14px">Itens do Orçamento</strong>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost btn-sm" onclick="openPricingConfig()" title="Configurar preços" style="font-size:11px">⚙️ Markup: <strong id="markup-label">${state.pricing?.markup||3}×</strong></button>
+        <button class="btn btn-outline btn-sm" onclick="applyMarkupToAll()" style="font-size:12px" id="btn-apply-markup">💰 Aplicar a todos</button>
+        <button class="btn btn-outline btn-sm" onclick="openServicos()" style="border-color:var(--blue);color:var(--blue)">🔧 Serviço</button>
+        <button class="btn btn-outline btn-sm" onclick="openDesenhos()" style="border-color:var(--gold);color:var(--gold)">📐 Desenho</button>
+        <button class="btn btn-outline btn-sm" onclick="addItem()">+ Manual</button>
+      </div>
+    </div>
+    <table class="items-table">
+      <thead><tr><th style="width:30%">Descrição</th><th>Material</th><th>Larg (m)</th><th>Alt (m)</th><th>Qtd</th><th>R$/m²</th><th>Total</th><th></th></tr></thead>
+      <tbody id="items-tbody"></tbody>
+    </table>
+    <div class="form-row form-row-2 mt-4">
+      <div class="form-group">
+        <label class="form-label">MÃO DE OBRA (R$)</label>
+        <input class="form-input" type="number" id="orc-maoobra" placeholder="0,00" value="${o ? o.maoObra : 0}" oninput="recalcTotal()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">DESCONTO (R$)</label>
+        <input class="form-input" type="number" id="orc-desconto" placeholder="0,00" value="${o ? o.desconto : 0}" oninput="recalcTotal()">
+      </div>
+    </div>
+    <div id="total-box-form"></div>
+    <div class="form-group mt-4">
+      <label class="form-label">OBSERVAÇÕES</label>
+      <textarea class="form-textarea" id="orc-obs" placeholder="Observações para o cliente...">${o ? o.obs : ''}</textarea>
+    </div>
+  `;
+  renderItemsTable();
+  recalcTotal();
+}
+
+function renderItemsTable() {
+  const tb = document.getElementById('items-tbody');
+  if (!tb) return;
+  tb.innerHTML = state.orcItems.map((item, i) => `
+    <tr id="item-row-${i}">
+      <td><input value="${item.desc}" onchange="updateItem(${i},'desc',this.value)" placeholder="Descrição do item"></td>
+      <td>
+        <select onchange="updateItem(${i},'mat',this.value)">
+          <option value="-">—</option>
+          ${state.materiais.map(m => `<option value="${m.nome}" ${item.mat===m.nome?'selected':''}>${m.nome}</option>`).join('')}
+          <option value="Outro" ${item.mat==='Outro'?'selected':''}>Outro</option>
+        </select>
+      </td>
+      <td><input type="number" value="${item.largura}" step="0.01" onchange="updateItem(${i},'largura',parseFloat(this.value)||0)" style="width:70px"></td>
+      <td><input type="number" value="${item.altura}" step="0.01" onchange="updateItem(${i},'altura',parseFloat(this.value)||0)" style="width:70px"></td>
+      <td><input type="number" value="${item.qtd||1}" min="1" onchange="updateItem(${i},'qtd',parseInt(this.value)||1)" style="width:55px"></td>
+      <td style="white-space:nowrap">
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="number" value="${item.vlrm2}" step="0.01" onchange="updateItem(${i},'vlrm2',parseFloat(this.value)||0)" style="width:75px">
+          ${item.mat && item.mat !== '-' && item.mat !== 'Outro' ? `<button onclick="applyAutoPrice(${i})" title="Aplicar ${state.pricing?.markup||3}× custo" style="background:rgba(201,168,76,0.15);border:none;cursor:pointer;border-radius:5px;padding:3px 5px;font-size:10px;color:#a07820;font-weight:700;white-space:nowrap">${state.pricing?.markup||3}×</button>` : ''}
+        </div>
+      </td>
+      <td class="item-total">${fmt(item.total||0)}</td>
+      <td><button class="btn-remove" onclick="removeItem(${i})">×</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--gray);padding:20px;font-size:13px">Nenhum item. Clique em "+ Adicionar Item"</td></tr>';
+}
+
+function addItem() {
+  state.orcItems.push({ desc: '', mat: '-', largura: 0, altura: 0, qtd: 1, vlrm2: 0, total: 0 });
+  renderItemsTable(); recalcTotal();
+}
+
+function removeItem(i) {
+  state.orcItems.splice(i, 1);
+  renderItemsTable(); recalcTotal();
+}
+
+function updateItem(i, field, val) {
+  state.orcItems[i][field] = val;
+  const item = state.orcItems[i];
+  if (item.largura > 0 && item.altura > 0 && item.vlrm2 > 0) {
+    item.total = item.largura * item.altura * (item.qtd || 1) * item.vlrm2;
+  } else if (item.vlrm2 > 0 && item.qtd > 0 && item.largura === 0) {
+    item.total = item.vlrm2 * (item.qtd || 1);
+  }
+  renderItemsTable(); recalcTotal();
+}
+
+function recalcTotal() {
+  const subtotal = state.orcItems.reduce((s, i) => s + (i.total || 0), 0);
+  const maoObra = parseFloat(document.getElementById('orc-maoobra')?.value || 0) || 0;
+  const desconto = parseFloat(document.getElementById('orc-desconto')?.value || 0) || 0;
+  const total = subtotal + maoObra - desconto;
+  const box = document.getElementById('total-box-form');
+  if (box) box.innerHTML = `
+    <div class="total-box">
+      <div class="total-line"><span>Subtotal itens</span><span>${fmt(subtotal)}</span></div>
+      ${maoObra > 0 ? `<div class="total-line"><span>Mão de obra</span><span>${fmt(maoObra)}</span></div>` : ''}
+      ${desconto > 0 ? `<div class="total-line"><span>Desconto</span><span style="color:var(--red)">- ${fmt(desconto)}</span></div>` : ''}
+      <div class="total-line final"><span>TOTAL DO ORÇAMENTO</span><span>${fmt(total)}</span></div>
+    </div>`;
+}
+
+async function saveOrcamento() {
+  const titulo = document.getElementById('orc-titulo')?.value?.trim();
+  const clienteId = document.getElementById('orc-cliente')?.value;
+  if (!titulo) { showToast('Informe o título do orçamento', 'err'); return; }
+  if (!clienteId) { showToast('Selecione um cliente', 'err'); return; }
+  const data = {
+    titulo, clienteId,
+    data: document.getElementById('orc-data').value,
+    validade: document.getElementById('orc-validade').value,
+    pagamento: document.getElementById('orc-pagamento').value,
+    obs: document.getElementById('orc-obs').value,
+    maoObra: parseFloat(document.getElementById('orc-maoobra').value) || 0,
+    desconto: parseFloat(document.getElementById('orc-desconto').value) || 0,
+    status: state.editingOrcId ? (state.orcamentos.find(o=>o.id===state.editingOrcId)?.status||'rascunho') : 'rascunho',
+  };
+  const btn = document.querySelector('#modal-orcamento .btn-gold');
+  if (btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
+  try {
+    await sbSaveOrcamento(data, JSON.parse(JSON.stringify(state.orcItems)));
+    await loadOrcamentos();
+    showToast(state.editingOrcId ? 'Orçamento atualizado!' : 'Orçamento criado!', 'ok2');
+    closeModal('modal-orcamento');
+    renderOrcamentos();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.textContent = '💾 Salvar Orçamento'; btn.disabled = false; }
+  }
+}
+
+// ═══════════════════════════════════════════
+// PDF VIEW
+// ═══════════════════════════════════════════
+function viewPDF(id) {
+  const o = state.orcamentos.find(o => o.id === id);
+  const cli = state.clientes.find(c => c.id === o.clienteId);
+  const subtotal = o.itens.reduce((s, i) => s + (i.total || 0), 0);
+  const total = orcTotal(o);
+  document.getElementById('modal-pdf-body').innerHTML = `
+    <div class="pdf-preview" id="pdf-content">
+      <div class="pdf-header">
+        <div class="pdf-company">
+          <div class="co-name">${state.company.name}</div>
+          <div class="co-sub">${state.company.phone} · ${state.company.email}</div>
+        </div>
+        <div class="pdf-meta">
+          <div class="ref">Orçamento #${o.id}</div>
+          <small>Data: ${o.data}</small>
+          <small>Validade: ${o.validade || '—'}</small>
+        </div>
+      </div>
+      <div class="pdf-section">
+        <h4>CLIENTE</h4>
+        <div style="font-size:14px"><strong>${cli ? cli.nome : '—'}</strong></div>
+        ${cli ? `<div style="font-size:12px;color:var(--gray)">${cli.tel} · ${cli.email}</div>` : ''}
+      </div>
+      <div class="pdf-section">
+        <h4>ITENS DO ORÇAMENTO</h4>
+        <table class="pdf-table">
+          <thead><tr><th>Descrição</th><th>Material</th><th>Dimensões</th><th>Qtd</th><th>Total</th></tr></thead>
+          <tbody>
+          ${o.itens.map(i => `<tr>
+            <td>${i.desc}</td>
+            <td>${i.mat !== '-' ? i.mat : '—'}</td>
+            <td>${i.largura > 0 ? `${i.largura}m × ${i.altura}m` : '—'}</td>
+            <td>${i.qtd || 1}</td>
+            <td><strong>${fmt(i.total || 0)}</strong></td>
+          </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="pdf-totals">
+          <div class="pdf-total-line"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+          ${o.maoObra > 0 ? `<div class="pdf-total-line"><span>Mão de obra</span><span>${fmt(o.maoObra)}</span></div>` : ''}
+          ${o.desconto > 0 ? `<div class="pdf-total-line"><span>Desconto</span><span>- ${fmt(o.desconto)}</span></div>` : ''}
+          <div class="pdf-total-line big"><span>TOTAL</span><span>${fmt(total)}</span></div>
+        </div>
+      </div>
+      ${o.obs ? `<div class="pdf-section"><h4>OBSERVAÇÕES</h4><p style="font-size:13px">${o.obs}</p></div>` : ''}
+      <div class="pdf-section"><h4>CONDIÇÕES DE PAGAMENTO</h4><p style="font-size:13px">${o.pagamento}</p></div>
+      <div class="pdf-sign">
+        <div class="pdf-sign-line">Assinatura do Cliente</div>
+        <div class="pdf-sign-line">${state.company.name}</div>
+      </div>
+      <div class="pdf-footer">Este orçamento tem validade até ${o.validade || '—'}. Para mais informações: ${state.company.phone}</div>
+    </div>`;
+  openModal('modal-pdf');
+}
+
+function printPDF() {
+  const content = document.getElementById('pdf-content').innerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>Orçamento</title><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"><style>body{font-family:'DM Sans',sans-serif;margin:40px;color:#1A1A2E}table{width:100%;border-collapse:collapse}th{background:#1A1A2E;color:#fff;padding:9px 12px;font-size:11px;text-align:left}td{padding:9px 12px;border-bottom:1px solid #e8e4dc;font-size:12px}.co-name{font-family:'Playfair Display',serif;font-size:24px;font-weight:700}.pdf-header{display:flex;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:2px solid #C9A84C}.pdf-total-line{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}.big{font-weight:700;font-size:16px;border-top:2px solid #C9A84C;margin-top:6px;padding-top:10px}.pdf-sign{display:flex;gap:40px;margin-top:32px}.pdf-sign-line{flex:1;border-top:1px solid #1A1A2E;padding-top:6px;font-size:11px;color:#8B8B9A;text-align:center}</style></head><body>${content}</body></html>`);
+  w.document.close(); w.print();
+}
+
+// ═══════════════════════════════════════════
+// CLIENTES
+// ═══════════════════════════════════════════
+function renderClientes() {
+  setPage('Clientes',
+    `<button class="btn btn-gold" onclick="openNovoCliente()">+ Novo Cliente</button>`,
+    `<div class="card">
+      <div class="card-header">
+        <span class="card-title">Base de Clientes</span>
+        <div class="search-bar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="form-input" style="width:220px;padding-left:32px" placeholder="Buscar cliente..." oninput="filterClientes(this.value)">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Nome</th><th>Tipo</th><th>Documento</th><th>Telefone</th><th>Origem</th><th>Orçamentos</th><th>Total Gasto</th><th>Ações</th></tr></thead>
+        <tbody id="cli-tbody"></tbody></table>
+      </div>
+    </div>`
+  );
+  renderCliTable(state.clientes);
+}
+
+function renderCliTable(list) {
+  const tb = document.getElementById('cli-tbody');
+  if (!tb) return;
+  tb.innerHTML = list.map(c => {
+    const orcs = state.orcamentos.filter(o => o.clienteId === c.id && o.status === 'aprovado');
+    const total = orcs.reduce((s, o) => s + orcTotal(o), 0);
+    return `<tr>
+      <td style="font-weight:500">${c.nome}</td>
+      <td><span class="badge ${c.tipo==='pj'?'badge-sent':'badge-draft'}">${c.tipo==='pj'?'PJ':'PF'}</span></td>
+      <td class="text-sm text-gray">${c.doc||'—'}</td>
+      <td class="text-sm">${c.tel||'—'}</td>
+      <td class="text-sm text-gray">${c.origem||'—'}</td>
+      <td class="text-sm">${orcs.length}</td>
+      <td class="font-bold">${total > 0 ? fmt(total) : '—'}</td>
+      <td><div class="flex gap-2">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="editCliente(${c.id})">✏️</button>
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="verOrcamentosCliente(${c.id})">📄</button>
+      </div></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="8"><div class="empty-state"><h3>Nenhum cliente</h3></div></td></tr>`;
+}
+
+function filterClientes(q) {
+  const filtered = state.clientes.filter(c => c.nome.toLowerCase().includes(q.toLowerCase()) || (c.tel||'').includes(q));
+  renderCliTable(filtered);
+}
+
+function openNovoCliente() {
+  state.editingCliId = null;
+  document.getElementById('modal-cli-title').textContent = 'Novo Cliente';
+  renderClienteForm();
+  openModal('modal-cliente');
+}
+
+function editCliente(id) {
+  state.editingCliId = id;
+  const c = state.clientes.find(c => c.id === id);
+  document.getElementById('modal-cli-title').textContent = 'Editar Cliente';
+  renderClienteForm(c);
+  openModal('modal-cliente');
+}
+
+function renderClienteForm(c = null) {
+  document.getElementById('modal-cli-body').innerHTML = `
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">NOME / RAZÃO SOCIAL *</label>
+        <input class="form-input" id="cli-nome" placeholder="Nome completo" value="${c ? c.nome : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">TIPO</label>
+        <select class="form-select" id="cli-tipo">
+          <option value="pf" ${c && c.tipo==='pf' ? 'selected' : ''}>Pessoa Física</option>
+          <option value="pj" ${c && c.tipo==='pj' ? 'selected' : ''}>Pessoa Jurídica</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">CPF / CNPJ</label>
+        <input class="form-input" id="cli-doc" placeholder="000.000.000-00" value="${c ? c.doc : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">TELEFONE / WHATSAPP</label>
+        <input class="form-input" id="cli-tel" placeholder="(11) 99999-0000" value="${c ? c.tel : ''}">
+      </div>
+    </div>
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">E-MAIL</label>
+        <input class="form-input" id="cli-email" type="email" placeholder="email@cliente.com" value="${c ? c.email : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ORIGEM</label>
+        <select class="form-select" id="cli-origem">
+          ${['indicação','google','instagram','presencial','outros'].map(o => `<option value="${o}" ${c && c.origem===o ? 'selected' : ''}>${o.charAt(0).toUpperCase()+o.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">OBSERVAÇÕES</label>
+      <textarea class="form-textarea" id="cli-obs" placeholder="Anotações sobre o cliente...">${c ? c.obs : ''}</textarea>
+    </div>
+  `;
+}
+
+async function saveCliente() {
+  const nome = document.getElementById('cli-nome')?.value?.trim();
+  if (!nome) { showToast('Informe o nome do cliente', 'err'); return; }
+  const data = {
+    nome,
+    tipo: document.getElementById('cli-tipo').value,
+    doc: document.getElementById('cli-doc').value,
+    tel: document.getElementById('cli-tel').value,
+    email: document.getElementById('cli-email').value,
+    origem: document.getElementById('cli-origem').value,
+    obs: document.getElementById('cli-obs').value,
+  };
+  try {
+    const { data: res, error } = await sbSaveCliente(data);
+    if (error) throw error;
+    await loadClientes();
+    showToast(state.editingCliId ? 'Cliente atualizado!' : 'Cliente cadastrado!', 'ok2');
+    closeModal('modal-cliente');
+    renderClientes();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'err');
+  }
+}
+
+function verOrcamentosCliente(id) {
+  const c = state.clientes.find(c => c.id === id);
+  showPage('orcamentos');
+  setTimeout(() => filterOrcamentos(c.nome), 100);
+}
+
+// ═══════════════════════════════════════════
+// AGENDA / OS
+// ═══════════════════════════════════════════
+function renderAgenda() {
+  const cols = [
+    { key: 'prod', label: 'Em Produção', color: 'var(--blue)' },
+    { key: 'ready', label: 'Pronto p/ Instalar', color: 'var(--gold)' },
+    { key: 'sched', label: 'Agendado', color: 'var(--green)' },
+    { key: 'done', label: 'Concluído', color: 'var(--gray)' },
+  ];
+  setPage('Agenda / Ordens de Serviço',
+    `<button class="btn btn-gold" onclick="openNovaOS()">+ Nova OS</button>`,
+    `<div class="kanban">
+      ${cols.map(col => {
+        const items = state.os.filter(o => o.status === col.key);
+        return `<div class="kanban-col">
+          <div class="kanban-col-title" style="color:${col.color}">${col.label} <span style="background:${col.color};color:white;padding:2px 8px;border-radius:20px;font-size:11px">${items.length}</span></div>
+          ${items.map(o => `
+            <div class="kanban-card" onclick="editOS(${o.id})">
+              <h4>${o.titulo}</h4>
+              <p>${o.cliente}</p>
+              <p style="margin-top:4px;font-size:11px">📍 ${o.endInst || '—'}</p>
+              ${o.dataInst ? `<div class="card-date">📅 Instalação: ${o.dataInst}</div>` : ''}
+              ${o.resp ? `<p style="margin-top:4px;font-size:11px">👷 ${o.resp}</p>` : ''}
+              <div style="margin-top:8px;display:flex;gap:6px">
+                ${col.key !== 'done' ? `<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="event.stopPropagation();advanceOS(${o.id})">Avançar →</button>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>`;
+      }).join('')}
+    </div>`
+  );
+}
+
+async function advanceOS(id) {
+  const o = state.os.find(o => o.id === id);
+  const cycle = ['prod','ready','sched','done'];
+  const next = cycle[cycle.indexOf(o.status) + 1];
+  if (!next) return;
+  try {
+    await sb.from('ordens_servico').update({ status: next }).eq('id', id);
+    o.status = next;
+    renderAgenda();
+    showToast('OS avançada!', 'ok2');
+  } catch(e) {
+    showToast('Erro ao avançar OS', 'err');
+  }
+}
+
+function openNovaOS() {
+  state.editingOsId = null;
+  document.getElementById('modal-os-title').textContent = 'Nova Ordem de Serviço';
+  renderOSForm();
+  openModal('modal-os');
+}
+
+function editOS(id) {
+  state.editingOsId = id;
+  const o = state.os.find(o => o.id === id);
+  document.getElementById('modal-os-title').textContent = 'Editar OS';
+  renderOSForm(o);
+  openModal('modal-os');
+}
+
+function criarOS(orcId) {
+  const orc = state.orcamentos.find(o => o.id === orcId);
+  state.editingOsId = null;
+  document.getElementById('modal-os-title').textContent = 'Criar OS — Orçamento #' + orcId;
+  renderOSForm(null, orc);
+  openModal('modal-os');
+}
+
+function renderOSForm(os = null, orc = null) {
+  const aprovados = state.orcamentos.filter(o => o.status === 'aprovado');
+  document.getElementById('modal-os-body').innerHTML = `
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">TÍTULO DA OS *</label>
+        <input class="form-input" id="os-titulo" placeholder="Ex: Bancada João Silva" value="${os ? os.titulo : (orc ? orc.titulo : '')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">CLIENTE</label>
+        <input class="form-input" id="os-cliente" placeholder="Nome do cliente" value="${os ? os.cliente : (orc ? clienteNome(orc.clienteId) : '')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ORÇAMENTO VINCULADO</label>
+      <select class="form-select" id="os-orc">
+        <option value="">Sem vínculo</option>
+        ${aprovados.map(o => `<option value="${o.id}" ${(os && os.orcId===o.id)||(orc&&orc.id===o.id)?'selected':''}>#${o.id} — ${o.titulo}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">DATA DE PRODUÇÃO</label>
+        <input class="form-input" type="date" id="os-dataprod" value="${os ? os.dataProd : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">DATA DE INSTALAÇÃO</label>
+        <input class="form-input" type="date" id="os-datainst" value="${os ? os.dataInst : ''}">
+      </div>
+    </div>
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">ENDEREÇO DE INSTALAÇÃO</label>
+        <input class="form-input" id="os-end" placeholder="Rua, número, bairro" value="${os ? os.endInst : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">RESPONSÁVEL</label>
+        <input class="form-input" id="os-resp" placeholder="Nome do instalador" value="${os ? os.resp : ''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">STATUS</label>
+      <select class="form-select" id="os-status">
+        <option value="prod" ${os && os.status==='prod' ? 'selected' : ''}>Em Produção</option>
+        <option value="ready" ${os && os.status==='ready' ? 'selected' : ''}>Pronto p/ Instalar</option>
+        <option value="sched" ${os && os.status==='sched' ? 'selected' : ''}>Agendado</option>
+        <option value="done" ${os && os.status==='done' ? 'selected' : ''}>Concluído</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">OBSERVAÇÕES TÉCNICAS</label>
+      <textarea class="form-textarea" id="os-obs" placeholder="Detalhes técnicos para a equipe...">${os ? os.obs : ''}</textarea>
+    </div>
+  `;
+}
+
+async function saveOS() {
+  const titulo = document.getElementById('os-titulo')?.value?.trim();
+  if (!titulo) { showToast('Informe o título da OS', 'err'); return; }
+  const data = {
+    titulo,
+    cliente: document.getElementById('os-cliente').value,
+    orcId: document.getElementById('os-orc').value || null,
+    dataProd: document.getElementById('os-dataprod').value,
+    dataInst: document.getElementById('os-datainst').value,
+    endInst: document.getElementById('os-end').value,
+    resp: document.getElementById('os-resp').value,
+    status: document.getElementById('os-status').value,
+    obs: document.getElementById('os-obs').value,
+  };
+  try {
+    const { error } = await sbSaveOS(data);
+    if (error) throw error;
+    await loadOS();
+    showToast(state.editingOsId ? 'OS atualizada!' : 'OS criada!', 'ok2');
+    closeModal('modal-os');
+    renderAgenda();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'err');
+  }
+}
+
+// ═══════════════════════════════════════════
+// ESTOQUE
+// ═══════════════════════════════════════════
+function renderEstoque() {
+  const valorTotal = state.materiais.reduce((s, m) => s + m.custo * m.estoque, 0);
+  const alertas = state.materiais.filter(m => m.estoque < m.minimo);
+  setPage('Gestão de Estoque',
+    `<button class="btn btn-gold" onclick="openNovoMaterial()">+ Novo Material</button>`,
+    `
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+        <div class="stat-info"><div class="stat-value">${state.materiais.length}</div><div class="stat-label">Materiais cadastrados</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:var(--green)">
+        <div class="stat-icon" style="background:rgba(39,174,96,0.12)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="stat-info"><div class="stat-value">${fmt(valorTotal)}</div><div class="stat-label">Valor total em estoque</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:${alertas.length?'var(--red)':'var(--green)'}">
+        <div class="stat-icon" style="background:rgba(${alertas.length?'192,57,43':'39,174,96'},0.12)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${alertas.length?'var(--red)':'var(--green)'}" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="stat-info"><div class="stat-value">${alertas.length}</div><div class="stat-label">Alertas de reposição</div></div>
+      </div>
+    </div>
+    ${alertas.length ? `<div class="alert alert-danger">⚠️ Materiais abaixo do mínimo: ${alertas.map(m=>m.nome).join(', ')}</div>` : ''}
+    <div class="card">
+      <div class="card-header"><span class="card-title">Materiais em Estoque</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Material</th><th>Categoria</th><th>Unidade</th><th>Custo Unit.</th><th>Estoque</th><th>Mínimo</th><th>Nível</th><th>Valor Total</th><th>Ações</th></tr></thead>
+        <tbody>${state.materiais.map(m => {
+          const pct = Math.min(100, Math.round(m.estoque / (m.minimo * 2) * 100));
+          const cor = m.estoque < m.minimo ? 'var(--red)' : m.estoque < m.minimo * 1.5 ? 'var(--gold)' : 'var(--green)';
+          return `<tr>
+            <td style="font-weight:500">${m.nome}</td>
+            <td><span class="badge badge-draft">${m.cat}</span></td>
+            <td class="text-sm text-gray">${m.unid}</td>
+            <td>${fmt(m.custo)}</td>
+            <td><strong ${m.estoque < m.minimo ? 'style="color:var(--red)"' : ''}>${m.estoque} ${m.unid}</strong></td>
+            <td class="text-gray text-sm">${m.minimo} ${m.unid}</td>
+            <td style="min-width:100px">
+              <div class="stock-bar"><div class="stock-bar-fill" style="width:${pct}%;background:${cor}"></div></div>
+              ${m.estoque < m.minimo ? '<span class="badge badge-low" style="margin-top:3px">Repor</span>' : '<span class="badge badge-ok" style="margin-top:3px">OK</span>'}
+            </td>
+            <td class="font-bold">${fmt(m.custo * m.estoque)}</td>
+            <td><div class="flex gap-2">
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="editMaterial(${m.id})">✏️</button>
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="entradaEstoque(${m.id})" title="Entrada">📦</button>
+            </div></td>
+          </tr>`;
+        }).join('')}</tbody></table>
+      </div>
+    </div>`
+  );
+}
+
+function openNovoMaterial() {
+  state.editingMatId = null;
+  document.getElementById('modal-est-title').textContent = 'Novo Material';
+  renderMaterialForm();
+  openModal('modal-estoque');
+}
+
+function editMaterial(id) {
+  state.editingMatId = id;
+  const m = state.materiais.find(m => m.id === id);
+  document.getElementById('modal-est-title').textContent = 'Editar Material';
+  renderMaterialForm(m);
+  openModal('modal-estoque');
+}
+
+function entradaEstoque(id) {
+  const m = state.materiais.find(m => m.id === id);
+  const qtd = parseFloat(prompt(`Entrada de estoque — ${m.nome}\nQuantidade a adicionar (${m.unid}):`));
+  if (!isNaN(qtd) && qtd > 0) {
+    m.estoque += qtd;
+    renderEstoque();
+    showToast(`${qtd} ${m.unid} adicionado(s) ao estoque de ${m.nome}`, 'ok2');
+  }
+}
+
+function renderMaterialForm(m = null) {
+  document.getElementById('modal-est-body').innerHTML = `
+    <div class="form-group">
+      <label class="form-label">NOME DO MATERIAL *</label>
+      <input class="form-input" id="mat-nome" placeholder="Ex: Granito Preto São Gabriel" value="${m ? m.nome : ''}">
+    </div>
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">CATEGORIA</label>
+        <select class="form-select" id="mat-cat">
+          ${['chapa','insumo','acessório'].map(c => `<option value="${c}" ${m && m.cat===c ? 'selected' : ''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">UNIDADE</label>
+        <select class="form-select" id="mat-unid">
+          ${['m²','peça','kg','litro','rolo'].map(u => `<option value="${u}" ${m && m.unid===u ? 'selected' : ''}>${u}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row form-row-3">
+      <div class="form-group">
+        <label class="form-label">CUSTO UNITÁRIO (R$)</label>
+        <input class="form-input" type="number" id="mat-custo" placeholder="0,00" value="${m ? m.custo : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ESTOQUE ATUAL</label>
+        <input class="form-input" type="number" id="mat-estoque" placeholder="0" value="${m ? m.estoque : ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ESTOQUE MÍNIMO</label>
+        <input class="form-input" type="number" id="mat-minimo" placeholder="0" value="${m ? m.minimo : ''}">
+      </div>
+    </div>
+  `;
+}
+
+async function saveEstoque() {
+  const nome = document.getElementById('mat-nome')?.value?.trim();
+  if (!nome) { showToast('Informe o nome do material', 'err'); return; }
+  const data = {
+    nome,
+    cat: document.getElementById('mat-cat').value,
+    unid: document.getElementById('mat-unid').value,
+    custo: parseFloat(document.getElementById('mat-custo').value) || 0,
+    estoque: parseFloat(document.getElementById('mat-estoque').value) || 0,
+    minimo: parseFloat(document.getElementById('mat-minimo').value) || 0,
+  };
+  try {
+    const { error } = await sbSaveMaterial(data);
+    if (error) throw error;
+    await loadMateriais();
+    showToast(state.editingMatId ? 'Material atualizado!' : 'Material cadastrado!', 'ok2');
+    closeModal('modal-estoque');
+    renderEstoque();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'err');
+  }
+}
+
+// ═══════════════════════════════════════════
+// RELATÓRIOS
+// ═══════════════════════════════════════════
+function renderRelatorios() {
+  const orcs = state.orcamentos;
+  const aprovados = orcs.filter(o => o.status === 'aprovado');
+  const enviados = orcs.filter(o => o.status === 'enviado');
+  const rascunhos = orcs.filter(o => o.status === 'rascunho');
+  const recusados = orcs.filter(o => o.status === 'recusado');
+
+  const receitaReal = aprovados.reduce((s, o) => s + orcTotal(o), 0);
+  const pipeline = enviados.reduce((s, o) => s + orcTotal(o), 0);
+  const taxaConv = orcs.length ? Math.round(aprovados.length / orcs.length * 100) : 0;
+
+  const margens = aprovados.map(o => {
+    const total = orcTotal(o);
+    const custo = o.itens.reduce((s, i) => {
+      const mat = state.materiais.find(m => m.nome === i.mat);
+      return s + (mat ? mat.custo * (i.largura * i.altura * (i.qtd || 1)) : 0);
+    }, 0);
+    return { titulo: o.titulo, total, custo, margem: custo > 0 ? Math.round((total - custo)/total*100) : null };
+  }).filter(x => x.margem !== null).sort((a,b) => b.margem - a.margem);
+
+  setPage('Relatórios Financeiros', '',
+    `<div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-info"><div class="stat-value">${fmt(receitaReal)}</div><div class="stat-label">Receita realizada (aprovados)</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:var(--blue)">
+        <div class="stat-info"><div class="stat-value">${fmt(pipeline)}</div><div class="stat-label">Receita em pipeline</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:var(--green)">
+        <div class="stat-info"><div class="stat-value">${taxaConv}%</div><div class="stat-label">Taxa de conversão</div></div>
+      </div>
+      <div class="stat-card" style="border-left-color:var(--gray)">
+        <div class="stat-info"><div class="stat-value">${orcs.length}</div><div class="stat-label">Total de orçamentos</div></div>
+      </div>
+    </div>
+
+    <div class="dash-grid mt-4">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Status dos Orçamentos</span></div>
+        <div class="card-body">
+          ${[
+            { label: 'Aprovados', count: aprovados.length, color: 'var(--green)', val: receitaReal },
+            { label: 'Em pipeline', count: enviados.length, color: 'var(--blue)', val: pipeline },
+            { label: 'Rascunhos', count: rascunhos.length, color: 'var(--gray)', val: rascunhos.reduce((s,o)=>s+orcTotal(o),0) },
+            { label: 'Recusados', count: recusados.length, color: 'var(--red)', val: recusados.reduce((s,o)=>s+orcTotal(o),0) },
+          ].map(item => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--marble2)">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:10px;height:10px;border-radius:50%;background:${item.color}"></div>
+                <span style="font-size:13px">${item.label}</span>
+                <span class="badge badge-draft">${item.count}</span>
+              </div>
+              <strong style="font-size:13px">${fmt(item.val)}</strong>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Margem por Obra</span></div>
+        <div class="card-body">
+          ${margens.length ? margens.map(m => `
+            <div style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                <span style="font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.titulo}</span>
+                <span class="${m.margem >= 30 ? 'text-green' : m.margem >= 15 ? 'text-gold' : 'text-red'} font-bold">${m.margem}%</span>
+              </div>
+              <div style="display:flex;gap:8px;font-size:11px;color:var(--gray)">
+                <span>Receita: ${fmt(m.total)}</span>
+                <span>Custo mat.: ${fmt(m.custo)}</span>
+              </div>
+              <div class="pipeline-bar"><div class="pipeline-seg" style="width:${Math.min(100,m.margem)}%;background:${m.margem>=30?'var(--green)':m.margem>=15?'var(--gold)':'var(--red)'}"></div></div>
+            </div>`).join('') : '<div class="empty-state" style="padding:30px"><p>Aprove orçamentos com materiais vinculados para ver margens</p></div>'}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-header"><span class="card-title">Origem dos Clientes</span></div>
+      <div class="card-body">
+        <div style="display:flex;gap:24px;flex-wrap:wrap">
+          ${['indicação','google','instagram','presencial','outros'].map(orig => {
+            const count = state.clientes.filter(c => c.origem === orig).length;
+            const pct = state.clientes.length ? Math.round(count/state.clientes.length*100) : 0;
+            return `<div style="text-align:center;min-width:80px">
+              <div style="font-size:24px;font-weight:700;font-family:'Playfair Display',serif;color:var(--dark)">${count}</div>
+              <div style="font-size:11px;color:var(--gray);margin-top:2px">${orig.charAt(0).toUpperCase()+orig.slice(1)}</div>
+              <div style="font-size:11px;color:var(--gold);font-weight:600">${pct}%</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`
+  );
+}
+
+
+
+// ═══════════════════════════════════════════
+// PRICING ENGINE
+// ═══════════════════════════════════════════
+const SERVICOS_DEFAULT = [
+  { id:'instalacao',   nome:'Instalação',          icon:'🔨', unid:'m²',  preco:120  },
+  { id:'polimento',    nome:'Polimento',            icon:'✨', unid:'m²',  preco:80   },
+  { id:'furo_cuba',    nome:'Furo de Cuba',         icon:'🔵', unid:'und', preco:90   },
+  { id:'furo_torn',    nome:'Furo Torneira/Fogão',  icon:'🔩', unid:'und', preco:45   },
+  { id:'corte_esp',    nome:'Corte Especial',       icon:'⚡', unid:'ml',  preco:65   },
+  { id:'meia_esq',     nome:'Meia Esquadria',       icon:'📐', unid:'ml',  preco:55   },
+  { id:'transporte',   nome:'Transporte',           icon:'🚚', unid:'und', preco:180  },
+  { id:'borda_ret',    nome:'Borda Reta Polida',    icon:'▬',  unid:'ml',  preco:35   },
+];
+
+if (!state.pricing) {
+  state.pricing = {
+    markup: 3.0,
+    servicos: JSON.parse(JSON.stringify(SERVICOS_DEFAULT)),
+  };
+}
+
+let selectedServico = null;
+let servicoQtd = 1;
+
+// ── Markup auto-price ──
+function calcPriceFromStock(matNome, markup) {
+  const mat = state.materiais.find(m => m.nome === matNome);
+  if (!mat || mat.custo <= 0) return null;
+  return mat.custo * (markup || state.pricing.markup);
+}
+
+function applyAutoPrice(itemIdx) {
+  const item = state.orcItems[itemIdx];
+  if (!item || item.mat === '-' || item.mat === 'Outro') return;
+  const price = calcPriceFromStock(item.mat, state.pricing.markup);
+  if (price) {
+    item.vlrm2 = parseFloat(price.toFixed(2));
+    if (item.largura > 0 && item.altura > 0) {
+      item.total = item.largura * item.altura * (item.qtd || 1) * item.vlrm2;
+    }
+    renderItemsTable();
+    recalcTotal();
+    showToast(`Preço automático: ${fmt(price)}/m² (${state.pricing.markup}× custo)`, 'ok2');
+  } else {
+    showToast('Material sem custo cadastrado no estoque', 'err');
+  }
+}
+
+function applyMarkupToAll() {
+  let count = 0;
+  state.orcItems.forEach((item, i) => {
+    if (item.mat && item.mat !== '-' && item.mat !== 'Outro') {
+      const price = calcPriceFromStock(item.mat, state.pricing.markup);
+      if (price) {
+        item.vlrm2 = parseFloat(price.toFixed(2));
+        if (item.largura > 0 && item.altura > 0) {
+          item.total = item.largura * item.altura * (item.qtd || 1) * item.vlrm2;
+        }
+        count++;
+      }
+    }
+  });
+  if (count > 0) { renderItemsTable(); recalcTotal(); showToast(`Preços aplicados em ${count} item(ns)!`, 'ok2'); }
+  else showToast('Nenhum item com material vinculado ao estoque', 'err');
+}
+
+// ── Pricing config modal ──
+function openPricingConfig() {
+  // update api key and cep fields if already saved
+
+  const p = state.pricing;
+  document.getElementById('pricing-modal-body').innerHTML = `
+    <div class="config-section">
+      <div class="config-section-title">AGENTE IA — CONFIGURAÇÃO</div>
+      <div class="servico-config-row">
+        <label>🔑 API Key (Anthropic)</label>
+        <input type="password" id="pc-apikey" value="${state.pricing.apiKey||''}" placeholder="sk-ant-..." style="width:200px;font-size:12px" oninput="state.pricing.apiKey=this.value">
+      </div>
+      <div class="servico-config-row">
+        <label>📍 CEP da Marmoraria</label>
+        <input type="text" id="pc-cep" value="${state.pricing.cep||''}" placeholder="00000-000" style="width:120px" oninput="state.pricing.cep=this.value">
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-top:8px">A API key é usada apenas localmente para o agente de orçamento.</div>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">MARKUP DE MATERIAL</div>
+      <div class="markup-row">
+        <input class="markup-input" type="number" id="pc-markup" value="${p.markup}" step="0.1" min="1" max="10" oninput="updateMarkupPreview()">
+        <span style="font-size:13px;color:var(--gray)">× custo</span>
+        <div class="markup-presets">
+          ${[2,2.5,3,3.5,4].map(v => `<button class="markup-preset ${p.markup==v?'active':''}" onclick="setMarkup(${v})">${v}×</button>`).join('')}
+        </div>
+      </div>
+      <div class="auto-price-wrap" id="markup-preview" style="margin-top:12px">
+        <span>📦 Exemplo — Granito (R$280/m²) → preço venda: <strong id="markup-ex">R$ 840,00/m²</strong></span>
+      </div>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">TABELA DE SERVIÇOS E ACABAMENTOS</div>
+      ${p.servicos.map((s,i) => `
+        <div class="servico-config-row">
+          <label>${s.icon} ${s.nome}</label>
+          <input type="number" value="${s.preco}" step="1" min="0" id="sc-${s.id}" oninput="updateServicoPrice(${i},this.value)">
+          <span>R$/${s.unid}</span>
+        </div>`).join('')}
+    </div>
+  `;
+  updateMarkupPreview();
+  document.getElementById('modal-pricing').classList.add('open');
+}
+
+function closePricingModal() {
+  document.getElementById('modal-pricing').classList.remove('open');
+}
+
+function setMarkup(v) {
+  document.getElementById('pc-markup').value = v;
+  updateMarkupPreview();
+  document.querySelectorAll('.markup-preset').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.textContent) === v);
+  });
+}
+
+function updateMarkupPreview() {
+  const v = parseFloat(document.getElementById('pc-markup')?.value) || 3;
+  const ex = document.getElementById('markup-ex');
+  if (ex) ex.textContent = fmt(280 * v) + '/m²';
+}
+
+function updateServicoPrice(idx, val) {
+  state.pricing.servicos[idx].preco = parseFloat(val) || 0;
+}
+
+function savePricingConfig() {
+  state.pricing.markup = parseFloat(document.getElementById('pc-markup').value) || 3;
+  closePricingModal();
+  showToast('Configurações salvas!', 'ok2');
+}
+
+// ── Serviços modal ──
+function openServicos() {
+  selectedServico = null;
+  servicoQtd = 1;
+  renderServicosModal();
+  document.getElementById('modal-servicos').classList.add('open');
+}
+
+function renderServicosModal() {
+  document.getElementById('servicos-modal-body').innerHTML = `
+    <div class="servico-grid">
+      ${state.pricing.servicos.map(s => `
+        <div class="servico-card ${selectedServico && selectedServico.id===s.id ? 'selected' : ''}" onclick="selectServico('${s.id}')">
+          <div class="servico-card-icon">${s.icon}</div>
+          <div class="servico-card-name">${s.nome}</div>
+          <div class="servico-card-price">${fmt(s.preco)} / ${s.unid}</div>
+        </div>`).join('')}
+    </div>
+    <div id="servico-config-area"></div>
+  `;
+}
+
+function selectServico(id) {
+  selectedServico = state.pricing.servicos.find(s => s.id === id);
+  servicoQtd = 1;
+  renderServicosModal();
+  const isUnid = selectedServico.unid === 'und';
+  document.getElementById('servico-config-area').innerHTML = `
+    <div class="config-section" style="margin-top:4px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:24px">${selectedServico.icon}</span>
+        <div>
+          <div style="font-weight:600;font-size:14px">${selectedServico.nome}</div>
+          <div style="font-size:12px;color:var(--gray)">${fmt(selectedServico.preco)} por ${selectedServico.unid}</div>
+        </div>
+      </div>
+      <div class="form-row form-row-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray);display:block;margin-bottom:5px">${isUnid ? 'QUANTIDADE' : selectedServico.unid === 'm²' ? 'ÁREA (m²)' : 'METROS LINEARES (ml)'}</label>
+          <input class="form-input" type="number" id="sc-qtd" value="1" step="${isUnid?'1':'0.1'}" min="0"
+            style="font-size:15px;font-weight:600" oninput="updateServicoPreview()">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--gray);display:block;margin-bottom:5px">PREÇO (R$/${selectedServico.unid})</label>
+          <input class="form-input" type="number" id="sc-price" value="${selectedServico.preco}" step="1" min="0"
+            style="font-size:15px;font-weight:600" oninput="updateServicoPreview()">
+        </div>
+      </div>
+      <div id="sc-preview" class="auto-price-wrap" style="margin-top:12px"></div>
+    </div>
+  `;
+  updateServicoPreview();
+}
+
+function updateServicoPreview() {
+  const qtd = parseFloat(document.getElementById('sc-qtd')?.value) || 0;
+  const price = parseFloat(document.getElementById('sc-price')?.value) || 0;
+  const total = qtd * price;
+  const prev = document.getElementById('sc-preview');
+  if (prev) prev.innerHTML = `
+    <span>${selectedServico.unid === 'und' ? qtd + ' und' : qtd + ' ' + selectedServico.unid} × ${fmt(price)} = </span>
+    <strong style="margin-left:auto">${fmt(total)}</strong>
+  `;
+}
+
+function inserirServico() {
+  if (!selectedServico) { showToast('Selecione um serviço', 'err'); return; }
+  const qtd = parseFloat(document.getElementById('sc-qtd')?.value) || 1;
+  const price = parseFloat(document.getElementById('sc-price')?.value) || selectedServico.preco;
+  const total = qtd * price;
+  const isUnid = selectedServico.unid === 'und';
+  state.orcItems.push({
+    desc: `${selectedServico.nome}${!isUnid ? ' — ' + qtd + ' ' + selectedServico.unid : ''}`,
+    mat: '-',
+    largura: isUnid ? 0 : qtd,
+    altura: isUnid ? 0 : 1,
+    qtd: isUnid ? qtd : 1,
+    vlrm2: price,
+    total: parseFloat(total.toFixed(2)),
+    _servico: selectedServico.id,
+  });
+  document.getElementById('modal-servicos').classList.remove('open');
+  renderItemsTable();
+  recalcTotal();
+  showToast(`${selectedServico.nome} adicionado!`, 'ok2');
+}
+
+// ═══════════════════════════════════════════
+// DESENHOS PADRÃO
+// ═══════════════════════════════════════════
+const DESENHOS = [
+  {
+    id: 'pia-ret',
+    nome: 'Pia Retangular',
+    icon: `<svg width="56" height="44" viewBox="0 0 56 44"><rect x="3" y="3" width="50" height="38" rx="2" fill="none" stroke="#C9A84C" stroke-width="2"/><rect x="12" y="10" width="32" height="24" rx="10" fill="none" stroke="#1A1A2E" stroke-width="1.5" stroke-dasharray="4,2"/><circle cx="28" cy="22" r="2" fill="#1A1A2E"/></svg>`,
+    campos: [
+      { id:'larg', label:'Largura total (m)', val:0.6, step:0.01 },
+      { id:'prof', label:'Profundidade total (m)', val:0.5, step:0.01 },
+      { id:'furo_larg', label:'Furo cuba larg. (m)', val:0.35, step:0.01 },
+      { id:'furo_prof', label:'Furo cuba prof. (m)', val:0.32, step:0.01 },
+      { id:'qtd', label:'Quantidade', val:1, step:1 },
+      { id:'vlrm2', label:'R$/m²', val:900, step:1 },
+    ],
+    calcArea(v) {
+      const total = v.larg * v.prof;
+      const furo = v.furo_larg * v.furo_prof;
+      return Math.max(0, total - furo) * (v.qtd||1);
+    },
+    descricao(v) { return `Pia retangular ${v.larg}m × ${v.prof}m (furo ${v.furo_larg}×${v.furo_prof}m)`; },
+    desenhar(ctx, v) {
+      const W=220,H=180,p=20;
+      ctx.clearRect(0,0,W,H);
+      const sw = W-p*2, sh = H-p*2;
+      // borda externa
+      ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2.5;
+      ctx.strokeRect(p,p,sw,sh);
+      ctx.fillStyle='rgba(201,168,76,0.08)'; ctx.fillRect(p,p,sw,sh);
+      // furo cuba
+      const fx = p+(sw-v.furo_larg/v.larg*sw)/2;
+      const fy = p+(sh-v.furo_prof/v.prof*sh)/2;
+      const fw = v.furo_larg/v.larg*sw;
+      const fh = v.furo_prof/v.prof*sh;
+      ctx.fillStyle='#E8E4DC'; ctx.fillRect(fx,fy,fw,fh);
+      ctx.strokeStyle='#1A1A2E'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+      ctx.strokeRect(fx,fy,fw,fh);
+      ctx.setLineDash([]);
+      // cotas
+      ctx.fillStyle='#8B8B9A'; ctx.font='11px DM Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(v.larg+'m', W/2, p-6);
+      ctx.save(); ctx.translate(p-8, H/2); ctx.rotate(-Math.PI/2);
+      ctx.fillText(v.prof+'m', 0,0); ctx.restore();
+      // label furo
+      ctx.fillStyle='#1A1A2E'; ctx.font='10px DM Sans,sans-serif';
+      ctx.fillText('Cuba', fx+fw/2, fy+fh/2+4);
+    }
+  },
+  {
+    id: 'soleira',
+    nome: 'Soleira / Pingadeira',
+    icon: `<svg width="56" height="44" viewBox="0 0 56 44"><rect x="3" y="14" width="50" height="16" rx="2" fill="none" stroke="#C9A84C" stroke-width="2"/><line x1="3" y1="22" x2="53" y2="22" stroke="#1A1A2E" stroke-width="1" stroke-dasharray="4,2"/></svg>`,
+    campos: [
+      { id:'comp', label:'Comprimento (m)', val:0.9, step:0.01 },
+      { id:'larg', label:'Largura (m)', val:0.15, step:0.01 },
+      { id:'qtd', label:'Quantidade', val:1, step:1 },
+      { id:'vlrm2', label:'R$/m²', val:800, step:1 },
+    ],
+    calcArea(v) { return v.comp * v.larg * (v.qtd||1); },
+    descricao(v) { return `Soleira/Pingadeira ${v.comp}m × ${v.larg}m — ${v.qtd} unidade(s)`; },
+    desenhar(ctx, v) {
+      const W=220,H=180;
+      ctx.clearRect(0,0,W,H);
+      const sw=W-40, sh=Math.min(60, v.larg/v.comp*sw*3+20);
+      const sx=20, sy=(H-sh)/2;
+      ctx.fillStyle='rgba(201,168,76,0.1)'; ctx.fillRect(sx,sy,sw,sh);
+      ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2.5; ctx.strokeRect(sx,sy,sw,sh);
+      ctx.fillStyle='#8B8B9A'; ctx.font='11px DM Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(v.comp+'m', W/2, sy-7);
+      ctx.save(); ctx.translate(sx-10,H/2); ctx.rotate(-Math.PI/2);
+      ctx.fillText(v.larg+'m',0,0); ctx.restore();
+    }
+  },
+  {
+    id: 'pia-l',
+    nome: 'Pia em L',
+    icon: `<svg width="56" height="44" viewBox="0 0 56 44"><polyline points="3,3 3,41 53,41 53,22 28,22 28,3 3,3" fill="none" stroke="#C9A84C" stroke-width="2"/><rect x="8" y="24" width="20" height="14" rx="6" fill="none" stroke="#1A1A2E" stroke-width="1.2" stroke-dasharray="3,2"/></svg>`,
+    campos: [
+      { id:'a_comp', label:'Segmento A — comp. (m)', val:1.2, step:0.01 },
+      { id:'a_larg', label:'Segmento A — larg. (m)', val:0.55, step:0.01 },
+      { id:'b_comp', label:'Segmento B — comp. (m)', val:0.8, step:0.01 },
+      { id:'b_larg', label:'Segmento B — larg. (m)', val:0.55, step:0.01 },
+      { id:'furo', label:'Desconto furos (m²)', val:0.11, step:0.01 },
+      { id:'qtd', label:'Quantidade', val:1, step:1 },
+      { id:'vlrm2', label:'R$/m²', val:950, step:1 },
+    ],
+    calcArea(v) {
+      const area = v.a_comp*v.a_larg + v.b_comp*v.b_larg - v.a_larg*v.b_larg;
+      return Math.max(0, area - (v.furo||0)) * (v.qtd||1);
+    },
+    descricao(v) { return `Pia em L — A:${v.a_comp}×${v.a_larg}m B:${v.b_comp}×${v.b_larg}m`; },
+    desenhar(ctx, v) {
+      const W=220,H=180,p=30;
+      ctx.clearRect(0,0,W,H);
+      const tot_w = v.a_comp+v.b_comp, tot_h = v.a_larg+v.b_larg;
+      const scale = Math.min((W-p*2)/tot_w, (H-p*2)/tot_h);
+      const aw=v.a_comp*scale, ah=v.a_larg*scale, bw=v.b_comp*scale, bh=v.b_larg*scale;
+      const ox=p, oy=p;
+      // Segment A (horizontal top)
+      ctx.fillStyle='rgba(201,168,76,0.1)'; ctx.fillRect(ox,oy,aw+bw,ah);
+      // Segment B (vertical left bottom)
+      ctx.fillRect(ox,oy,aw,ah+bh);
+      // outline L shape
+      ctx.beginPath();
+      ctx.moveTo(ox,oy); ctx.lineTo(ox+aw+bw,oy); ctx.lineTo(ox+aw+bw,oy+ah);
+      ctx.lineTo(ox+aw,oy+ah); ctx.lineTo(ox+aw,oy+ah+bh);
+      ctx.lineTo(ox,oy+ah+bh); ctx.closePath();
+      ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2.5; ctx.stroke();
+      ctx.fillStyle='#8B8B9A'; ctx.font='10px DM Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('A: '+v.a_comp+'m', ox+(aw+bw)/2, oy-8);
+      ctx.fillText('B: '+v.b_comp+'m', ox+aw+(bw)/2, oy+ah+bh/2+4);
+    }
+  },
+  {
+    id: 'pia-u',
+    nome: 'Pia em U',
+    icon: `<svg width="56" height="44" viewBox="0 0 56 44"><polyline points="3,3 3,41 53,41 53,3" fill="none" stroke="#C9A84C" stroke-width="2"/><line x1="3" y1="22" x2="53" y2="22" stroke="#C9A84C" stroke-width="2"/><rect x="8" y="24" width="16" height="12" rx="5" fill="none" stroke="#1A1A2E" stroke-width="1.2" stroke-dasharray="3,2"/><rect x="33" y="24" width="16" height="12" rx="5" fill="none" stroke="#1A1A2E" stroke-width="1.2" stroke-dasharray="3,2"/></svg>`,
+    campos: [
+      { id:'esq_comp', label:'Esquerda — comp. (m)', val:0.8, step:0.01 },
+      { id:'esq_larg', label:'Esquerda — larg. (m)', val:0.55, step:0.01 },
+      { id:'fund_comp', label:'Fundo — comp. (m)', val:1.5, step:0.01 },
+      { id:'fund_larg', label:'Fundo — larg. (m)', val:0.55, step:0.01 },
+      { id:'dir_comp', label:'Direita — comp. (m)', val:0.8, step:0.01 },
+      { id:'dir_larg', label:'Direita — larg. (m)', val:0.55, step:0.01 },
+      { id:'furo', label:'Desconto furos (m²)', val:0.22, step:0.01 },
+      { id:'qtd', label:'Quantidade', val:1, step:1 },
+      { id:'vlrm2', label:'R$/m²', val:950, step:1 },
+    ],
+    calcArea(v) {
+      const area = v.esq_comp*v.esq_larg + v.fund_comp*v.fund_larg + v.dir_comp*v.dir_larg;
+      return Math.max(0, area - (v.furo||0)) * (v.qtd||1);
+    },
+    descricao(v) { return `Pia em U — Esq:${v.esq_comp}m Fundo:${v.fund_comp}m Dir:${v.dir_comp}m`; },
+    desenhar(ctx, v) {
+      const W=220,H=180,p=24;
+      ctx.clearRect(0,0,W,H);
+      const totalW = v.esq_comp + v.fund_comp + v.dir_comp;
+      const scale = Math.min((W-p*2)/totalW, (H-p*2)/(Math.max(v.esq_larg,v.fund_larg,v.dir_larg)*2.2));
+      const ew=v.esq_comp*scale, fw=v.fund_comp*scale, dw=v.dir_comp*scale;
+      const eh=v.esq_larg*scale, fh=v.fund_larg*scale, dh=v.dir_larg*scale;
+      const maxH=Math.max(eh,fh,dh);
+      const ox=p, oy=p+(H-p*2-maxH)/2;
+      ctx.fillStyle='rgba(201,168,76,0.1)';
+      // esquerda
+      ctx.fillRect(ox, oy, ew, eh);
+      ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2; ctx.strokeRect(ox, oy, ew, eh);
+      // fundo
+      ctx.fillRect(ox+ew, oy, fw, fh);
+      ctx.strokeRect(ox+ew, oy, fw, fh);
+      // direita
+      ctx.fillRect(ox+ew+fw, oy, dw, dh);
+      ctx.strokeRect(ox+ew+fw, oy, dw, dh);
+      ctx.fillStyle='#8B8B9A'; ctx.font='9px DM Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('E:'+v.esq_comp, ox+ew/2, oy+eh+12);
+      ctx.fillText('Fundo:'+v.fund_comp, ox+ew+fw/2, oy+fh+12);
+      ctx.fillText('D:'+v.dir_comp, ox+ew+fw+dw/2, oy+dh+12);
+    }
+  },
+  {
+    id: 'lavatorio',
+    nome: 'Lavatório',
+    icon: `<svg width="56" height="44" viewBox="0 0 56 44"><ellipse cx="28" cy="22" rx="24" ry="18" fill="none" stroke="#C9A84C" stroke-width="2"/><ellipse cx="28" cy="22" rx="14" ry="10" fill="none" stroke="#1A1A2E" stroke-width="1.2" stroke-dasharray="4,2"/><circle cx="28" cy="22" r="2" fill="#1A1A2E"/></svg>`,
+    campos: [
+      { id:'larg', label:'Largura total (m)', val:0.5, step:0.01 },
+      { id:'prof', label:'Profundidade total (m)', val:0.42, step:0.01 },
+      { id:'furo_larg', label:'Furo cuba larg. (m)', val:0.32, step:0.01 },
+      { id:'furo_prof', label:'Furo cuba prof. (m)', val:0.26, step:0.01 },
+      { id:'qtd', label:'Quantidade', val:1, step:1 },
+      { id:'vlrm2', label:'R$/m²', val:1100, step:1 },
+    ],
+    calcArea(v) {
+      const total = Math.PI * (v.larg/2) * (v.prof/2);
+      const furo = Math.PI * (v.furo_larg/2) * (v.furo_prof/2);
+      return Math.max(0, total - furo) * (v.qtd||1);
+    },
+    descricao(v) { return `Lavatório ${v.larg}m × ${v.prof}m (cuba ${v.furo_larg}×${v.furo_prof}m)`; },
+    desenhar(ctx, v) {
+      const W=220,H=180,cx=W/2,cy=H/2;
+      ctx.clearRect(0,0,W,H);
+      const scale = Math.min((W-40)/v.larg, (H-40)/v.prof);
+      const rx=v.larg/2*scale, ry=v.prof/2*scale;
+      const frx=v.furo_larg/2*scale, fry=v.furo_prof/2*scale;
+      // externa
+      ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+      ctx.fillStyle='rgba(201,168,76,0.1)'; ctx.fill();
+      ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2.5; ctx.stroke();
+      // furo
+      ctx.beginPath(); ctx.ellipse(cx,cy,frx,fry,0,0,Math.PI*2);
+      ctx.fillStyle='#E8E4DC'; ctx.fill();
+      ctx.strokeStyle='#1A1A2E'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#8B8B9A'; ctx.font='11px DM Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(v.larg+'m', cx, cy-ry-8);
+      ctx.save(); ctx.translate(cx-rx-12, cy); ctx.rotate(-Math.PI/2);
+      ctx.fillText(v.prof+'m',0,0); ctx.restore();
+    }
+  },
+  {
+    id: 'tampo-ret',
+    nome: 'Tampo Retangular',
+    icon: `<svg width="56" height="44" viewBox="0 0 56 44"><rect x="3" y="8" width="50" height="28" rx="2" fill="none" stroke="#C9A84C" stroke-width="2"/><line x1="3" y1="16" x2="53" y2="16" stroke="#1A1A2E" stroke-width="1" stroke-dasharray="3,2"/><line x1="3" y1="28" x2="53" y2="28" stroke="#1A1A2E" stroke-width="1" stroke-dasharray="3,2"/></svg>`,
+    campos: [
+      { id:'comp', label:'Comprimento (m)', val:1.5, step:0.01 },
+      { id:'larg', label:'Largura (m)', val:0.6, step:0.01 },
+      { id:'qtd', label:'Quantidade', val:1, step:1 },
+      { id:'vlrm2', label:'R$/m²', val:750, step:1 },
+    ],
+    calcArea(v) { return v.comp * v.larg * (v.qtd||1); },
+    descricao(v) { return `Tampo retangular ${v.comp}m × ${v.larg}m`; },
+    desenhar(ctx, v) {
+      const W=220,H=180,p=28;
+      ctx.clearRect(0,0,W,H);
+      const sw=W-p*2, sh=Math.min(H-p*2, v.larg/v.comp*(W-p*2)*1.2);
+      const ox=p, oy=(H-sh)/2;
+      ctx.fillStyle='rgba(201,168,76,0.1)'; ctx.fillRect(ox,oy,sw,sh);
+      ctx.strokeStyle='#C9A84C'; ctx.lineWidth=2.5; ctx.strokeRect(ox,oy,sw,sh);
+      ctx.fillStyle='#8B8B9A'; ctx.font='11px DM Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(v.comp+'m', W/2, oy-8);
+      ctx.save(); ctx.translate(ox-12,H/2); ctx.rotate(-Math.PI/2);
+      ctx.fillText(v.larg+'m',0,0); ctx.restore();
+    }
+  },
+];
+
+let selectedDesenho = null;
+let desenhoVals = {};
+
+function openDesenhos() {
+  selectedDesenho = null;
+  desenhoVals = {};
+  renderDesenhoGrid();
+  document.getElementById('desenho-config').style.display = 'none';
+  openModal('modal-desenhos');
+}
+
+function renderDesenhoGrid() {
+  document.getElementById('desenho-grid').innerHTML = DESENHOS.map(d => `
+    <div class="desenho-card ${selectedDesenho && selectedDesenho.id===d.id?'selected':''}" onclick="selectDesenho('${d.id}')">
+      ${d.icon}
+      <span>${d.nome}</span>
+    </div>
+  `).join('');
+}
+
+function selectDesenho(id) {
+  selectedDesenho = DESENHOS.find(d => d.id === id);
+  desenhoVals = {};
+  selectedDesenho.campos.forEach(c => { desenhoVals[c.id] = c.val; });
+  renderDesenhoGrid();
+  renderDesenhoConfig();
+  document.getElementById('desenho-config').style.display = 'block';
+}
+
+function renderDesenhoConfig() {
+  const d = selectedDesenho;
+  // Fields
+  const halfLen = Math.ceil(d.campos.length / 2);
+  const row1 = d.campos.slice(0, halfLen);
+  const row2 = d.campos.slice(halfLen);
+  document.getElementById('desenho-fields').innerHTML = `
+    <div style="margin-bottom:6px;font-weight:600;font-size:13px;color:var(--dark)">${d.nome} — Medidas</div>
+    <div class="field-row field-row-2" style="margin-bottom:12px">
+      ${row1.map(c => `
+        <div class="field-mini">
+          <label>${c.label}</label>
+          <input type="number" id="df_${c.id}" value="${desenhoVals[c.id]}" step="${c.step}" min="0"
+            oninput="updateDesenhoVal('${c.id}',parseFloat(this.value)||0)">
+        </div>`).join('')}
+    </div>
+    <div class="field-row field-row-2">
+      ${row2.map(c => `
+        <div class="field-mini">
+          <label>${c.label}</label>
+          <input type="number" id="df_${c.id}" value="${desenhoVals[c.id]}" step="${c.step}" min="0"
+            oninput="updateDesenhoVal('${c.id}',parseFloat(this.value)||0)">
+        </div>`).join('')}
+    </div>
+  `;
+  updateDesenhoPreview();
+}
+
+function updateDesenhoVal(field, val) {
+  desenhoVals[field] = val;
+  updateDesenhoPreview();
+}
+
+function updateDesenhoPreview() {
+  const d = selectedDesenho;
+  const v = desenhoVals;
+  const canvas = document.getElementById('desenho-canvas');
+  const ctx = canvas.getContext('2d');
+  d.desenhar(ctx, v);
+  const area = d.calcArea(v);
+  const vlrm2 = v.vlrm2 || 0;
+  const total = area * vlrm2;
+  document.getElementById('area-result').innerHTML = `
+    <div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+      <div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:3px">Área calculada</div><strong>${area.toFixed(4)} m²</strong></div>
+      <div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:3px">R$/m²</div><strong>${fmt(vlrm2)}</strong></div>
+      <div><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:3px">Qtd</div><strong>${v.qtd||1}</strong></div>
+      <div style="margin-left:auto"><div style="font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:3px">TOTAL DO ITEM</div><strong style="font-size:22px">${fmt(total)}</strong></div>
+    </div>
+  `;
+}
+
+function inserirDesenho() {
+  if (!selectedDesenho) { showToast('Selecione um desenho', 'err'); return; }
+  const d = selectedDesenho;
+  const v = desenhoVals;
+  const area = d.calcArea(v);
+  const total = area * (v.vlrm2||0);
+  state.orcItems.push({
+    desc: d.descricao(v),
+    mat: '-',
+    largura: parseFloat(area.toFixed(4)),
+    altura: 1,
+    qtd: v.qtd || 1,
+    vlrm2: v.vlrm2 || 0,
+    total: parseFloat(total.toFixed(2)),
+    _desenho: d.id,
+  });
+  closeModal('modal-desenhos');
+  renderItemsTable();
+  recalcTotal();
+  showToast(`${d.nome} inserido no orçamento!`, 'ok2');
+}
+
+
+// ═══════════════════════════════════════════
+// AGENTE IA — MARMO IA
+// ═══════════════════════════════════════════
+let agentOpen = false;
+let agentHistory = [];
+let agentPendingOrcamento = null;
+
+const AGENT_SYSTEM = `Você é o MarmoIA, assistente especializado em orçamentos para marmorarias brasileiras.
+
+Seu objetivo é guiar o responsável pela marmoraria através de um processo de orçamento estruturado, coletando todas as informações necessárias e ao final gerar um orçamento detalhado com margem de lucro real.
+
+FLUXO DE COLETA:
+1. Tipo de projeto (pia, bancada, soleira, tampo, revestimento, etc)
+2. Material desejado (granito, mármore, porcelanato, quartzito, etc)
+3. Medidas exatas (comprimento, largura, espessura)
+4. Quantidade de peças/ambientes
+5. Acabamentos necessários (polimento, borda, meia esquadria)
+6. Serviços (instalação, furos de cuba/torneira/fogão)
+7. Endereço de entrega/instalação (para calcular frete)
+8. Prazo desejado
+
+TABELA DE PREÇOS BASE (use estes valores de custo de mercado brasileiro):
+- Granito Preto São Gabriel: R$280/m²
+- Granito Branco Itaúnas: R$320/m²
+- Granito Amarelo Real: R$180/m²
+- Mármore Branco Carrara: R$620/m²
+- Mármore Travertino: R$420/m²
+- Porcelanato (genérico): R$75/m²
+- Quartzito Taj Mahal: R$850/m²
+
+SERVIÇOS (custo):
+- Instalação: R$80/m² (cobrar R$120/m²)
+- Polimento: R$50/m² (cobrar R$80/m²)
+- Furo cuba: R$45/und (cobrar R$90/und)
+- Furo torneira/fogão: R$25/und (cobrar R$45/und)
+- Meia esquadria: R$30/ml (cobrar R$55/ml)
+- Corte especial: R$40/ml (cobrar R$65/ml)
+
+CÁLCULO DE FRETE:
+- Até 10km: R$120 fixo
+- 11–30km: R$200
+- 31–60km: R$350
+- Acima 60km: R$500 + R$3/km adicional
+
+MARKUP PADRÃO: 3× o custo do material
+
+FORMATO DO ORÇAMENTO FINAL:
+Quando tiver TODAS as informações, responda com um JSON no seguinte formato exato (sem markdown, só o JSON puro):
+{"tipo":"orcamento","titulo":"[título descritivo]","itens":[{"desc":"[descrição]","area":[numero],"vlrm2":[preco_venda],"total":[total],"custo_unit":[custo_m2]}],"servicos":[{"desc":"[serviço]","qtd":[numero],"unid":"[m²/ml/und]","preco":[preco],"total":[total]}],"frete":{"distancia_km":[km_estimado],"valor":[valor_frete]},"resumo":{"subtotal_material":[valor],"subtotal_servicos":[valor],"frete":[valor],"total_venda":[valor],"custo_total":[valor],"margem_lucro_pct":[percentual],"margem_lucro_rs":[valor_rs]}}
+
+Seja direto e profissional. Use linguagem do setor. Pergunte uma etapa de cada vez. Quando o cliente mencionar o endereço, estime a distância com base no CEP informado. Se o CEP da marmoraria for informado, use-o como origem.`;
+
+function toggleAgent() {
+  agentOpen = !agentOpen;
+  const panel = document.getElementById('agent-panel');
+  const main = document.querySelector('.main');
+  panel.classList.toggle('open', agentOpen);
+  if (main) main.classList.toggle('main-shifted', agentOpen);
+  if (agentOpen && agentHistory.length === 0) {
+    agentGreet();
+  }
+}
+
+function agentGreet() {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  const msg = `${greeting}! 👋 Sou o **MarmoIA**, seu assistente de orçamentos.\n\nPosso te ajudar a:\n• 📐 Gerar orçamentos completos e detalhados\n• 💰 Calcular margem de lucro real por projeto\n• 🚚 Estimar frete por distância\n• ✅ Importar o orçamento direto para o sistema\n\nPor onde vamos começar? Me descreva o projeto ou clique em **"Novo orçamento"**.`;
+  addAgentMessage('agent', msg);
+}
+
+function addAgentMessage(role, text, extra = null) {
+  const msgs = document.getElementById('agent-messages');
+  if (!msgs) return;
+  const time = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const div = document.createElement('div');
+  div.className = `msg msg-${role}`;
+
+  // Parse JSON orçamento
+  let orcCard = '';
+  let cleanText = text;
+  try {
+    const jsonMatch = text.match(/\{\"tipo\":\"orcamento\".*\}/s);
+    if (jsonMatch) {
+      const orc = JSON.parse(jsonMatch[0]);
+      agentPendingOrcamento = orc;
+      cleanText = text.replace(jsonMatch[0], '').trim() || 'Aqui está seu orçamento detalhado:';
+      orcCard = buildOrcamentoCard(orc);
+    }
+  } catch(e) {}
+
+  // Format markdown-ish
+  const formatted = cleanText
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+
+  div.innerHTML = `
+    <div class="msg-bubble">${formatted}${orcCard}</div>
+    <div class="msg-time">${time}</div>
+  `;
+
+  if (extra) {
+    const extraDiv = document.createElement('div');
+    extraDiv.innerHTML = extra;
+    div.appendChild(extraDiv);
+  }
+
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function buildOrcamentoCard(orc) {
+  const r = orc.resumo;
+  const margemColor = r.margem_lucro_pct >= 30 ? '#27AE60' : r.margem_lucro_pct >= 15 ? '#C9A84C' : '#C0392B';
+  return `
+    <div class="orcamento-card">
+      <div class="orcamento-card-title">📋 ${orc.titulo}</div>
+      ${orc.itens.map(i => `
+        <div class="orcamento-card-item">
+          <span>${i.desc} (${i.area}m²)</span>
+          <span>${fmt(i.total)}</span>
+        </div>`).join('')}
+      ${orc.servicos.map(s => `
+        <div class="orcamento-card-item">
+          <span>🔧 ${s.desc} — ${s.qtd}${s.unid}</span>
+          <span>${fmt(s.total)}</span>
+        </div>`).join('')}
+      <div class="orcamento-card-item">
+        <span>🚚 Frete (~${orc.frete.distancia_km}km)</span>
+        <span>${fmt(orc.frete.valor)}</span>
+      </div>
+      <div class="orcamento-card-total">
+        <span>TOTAL DE VENDA</span>
+        <span>${fmt(r.total_venda)}</span>
+      </div>
+      <div style="margin-top:8px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.1)">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span style="color:rgba(255,255,255,0.6)">Custo total</span>
+          <span style="color:rgba(255,255,255,0.8)">${fmt(r.custo_total)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:rgba(255,255,255,0.6)">Margem de lucro</span>
+          <span style="color:${margemColor};font-weight:700">${r.margem_lucro_pct}% — ${fmt(r.margem_lucro_rs)}</span>
+        </div>
+      </div>
+      <button class="btn-import-orc" onclick="importarOrcamentoIA()">✅ Importar para o sistema</button>
+    </div>
+  `;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('agent-messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'msg msg-agent';
+  div.id = 'typing-indicator';
+  div.innerHTML = '<div class="agent-typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+async function sendAgentMsg() {
+  const input = document.getElementById('agent-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Special commands
+  if (text.toLowerCase().includes('limpar conversa')) {
+    agentHistory = [];
+    agentPendingOrcamento = null;
+    document.getElementById('agent-messages').innerHTML = '';
+    input.value = '';
+    input.style.height = 'auto';
+    agentGreet();
+    return;
+  }
+
+  addAgentMessage('user', text);
+  agentHistory.push({ role: 'user', content: text });
+  input.value = '';
+  input.style.height = 'auto';
+
+  const btn = document.getElementById('agent-send-btn');
+  btn.disabled = true;
+  showTyping();
+
+  try {
+    const apiKey = state.pricing?.apiKey || '';
+    if (!apiKey) {
+      hideTyping();
+      addAgentMessage('agent', '⚠️ **API key não configurada.**\n\nVá em **Preços e Serviços** no menu lateral e insira sua API key da Anthropic para ativar o agente.\n\nSe quiser testar sem API, posso simular um orçamento com dados de exemplo — é só pedir!');
+      btn.disabled = false;
+      return;
+    }
+
+    // Build context with current stock prices
+    const estoqueCtx = state.materiais.length
+      ? '\n\nESTOQUE ATUAL DA MARMORARIA:\n' + state.materiais.map(m => `- ${m.nome}: custo R$${m.custo}/${m.unid}, estoque ${m.estoque}${m.unid}`).join('\n')
+      : '';
+
+    const cepCtx = state.pricing?.cep
+      ? `\n\nCEP DA MARMORARIA: ${state.pricing.cep}`
+      : '';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        system: AGENT_SYSTEM + estoqueCtx + cepCtx,
+        messages: agentHistory,
+      })
+    });
+
+    const data = await response.json();
+    hideTyping();
+
+    if (!response.ok) {
+      const errMsg = data.error?.message || 'Erro na API';
+      addAgentMessage('agent', `❌ Erro: ${errMsg}`);
+    } else {
+      const reply = data.content[0]?.text || '';
+      agentHistory.push({ role: 'assistant', content: reply });
+      addAgentMessage('agent', reply);
+    }
+  } catch(err) {
+    hideTyping();
+    addAgentMessage('agent', `❌ Erro de conexão: ${err.message}`);
+  }
+
+  btn.disabled = false;
+}
+
+function agentQuickSend() {
+  const text = arguments[0];
+  document.getElementById('agent-input').value = text;
+  sendAgentMsg();
+}
+
+function importarOrcamentoIA() {
+  if (!agentPendingOrcamento) return;
+  const orc = agentPendingOrcamento;
+
+  // Build items array
+  const itens = [
+    ...orc.itens.map(i => ({
+      desc: i.desc,
+      mat: '-',
+      largura: parseFloat((i.area).toFixed(4)),
+      altura: 1,
+      qtd: 1,
+      vlrm2: i.vlrm2,
+      total: i.total,
+    })),
+    ...orc.servicos.map(s => ({
+      desc: s.desc,
+      mat: '-',
+      largura: s.unid === 'ml' ? s.qtd : s.unid === 'm²' ? s.qtd : 0,
+      altura: 1,
+      qtd: s.unid === 'und' ? s.qtd : 1,
+      vlrm2: s.preco,
+      total: s.total,
+    })),
+    {
+      desc: `Frete (~${orc.frete.distancia_km}km)`,
+      mat: '-',
+      largura: 0, altura: 0, qtd: 1,
+      vlrm2: orc.frete.valor,
+      total: orc.frete.valor,
+    }
+  ];
+
+  // Pre-fill new orcamento form
+  state.editingOrcId = null;
+  state.orcItems = itens;
+  document.getElementById('modal-orc-title').textContent = 'Orçamento via MarmoIA';
+  renderOrcForm({ titulo: orc.titulo, pagamento: 'A combinar', obs: `Gerado pelo MarmoIA. Margem: ${orc.resumo.margem_lucro_pct}%`, status:'rascunho' });
+
+  // Open orcamento modal
+  openModal('modal-orcamento');
+
+  addAgentMessage('agent', `✅ **Orçamento importado!**\n\nO orçamento **"${orc.titulo}"** foi carregado no formulário. Revise os dados, vincule a um cliente e salve.`);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+// Verificar sessão ao carregar
+checkSession();
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); document.querySelectorAll('.desenhos-modal-overlay.open').forEach(m => m.classList.remove('open')); }
+});
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
