@@ -108,12 +108,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // INITIAL_SESSION já tratado por initAuth acima
         if (event === 'INITIAL_SESSION') return
 
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          setMarmorariaId(await fetchMarmorariaId(session.user.id))
-        } else {
+        if (!session?.user) {
+          // O SDK acha que a sessão caiu (ex: SIGNED_OUT). Isso pode ser um
+          // falso-positivo durante a renovação automática do token (aba em
+          // segundo plano, token expirando no meio do preenchimento de um
+          // orçamento longo, etc). Antes de derrubar o usuário e disparar o
+          // redirecionamento para /cadastro, confirma direto com o servidor.
+          try {
+            const { data: { user: confirmedUser } } = await withTimeout(
+              supabase.auth.getUser(),
+              8000,
+              'getUser (revalidação após possível SIGNED_OUT)'
+            )
+            if (confirmedUser) {
+              // Falso alarme — a sessão continua válida, ignora o evento
+              return
+            }
+          } catch (err) {
+            console.error('[AuthContext] Falha ao revalidar sessão após SIGNED_OUT:', err)
+          }
+          setUser(null)
           setMarmorariaId(null)
+          setLoading(false)
+          return
         }
+
+        setUser(session.user)
+        setMarmorariaId(await fetchMarmorariaId(session.user.id))
         setLoading(false)
       }
     )
