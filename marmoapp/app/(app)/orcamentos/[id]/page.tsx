@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { supabase } from '@/lib/supabase'
-import { fmt, orcTotal } from '@/lib/utils'
+import { fmt, orcTotal, areaCortadaItens, mlAcabamentoItens, taxaMediaPorCargo } from '@/lib/utils'
 import type { OrcamentoItem } from '@/lib/types'
 import type { OrcamentoPDF, ItemPDF } from '@/lib/pdf/gerar-orcamento-pdf'
 
@@ -33,6 +33,7 @@ interface InstalacaoRegistrada {
 }
 
 interface ProjetoLink { id: string; titulo: string | null; nome_centro: string | null }
+interface FuncionarioTaxa { id: string; nome: string; cargo: string; ativo: boolean; valor_metro_linear: number | null }
 
 export default function VerOrcamentoPage() {
   const router = useRouter()
@@ -43,6 +44,8 @@ export default function VerOrcamentoPage() {
   const [loadingItens, setLoadingItens] = useState(true)
   const [instalacoes, setInstalacoes] = useState<InstalacaoRegistrada[]>([])
   const [projeto, setProjeto] = useState<ProjetoLink | null>(null)
+  const [funcionarios, setFuncionarios] = useState<FuncionarioTaxa[]>([])
+  const [descontoSimulado, setDescontoSimulado] = useState('')
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -67,6 +70,9 @@ export default function VerOrcamentoPage() {
       .eq('orcamento_id', orcId)
       .maybeSingle()
       .then(({ data }) => setProjeto(data))
+    fetch('/api/funcionarios', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: FuncionarioTaxa[]) => setFuncionarios(data || []))
   }, [orcId])
 
   const buildOrcPDF = useCallback((): OrcamentoPDF | null => {
@@ -199,6 +205,37 @@ export default function VerOrcamentoPage() {
   const orcNumStr = `ORC-${year}-${num}`
   const busy = generatingPdf || loadingItens
 
+  // Margem estimada com custo real (taxa dos funcionários), não com o preço
+  // de venda como proxy — funciona mesmo antes do orçamento fechar, pra
+  // decidir desconto com segurança.
+  const materiaisItens = itens.filter(i => i.tipo === 'material')
+  const custoMaterial = materiaisItens.reduce((s, i) => s + (i.custo_item || 0), 0)
+  const areaTotal = areaCortadaItens(itens)
+  const mlAcabamentoTotal = mlAcabamentoItens(itens)
+  const taxaCorte = taxaMediaPorCargo(funcionarios, 'serrador')
+  const taxaAcabamento = taxaMediaPorCargo(funcionarios, 'acabador')
+  const taxaInstalacao = taxaMediaPorCargo(funcionarios, 'instalador')
+  const custoCorte = areaTotal * taxaCorte
+  const custoAcabamento = mlAcabamentoTotal * taxaAcabamento
+  // Aproximação: assume que os metros lineares de acabamento ≈ metros
+  // lineares instalados (mesma borda que é acabada costuma ser a instalada)
+  const custoInstalacaoEstimado = mlAcabamentoTotal * taxaInstalacao
+  const custoTotalEstimado = custoMaterial + custoCorte + custoAcabamento + custoInstalacaoEstimado
+  const temTaxasCadastradas = taxaCorte > 0 || taxaAcabamento > 0 || taxaInstalacao > 0
+
+  const descontoSimuladoNum = parseFloat(descontoSimulado) || 0
+  const valorComDesconto = Math.max(0, totalFinal - descontoSimuladoNum)
+  const margemBase = totalFinal - custoTotalEstimado
+  const margemBasePct = totalFinal > 0 ? (margemBase / totalFinal) * 100 : 0
+  const margemComDesconto = valorComDesconto - custoTotalEstimado
+  const margemComDescontoPct = valorComDesconto > 0 ? (margemComDesconto / valorComDesconto) * 100 : 0
+
+  function corMargem(pct: number): string {
+    if (pct >= 30) return 'var(--green)'
+    if (pct >= 10) return '#E67E22'
+    return 'var(--red)'
+  }
+
   return (
     <div className="page-inner">
       {showDeleteModal && (
@@ -312,6 +349,95 @@ export default function VerOrcamentoPage() {
               )}
             </div>
           </div>
+
+          {!loadingItens && itens.length > 0 && (
+            <div className="card">
+              <div className="card-header"><span className="card-title">💰 Margem Estimada</span></div>
+              <div className="card-body">
+                {!temTaxasCadastradas && (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--light)', padding: 10, borderRadius: 6, marginBottom: 14 }}>
+                    Cadastre a taxa de custo (R$/m² ou R$/ml) dos serradores, acabadores e instaladores em <b>Funcionários</b> pra essa margem considerar mão de obra e instalação — por enquanto só o custo de material está sendo calculado.
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Material</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{fmt(custoMaterial)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Corte {taxaCorte === 0 && '(sem taxa)'}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{fmt(custoCorte)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Acabamento {taxaAcabamento === 0 && '(sem taxa)'}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{fmt(custoAcabamento)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Instalação (estim.) {taxaInstalacao === 0 && '(sem taxa)'}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{fmt(custoInstalacaoEstimado)}</div>
+                  </div>
+                </div>
+
+                {materiaisItens.length > 0 && (
+                  <details style={{ marginBottom: 16, fontSize: 12 }}>
+                    <summary style={{ cursor: 'pointer', color: 'var(--gray)', fontWeight: 600 }}>Ver materiais considerados ({materiaisItens.length})</summary>
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {materiaisItens.map((i, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>{i.descricao}</span>
+                          <span style={{ color: 'var(--gray)' }}>{fmt(i.custo_item || 0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span>Custo total estimado</span>
+                    <strong>{fmt(custoTotalEstimado)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span>Valor do orçamento</span>
+                    <strong>{fmt(totalFinal)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, marginTop: 8 }}>
+                    <span style={{ fontWeight: 700 }}>Margem</span>
+                    <strong style={{ color: corMargem(margemBasePct) }}>{fmt(margemBase)} ({margemBasePct.toFixed(1)}%)</strong>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--light)', borderRadius: 8, padding: 12 }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: 6 }}>Simular desconto (R$)</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0,00"
+                    value={descontoSimulado}
+                    onChange={e => setDescontoSimulado(e.target.value)}
+                    style={{ marginBottom: 10 }}
+                  />
+                  {descontoSimuladoNum > 0 && (
+                    <div style={{ fontSize: 13 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span>Valor com desconto</span>
+                        <strong>{fmt(valorComDesconto)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 700 }}>Margem com desconto</span>
+                        <strong style={{ color: corMargem(margemComDescontoPct) }}>
+                          {fmt(margemComDesconto)} ({margemComDescontoPct.toFixed(1)}%)
+                        </strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {orc.producao_status && (
             <div className="card">

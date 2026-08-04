@@ -117,3 +117,16 @@ export function mediaDiariaPCP(registros: { quantidade: number; data: string }[]
   const total = Object.values(porDia).reduce((s, v) => s + v, 0)
   return dias.length > 0 ? total / dias.length : 0
 }
+
+// Taxa média de custo (R$/m² ou R$/ml, conforme o cargo) entre os
+// funcionários ativos desse cargo que já têm a taxa cadastrada. Usada pra
+// estimar o custo real de mão de obra de um orçamento ainda não fechado
+// (sem saber ainda quem exatamente vai executar o serviço).
+export function taxaMediaPorCargo(
+  funcionarios: { cargo: string; ativo: boolean; valor_metro_linear?: number | null }[],
+  cargo: string
+): number {
+  const comTaxa = funcionarios.filter(f => f.ativo && f.cargo === cargo && (f.valor_metro_linear || 0) > 0)
+  if (comTaxa.length === 0) return 0
+  return comTaxa.reduce((s, f) => s + (f.valor_metro_linear || 0), 0) / comTaxa.length
+}

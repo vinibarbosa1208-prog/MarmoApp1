@@ -44,6 +44,7 @@ export interface OrcamentoItem {
   preco_unitario: number
   total: number
   total_item?: number
+  custo_item?: number
   largura?: number
   altura?: number
   area?: number
