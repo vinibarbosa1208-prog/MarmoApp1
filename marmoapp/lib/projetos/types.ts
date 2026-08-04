@@ -19,6 +19,7 @@ export interface ProjetoCusto {
   valor: number
   data: string
   funcionario_id?: string | null
+  origem?: 'manual' | 'automatico'
   created_at: string
 }
 

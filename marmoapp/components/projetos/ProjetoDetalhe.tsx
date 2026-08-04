@@ -378,7 +378,17 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
                     <td style={{ fontSize: 12, color: 'var(--gray)' }}>
                       {new Date(c.data + 'T00:00').toLocaleDateString('pt-BR')}
                     </td>
-                    <td>{c.descricao}</td>
+                    <td>
+                      {c.descricao}
+                      {c.origem === 'automatico' && (
+                        <span
+                          title="Calculado automaticamente a partir da produção real registrada na Fila de Serviços"
+                          style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: 'var(--gold)', background: 'rgba(201,168,76,0.12)', padding: '2px 6px', borderRadius: 4 }}
+                        >
+                          🤖 automático
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <span style={{ fontSize: 12, fontWeight: 500, color: BREAKDOWN.find(b => b.key === `custo_${c.tipo}`)?.cor ?? '#95A5A6' }}>
                         {c.tipo === 'mao_obra' ? 'Mão de Obra' : c.tipo === 'outros' ? 'Outros' :
