@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
@@ -46,6 +46,7 @@ export default function VerOrcamentoPage() {
   const [projeto, setProjeto] = useState<ProjetoLink | null>(null)
   const [funcionarios, setFuncionarios] = useState<FuncionarioTaxa[]>([])
   const [descontoSimulado, setDescontoSimulado] = useState('')
+  const [itensExpandidos, setItensExpandidos] = useState<Set<number>>(new Set())
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -230,6 +231,14 @@ export default function VerOrcamentoPage() {
   const margemComDesconto = valorComDesconto - custoTotalEstimado
   const margemComDescontoPct = valorComDesconto > 0 ? (margemComDesconto / valorComDesconto) * 100 : 0
 
+  function toggleItemExpandido(idx: number) {
+    setItensExpandidos(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      return next
+    })
+  }
+
   function corMargem(pct: number): string {
     if (pct >= 30) return 'var(--green)'
     if (pct >= 10) return '#E67E22'
@@ -332,18 +341,80 @@ export default function VerOrcamentoPage() {
               ) : (
                 <table>
                   <thead>
-                    <tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th></tr>
+                    <tr><th>Tipo</th><th>Descrição</th><th>Qtd</th><th>Preço/Un</th><th>Total</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {itens.map((item, idx) => (
-                      <tr key={idx}>
-                        <td><span className="badge badge-draft">{item.tipo}</span></td>
-                        <td style={{ fontWeight: 500 }}>{item.descricao}</td>
-                        <td>{item.quantidade}</td>
-                        <td>{fmt(item.preco_unitario)}</td>
-                        <td className="font-bold">{fmt(item.total_item || item.total || item.preco_unitario * item.quantidade)}</td>
-                      </tr>
-                    ))}
+                    {itens.map((item, idx) => {
+                      const totalItem = item.total_item || item.total || item.preco_unitario * item.quantidade
+                      const temBreakdown = item.tipo === 'material' && !!item.area && !!item.custo_m2
+                      const expandido = itensExpandidos.has(idx)
+                      const custoMaterialItem = temBreakdown ? (item.area || 0) * (item.custo_m2 || 0) : 0
+                      return (
+                        <Fragment key={idx}>
+                          <tr>
+                            <td><span className="badge badge-draft">{item.tipo}</span></td>
+                            <td style={{ fontWeight: 500 }}>{item.descricao}</td>
+                            <td>{item.quantidade}</td>
+                            <td>{fmt(item.preco_unitario)}</td>
+                            <td className="font-bold">{fmt(totalItem)}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              {temBreakdown && (
+                                <button
+                                  className="btn btn-ghost btn-sm btn-icon"
+                                  onClick={() => toggleItemExpandido(idx)}
+                                  title="Como esse valor foi calculado"
+                                >{expandido ? '▲' : '▾'}</button>
+                              )}
+                            </td>
+                          </tr>
+                          {temBreakdown && expandido && (
+                            <tr>
+                              <td colSpan={6} style={{ background: 'var(--light)', padding: '10px 16px' }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>
+                                  Como esse valor foi calculado
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, maxWidth: 420 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--gray)' }}>Área</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{(item.area || 0).toFixed(2)} m²</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--gray)' }}>Custo de compra (R$/m²)</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{fmt(item.custo_m2 || 0)}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--gray)' }}>Custo do material (área × custo/m²)</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{fmt(custoMaterialItem)}</span>
+                                  </div>
+                                  {!!item.markup && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                      <span style={{ color: 'var(--gray)' }}>Fator aplicado (markup)</span>
+                                      <span style={{ fontFamily: 'monospace' }}>× {item.markup}</span>
+                                    </div>
+                                  )}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--gray)' }}>Preço de venda (R$/m²)</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{fmt(item.preco_unitario)}</span>
+                                  </div>
+                                  <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 4, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                                    <span>Total do item (área × qtd × preço venda)</span>
+                                    <span style={{ fontFamily: 'monospace', color: 'var(--gold)' }}>{fmt(totalItem)}</span>
+                                  </div>
+                                  {!!item.custo_item && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                                      <span>Margem do item</span>
+                                      <span style={{ fontFamily: 'monospace' }}>
+                                        {fmt(totalItem - item.custo_item)} ({totalItem > 0 ? (((totalItem - item.custo_item) / totalItem) * 100).toFixed(1) : '0.0'}%)
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}

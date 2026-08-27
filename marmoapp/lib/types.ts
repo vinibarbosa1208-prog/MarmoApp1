@@ -45,6 +45,8 @@ export interface OrcamentoItem {
   total: number
   total_item?: number
   custo_item?: number
+  custo_m2?: number
+  markup?: number
   largura?: number
   altura?: number
   area?: number
