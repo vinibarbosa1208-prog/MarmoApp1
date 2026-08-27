@@ -42,24 +42,171 @@ const ITEM_DEFAULTS: ItemForm = {
 
 function calcArea(item: ItemForm): number {
   const ex = item.dados_extras
+
+  if (item.tipo_peca === 'lavatorio_simples') {
+    const comprimento = (ex.comprimento as number) || 0
+    const profundidade = (ex.profundidade as number) || 0
+    if (!comprimento || !profundidade) return 0
+    const base = comprimento * profundidade
+    const dimMap: Record<string, number> = { frente: comprimento, fundo: comprimento, esquerda: profundidade, direita: profundidade }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
+  }
+
+  if (item.tipo_peca === 'lavatorio_extensao') {
+    const compTampo = (ex.comp_tampo as number) || 0
+    const compExtensao = (ex.comp_extensao as number) || 0
+    const prof = (ex.profundidade as number) || 0
+    if (!compTampo || !prof) return 0
+    const totalWidth = compTampo + compExtensao
+    const base = totalWidth * prof
+    const dimMap: Record<string, number> = { frente: totalWidth, fundo: totalWidth, esquerda: prof, direita: prof }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
+  }
+
+  if (item.tipo_peca === 'soleira') {
+    const comp = (ex.comprimento as number) || 0
+    const larg = (ex.largura as number) || 0
+    return comp * larg
+  }
+
+  if (item.tipo_peca === 'nicho') {
+    const l = (ex.largura as number) || 0
+    const a = (ex.altura as number) || 0
+    const p = (ex.profundidade as number) || 0
+    if (!l || !a || !p) return 0
+    const aLat = 2 * p * a
+    const aTB = 2 * l * p
+    const aFundo = (ex.tem_fundo as boolean) ? l * a : 0
+    const altSaia = ((ex.altura_saia_nicho as number) || 0) / 100
+    const aSaia = (ex.tem_saia_nicho as boolean) && altSaia > 0 ? l * altSaia : 0
+    return aLat + aTB + aFundo + aSaia
+  }
+
+  if (item.tipo_peca === 'pia_l') {
+    const seg1c = (ex.seg1_comprimento as number) || 0
+    const seg1p = (ex.seg1_profundidade as number) || 0
+    const seg2c = (ex.seg2_comprimento as number) || 0
+    const seg2p = (ex.seg2_profundidade as number) || 0
+    if (!seg1c || !seg1p || !seg2c || !seg2p) return 0
+    const tampos = seg1c * seg1p + seg2c * seg2p
+
+    const dimMap: Record<string, number> = {
+      esquerda: seg1p,
+      direita: seg2p,
+      frente_seg1: seg1c,
+      frente_seg2: seg2c,
+      fundo: seg1c,
+    }
+    const acabs: Record<string, string> = {
+      esquerda: item.acabamento_esquerda,
+      direita: item.acabamento_direita,
+      fundo: item.acabamento_fundo,
+      frente_seg1: (ex.acabamento_frente_seg1 as string) || '',
+      frente_seg2: (ex.acabamento_frente_seg2 as string) || '',
+    }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return tampos + lateralExtras
+  }
+
+  if (item.tipo_peca === 'pia_u') {
+    const seg1c = (ex.seg1_comprimento as number) || 0
+    const seg1p = (ex.seg1_profundidade as number) || 0
+    const seg2c = (ex.seg2_comprimento as number) || 0
+    const seg2p = (ex.seg2_profundidade as number) || 0
+    const seg3c = (ex.seg3_comprimento as number) || 0
+    const seg3p = (ex.seg3_profundidade as number) || 0
+    if (!seg1c || !seg1p || !seg2c || !seg2p || !seg3c || !seg3p) return 0
+    const tampos = seg1c * seg1p + seg2c * seg2p + seg3c * seg3p
+
+    const dimMap: Record<string, number> = {
+      esquerda: seg1p,
+      direita: seg3p,
+      frente_seg1: seg1c,
+      frente_seg2: seg2c,
+      frente_seg3: seg3c,
+      fundo: seg2c,
+    }
+    const acabs: Record<string, string> = {
+      esquerda: item.acabamento_esquerda,
+      direita: item.acabamento_direita,
+      fundo: item.acabamento_fundo,
+      frente_seg1: (ex.acabamento_frente_seg1 as string) || '',
+      frente_seg2: (ex.acabamento_frente_seg2 as string) || '',
+      frente_seg3: (ex.acabamento_frente_seg3 as string) || '',
+    }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return tampos + lateralExtras
+  }
+
+  let base = 0
+  let saia = 0
+  let frontao = 0
+
   if (item.tipo_peca === 'escada') {
     const n = (ex.num_degraus as number) || 0
     const lp = (ex.largura_piso as number) || 0
     const ae = (ex.altura_espelho as number) || 0
     const w = item.largura || 0
-    return w * (lp / 100) * n + w * (ae / 100) * n
+    base = w * (lp / 100) * n + w * (ae / 100) * n
+  } else {
+    if (!item.largura || !item.altura) return 0
+    base = item.largura * item.altura
+    frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
+    saia = item.tem_saia ? item.largura * item.altura_saia : 0
   }
-  if (!item.largura || !item.altura) return 0
-  const tampo = item.largura * item.altura
-  const frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
-  const saia = item.tem_saia ? item.largura * item.altura_saia : 0
-  return tampo + frontao + saia
+
+  const dimMap: Record<string, number> = {
+    frente: item.largura, fundo: item.largura,
+    esquerda: item.altura, direita: item.altura,
+    superior: item.largura, inferior: item.largura,
+  }
+  let lateralExtras = 0
+  for (const [lat, len] of Object.entries(dimMap)) {
+    const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+    const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+    if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+    if ((ex[`frontao_${lat}`] as boolean) && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+  }
+
+  return base + saia + frontao + lateralExtras
 }
 
 function calcTotal(item: ItemForm): number {
   const area = calcArea(item)
-  if (area > 0) return area * item.quantidade * item.preco_unitario
-  return item.quantidade * item.preco_unitario
+  const temCubaExtra = item.tipo_peca === 'lavatorio_extensao' || item.tipo_peca === 'lavatorio_simples'
+  const cubaExtra = temCubaExtra && (item.dados_extras.cuba_pedra as boolean)
+    ? ((item.dados_extras.valor_cuba_pedra as number) || 350)
+    : 0
+  if (area > 0) return area * item.quantidade * item.preco_unitario + cubaExtra
+  return item.quantidade * item.preco_unitario + cubaExtra
 }
 
 function calcCusto(item: ItemForm): number {
@@ -73,16 +220,25 @@ function validarItem(item: ItemForm): boolean {
   if (!item.tipo_peca) return true
 
   const peca = item.tipo_peca
-  const laterais = getLateraisDaPeca(peca)
+  const laterais = getLateraisDaPeca(peca, item.dados_extras)
+  const PROP_LATERAIS = ['esquerda', 'direita', 'frente', 'fundo']
   for (const lat of laterais) {
-    const key = `acabamento_${lat}` as keyof ItemForm
-    if (!item[key]) return false
+    const acabamento = PROP_LATERAIS.includes(lat)
+      ? item[`acabamento_${lat}` as keyof ItemForm]
+      : item.dados_extras[`acabamento_${lat}`]
+    if (!acabamento) return false
   }
 
   const ex = item.dados_extras
-  if (peca === 'bancada_cuba' && !ex.tipo_cuba) return false
-  if (peca === 'bancada_saia' && !((ex.altura_saia as number) > 0)) return false
-  if (peca === 'bancada_frontao' && !((ex.altura_frontao as number) > 0)) return false
+  if (peca === 'lavatorio_extensao') {
+    if (!((ex.comp_tampo as number) > 0)) return false
+    if (!((ex.profundidade as number) > 0)) return false
+    if (!((ex.comp_extensao as number) > 0)) return false
+  }
+  if (peca === 'lavatorio_simples') {
+    if (!((ex.comprimento as number) > 0)) return false
+    if (!((ex.profundidade as number) > 0)) return false
+  }
   if (peca === 'escada') {
     if (!((ex.num_degraus as number) > 0)) return false
     if (!((ex.largura_piso as number) > 0)) return false
@@ -94,8 +250,23 @@ function validarItem(item: ItemForm): boolean {
   }
   if (peca === 'nicho') {
     if (!((ex.largura as number) > 0)) return false
-    if (!((ex.altura_nicho as number) > 0)) return false
+    if (!((ex.altura as number) > 0)) return false
     if (!((ex.profundidade as number) > 0)) return false
+    if ((ex.tem_saia_nicho as boolean) && !((ex.altura_saia_nicho as number) > 0)) return false
+  }
+  if (peca === 'pia_l') {
+    if (!((ex.seg1_comprimento as number) > 0)) return false
+    if (!((ex.seg1_profundidade as number) > 0)) return false
+    if (!((ex.seg2_comprimento as number) > 0)) return false
+    if (!((ex.seg2_profundidade as number) > 0)) return false
+  }
+  if (peca === 'pia_u') {
+    if (!((ex.seg1_comprimento as number) > 0)) return false
+    if (!((ex.seg1_profundidade as number) > 0)) return false
+    if (!((ex.seg2_comprimento as number) > 0)) return false
+    if (!((ex.seg2_profundidade as number) > 0)) return false
+    if (!((ex.seg3_comprimento as number) > 0)) return false
+    if (!((ex.seg3_profundidade as number) > 0)) return false
   }
   if (item.tem_saia && !(item.altura_saia > 0)) return false
   if (item.tem_frontao && !(item.altura_frontao > 0)) return false
