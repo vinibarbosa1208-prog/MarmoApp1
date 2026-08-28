@@ -11,7 +11,7 @@ import type { ProjectCustomStatus, ClientCustomField, FieldType } from '@/lib/co
 interface Funcionario {
   id: string
   nome: string
-  cargo: 'serrador' | 'acabador' | 'instalador' | 'outro'
+  cargo: 'serrador' | 'acabador' | 'instalador' | 'medidor' | 'outro'
   tipo_pagamento: 'diaria' | 'metro_linear'
   valor_diaria: number | null
   valor_metro_linear: number | null
@@ -376,6 +376,7 @@ function FuncionarioModal({
                 <option value="serrador">Serrador</option>
                 <option value="acabador">Acabador</option>
                 <option value="instalador">Instalador</option>
+                <option value="medidor">Medidor</option>
                 <option value="outro">Outro</option>
               </select>
             </div>
@@ -964,7 +965,7 @@ export default function ConfiguracoesPage() {
                 {funcionarios.map(f => (
                   <tr key={f.id}>
                     <td style={{ fontWeight: 500 }}>{f.nome}</td>
-                    <td>{{ serrador: 'Serrador', acabador: 'Acabador', instalador: 'Instalador', outro: 'Outro' }[f.cargo]}</td>
+                    <td>{{ serrador: 'Serrador', acabador: 'Acabador', instalador: 'Instalador', medidor: 'Medidor', outro: 'Outro' }[f.cargo]}</td>
                     <td className="text-sm text-gray">{f.tipo_pagamento === 'diaria' ? 'Diária' : 'Metro linear'}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>
                       {f.tipo_pagamento === 'diaria'

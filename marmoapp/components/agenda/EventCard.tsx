@@ -43,7 +43,7 @@ export default function EventCard({ event, onClick }: Props) {
       <div style={{ fontSize: 11, color: 'var(--gray)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <span>{hora}</span>
         {event.cliente_nome && <span>· {event.cliente_nome}</span>}
-        {event.responsavel_nome && <span>· {event.responsavel_nome}</span>}
+        {event.funcionario?.nome && <span>· {event.funcionario.nome}</span>}
       </div>
       <div style={{ marginTop: 4 }}>
         <span style={{

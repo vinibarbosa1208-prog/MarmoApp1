@@ -9,7 +9,7 @@ import { fmt } from '@/lib/utils'
 interface Funcionario {
   id: string
   nome: string
-  cargo: 'serrador' | 'acabador' | 'instalador' | 'outro'
+  cargo: 'serrador' | 'acabador' | 'instalador' | 'medidor' | 'outro'
   tipo_pagamento: 'diaria' | 'metro_linear'
   valor_diaria: number | null
   valor_metro_linear: number | null
@@ -87,6 +87,7 @@ const CARGO_LABELS: Record<string, string> = {
   serrador: 'Serrador',
   acabador: 'Acabador',
   instalador: 'Instalador',
+  medidor: 'Medidor',
   outro: 'Outro',
 }
 

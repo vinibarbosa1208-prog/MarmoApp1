@@ -7,14 +7,19 @@ import type { AgendaEventType, CreateAgendaEventInput } from '@/lib/agenda/types
 
 interface Funcionario { id: string; nome: string; cargo: string; ativo: boolean }
 
+const CARGO_LABELS: Record<string, string> = {
+  serrador: 'Serrador', acabador: 'Acabador', instalador: 'Instalador', medidor: 'Medidor', outro: 'Outro',
+}
+
 interface Props {
   tipos: AgendaEventType[]
   onClose: () => void
   onSaved: () => void
   defaultData?: string // ISO date string for the day clicked
+  defaultFuncionarioId?: string // preenche "Profissional responsável" ao abrir a partir de uma coluna
 }
 
-export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }: Props) {
+export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData, defaultFuncionarioId }: Props) {
   const { clientes, orcamentos, marmoraria, toast } = useApp()
   const [saving, setSaving] = useState(false)
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
@@ -26,7 +31,7 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
     dia_inteiro: false,
     cliente_id: '',
     orcamento_id: '',
-    responsavel_id: '',
+    funcionario_id: defaultFuncionarioId ?? '',
     descricao: '',
   })
 
@@ -73,6 +78,7 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
         dia_inteiro: form.dia_inteiro,
         cliente_id: form.cliente_id || null,
         orcamento_id: form.orcamento_id || null,
+        funcionario_id: form.funcionario_id || null,
         descricao: form.descricao || null,
         marmoraria_id: marmoraria.id,
         status: 'agendado',
@@ -164,10 +170,10 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Funcionário Responsável</label>
-            <select className="form-control" value={form.responsavel_id ?? ''} onChange={e => set('responsavel_id', e.target.value)}>
+            <label className="form-label">Profissional responsável</label>
+            <select className="form-control" value={form.funcionario_id ?? ''} onChange={e => set('funcionario_id', e.target.value)}>
               <option value="">— Nenhum —</option>
-              {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome} ({CARGO_LABELS[f.cargo] || f.cargo})</option>)}
             </select>
           </div>
 
