@@ -16,9 +16,10 @@ interface Props {
   onClose: () => void
   onSaved: () => void
   defaultData?: string // ISO date string for the day clicked
+  defaultFuncionarioId?: string // preenche "Profissional responsável" ao abrir a partir de uma coluna
 }
 
-export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }: Props) {
+export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData, defaultFuncionarioId }: Props) {
   const { clientes, orcamentos, marmoraria, toast } = useApp()
   const [saving, setSaving] = useState(false)
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
@@ -30,7 +31,7 @@ export default function NovoEventoModal({ tipos, onClose, onSaved, defaultData }
     dia_inteiro: false,
     cliente_id: '',
     orcamento_id: '',
-    funcionario_id: '',
+    funcionario_id: defaultFuncionarioId ?? '',
     descricao: '',
   })
 
