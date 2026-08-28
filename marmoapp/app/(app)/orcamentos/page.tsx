@@ -51,6 +51,7 @@ function ModalConfirmarExclusao({ numero, onConfirm, onCancel, busy }: {
 export default function OrcamentosPage() {
   const { orcamentos, clientes, loadOrcamentos, toast } = useApp()
   const [query, setQuery] = useState('')
+  const [crmFiltro, setCrmFiltro] = useState<Set<string>>(new Set())
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; numero: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [projetoMap, setProjetoMap] = useState<Record<string, string>>({})
@@ -70,7 +71,7 @@ export default function OrcamentosPage() {
     return clientes.find(c => c.id === id)?.nome || '—'
   }
 
-  const filtered = orcamentos.filter(o => {
+  const buscaFiltrada = orcamentos.filter(o => {
     if (!query) return true
     const q = query.toLowerCase()
     return (
@@ -78,6 +79,26 @@ export default function OrcamentosPage() {
       clienteNome(o.clienteId || o.cliente_id).toLowerCase().includes(q)
     )
   })
+
+  // Contagem por status do CRM, já considerando a busca por texto — os chips
+  // mostram quantos itens cada status tem dentro do que está sendo buscado.
+  const crmCounts = buscaFiltrada.reduce<Record<string, number>>((acc, o) => {
+    const st = o.crm_status || 'novo'
+    acc[st] = (acc[st] || 0) + 1
+    return acc
+  }, {})
+
+  const filtered = buscaFiltrada.filter(o =>
+    crmFiltro.size === 0 || crmFiltro.has(o.crm_status || 'novo')
+  )
+
+  function toggleCrmFiltro(status: string) {
+    setCrmFiltro(prev => {
+      const next = new Set(prev)
+      if (next.has(status)) next.delete(status); else next.add(status)
+      return next
+    })
+  }
 
   async function atualizarCRM(id: string, crmStatus: string) {
     await supabase.from('orcamentos').update({ crm_status: crmStatus }).eq('id', id)
@@ -159,6 +180,24 @@ export default function OrcamentosPage() {
             />
           </div>
         </div>
+        <div className="card-body" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingTop: 12, paddingBottom: 12 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Status do CRM:</span>
+          <button
+            className={`btn btn-sm ${crmFiltro.size === 0 ? 'btn-gold' : 'btn-outline'}`}
+            onClick={() => setCrmFiltro(new Set())}
+          >
+            Todos ({buscaFiltrada.length})
+          </button>
+          {Object.entries(CRM_LABELS).map(([val, lbl]) => (
+            <button
+              key={val}
+              className={`btn btn-sm ${crmFiltro.has(val) ? 'btn-gold' : 'btn-outline'}`}
+              onClick={() => toggleCrmFiltro(val)}
+            >
+              {lbl} ({crmCounts[val] || 0})
+            </button>
+          ))}
+        </div>
         <div className="table-wrap">
           <table>
             <thead>
@@ -169,7 +208,13 @@ export default function OrcamentosPage() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7}><div className="empty-state"><h3>Nenhum orçamento</h3><p>Crie seu primeiro orçamento</p></div></td></tr>
+                <tr><td colSpan={7}><div className="empty-state">
+                  {orcamentos.length === 0 ? (
+                    <><h3>Nenhum orçamento</h3><p>Crie seu primeiro orçamento</p></>
+                  ) : (
+                    <><h3>Nenhum orçamento com esse filtro</h3><p>Tente outro status do CRM ou limpe a busca</p></>
+                  )}
+                </div></td></tr>
               ) : filtered.map(o => {
                 const crmStatus = o.crm_status || 'novo'
                 const projetoId = projetoMap[o.id]
