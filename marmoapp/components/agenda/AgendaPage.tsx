@@ -7,8 +7,13 @@ import type { AgendaEvent, AgendaEventType } from '@/lib/agenda/types'
 import EventCard from './EventCard'
 import NovoEventoModal from './NovoEventoModal'
 
+interface Funcionario { id: string; nome: string; cargo: string; ativo: boolean }
+
 const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+const CARGO_LABELS: Record<string, string> = {
+  serrador: 'Serrador', acabador: 'Acabador', instalador: 'Instalador', medidor: 'Medidor', outro: 'Outro',
+}
 
 function getMondayOf(date: Date): Date {
   const d = new Date(date)
@@ -33,6 +38,17 @@ export default function AgendaPage() {
   const [defaultDay, setDefaultDay] = useState<string>('')
   const [filterTipo, setFilterTipo] = useState<string>('')
   const [selectedEvent, setSelectedEvent] = useState<AgendaEvent | null>(null)
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
+  // Visão por profissional: chip de cargo (visão dedicada instaladores/medidores)
+  // + opcionalmente um profissional específico dentro dessa visão.
+  const [filterCargo, setFilterCargo] = useState<'' | 'instalador' | 'medidor'>('')
+  const [filterFuncionarioId, setFilterFuncionarioId] = useState<string>('')
+
+  useEffect(() => {
+    fetch('/api/funcionarios', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Funcionario[]) => setFuncionarios((data || []).filter(f => f.ativo)))
+  }, [])
 
   // Uses marmoraria from AppContext — no getUser() network call needed
   const loadTipos = useCallback(async () => {
@@ -82,8 +98,20 @@ export default function AgendaPage() {
     return events
       .filter(e => {
         if (filterTipo && e.tipo_id !== filterTipo) return false
+        if (filterCargo && e.funcionario?.cargo !== filterCargo) return false
+        if (filterFuncionarioId && e.funcionario_id !== filterFuncionarioId) return false
         return e.data_inicio.startsWith(dayStr)
       })
+  }
+
+  // Opções do seletor de profissional — respeita o cargo já escolhido nos chips
+  const funcionariosDoFiltro = filterCargo
+    ? funcionarios.filter(f => f.cargo === filterCargo)
+    : funcionarios.filter(f => f.cargo === 'instalador' || f.cargo === 'medidor')
+
+  function selecionarCargo(cargo: '' | 'instalador' | 'medidor') {
+    setFilterCargo(cargo)
+    setFilterFuncionarioId('')
   }
 
   async function cancelarEvento(id: string) {
@@ -131,6 +159,29 @@ export default function AgendaPage() {
           {tipos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
         </select>
         {loading && <span style={{ fontSize: 12, color: 'var(--gray)' }}>Carregando...</span>}
+      </div>
+
+      {/* Visão por profissional */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Profissional:</span>
+        {(['', 'instalador', 'medidor'] as const).map(c => (
+          <button
+            key={c || 'todos'}
+            className={`btn btn-sm ${filterCargo === c ? 'btn-gold' : 'btn-outline'}`}
+            onClick={() => selecionarCargo(c)}
+          >
+            {c === '' ? 'Todos' : c === 'instalador' ? 'Instaladores' : 'Medidores'}
+          </button>
+        ))}
+        {funcionariosDoFiltro.length > 0 && (
+          <select className="form-control" style={{ width: 'auto', fontSize: 13, padding: '6px 12px' }}
+            value={filterFuncionarioId} onChange={e => setFilterFuncionarioId(e.target.value)}>
+            <option value="">— Qualquer profissional —</option>
+            {funcionariosDoFiltro.map(f => (
+              <option key={f.id} value={f.id}>{f.nome}{!filterCargo ? ` (${CARGO_LABELS[f.cargo] || f.cargo})` : ''}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Calendar grid */}
@@ -196,6 +247,11 @@ export default function AgendaPage() {
                 </div>
               )}
               {selectedEvent.cliente_nome && <div style={{ fontSize: 13 }}><strong>Cliente:</strong> {selectedEvent.cliente_nome}</div>}
+              {selectedEvent.funcionario?.nome && (
+                <div style={{ fontSize: 13 }}>
+                  <strong>Profissional:</strong> {selectedEvent.funcionario.nome} ({CARGO_LABELS[selectedEvent.funcionario.cargo] || selectedEvent.funcionario.cargo})
+                </div>
+              )}
               {selectedEvent.descricao && <div style={{ fontSize: 13, color: 'var(--gray)' }}>{selectedEvent.descricao}</div>}
               {selectedEvent.status !== 'cancelado' && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>

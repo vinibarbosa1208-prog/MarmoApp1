@@ -21,6 +21,7 @@ export interface AgendaEvent {
   cliente_id?: string
   orcamento_id?: string
   responsavel_id?: string
+  funcionario_id?: string
   status: EventStatus
   created_at: string
   updated_at: string
@@ -28,6 +29,7 @@ export interface AgendaEvent {
   tipo?: AgendaEventType
   cliente_nome?: string
   responsavel_nome?: string
+  funcionario?: { id: string; nome: string; cargo: string }
 }
 
 export interface CreateAgendaEventInput {
@@ -40,4 +42,5 @@ export interface CreateAgendaEventInput {
   cliente_id?: string
   orcamento_id?: string
   responsavel_id?: string
+  funcionario_id?: string
 }

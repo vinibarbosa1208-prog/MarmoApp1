@@ -17,7 +17,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .update(body)
       .eq('id', id)
       .eq('marmoraria_id', marmoraria_id)
-      .select('*, tipo:agenda_event_types(id,nome,cor,icone)')
+      .select('*, tipo:agenda_event_types(id,nome,cor,icone), funcionario:funcionarios(id,nome,cargo)')
       .single()
 
     if (error) throw error

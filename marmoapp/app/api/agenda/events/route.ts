@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const semana = req.nextUrl.searchParams.get('semana')
     let query = supabase
       .from('agenda_events')
-      .select('*, tipo:agenda_event_types(id,nome,cor,icone)')
+      .select('*, tipo:agenda_event_types(id,nome,cor,icone), funcionario:funcionarios(id,nome,cargo)')
       .eq('marmoraria_id', marmoraria_id)
       .order('data_inicio')
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('agenda_events')
       .insert({ ...body, marmoraria_id, status: 'agendado' })
-      .select('*, tipo:agenda_event_types(id,nome,cor,icone)')
+      .select('*, tipo:agenda_event_types(id,nome,cor,icone), funcionario:funcionarios(id,nome,cargo)')
       .single()
 
     if (error) throw error
