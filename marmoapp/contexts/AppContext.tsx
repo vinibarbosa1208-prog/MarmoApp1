@@ -20,7 +20,7 @@ interface AppContextValue extends AppState {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { user: authUser, marmorariaId } = useAuth()
+  const { user: authUser, marmorariaId, perfil } = useAuth()
   const [state, setState] = useState<AppState>({
     user: null,
     marmoraria: null,
@@ -134,8 +134,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [marmorariaId])
 
   useEffect(() => {
-    if (state.marmoraria?.id) loadAll()
-  }, [state.marmoraria?.id])
+    // Instalador nunca deve ter orçamentos (com preço/custo/margem) carregados
+    // no navegador — o portal dele busca só o que precisa via rotas próprias.
+    if (state.marmoraria?.id && perfil !== 'instalador') loadAll()
+  }, [state.marmoraria?.id, perfil])
 
   return (
     <AppContext.Provider value={{

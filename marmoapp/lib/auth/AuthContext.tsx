@@ -7,12 +7,14 @@ import type { User } from '@supabase/supabase-js'
 type AuthContextType = {
   user: User | null
   marmorariaId: string | null
+  perfil: string | null
   loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   marmorariaId: null,
+  perfil: null,
   loading: true,
 })
 
@@ -28,36 +30,38 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
   ])
 }
 
+type UsuarioInfo = { marmoraria_id: string | null; perfil: string | null }
+
 // Retorno tem 3 estados possíveis, e a diferença importa:
-//  - string  → marmoraria encontrada
-//  - null    → confirmado: esse usuário realmente não tem marmoraria vinculada
+//  - objeto  → usuário encontrado (marmoraria_id e/ou perfil podem ser null)
+//  - null    → confirmado: esse usuário realmente não tem registro em usuarios
 //  - undefined → NÃO foi possível confirmar (falha pontual de rede/RLS/timing).
 //    Isso NÃO é a mesma coisa que "sem marmoraria" — quem chamar essa função
 //    não deve tratar undefined como null, senão um usuário válido pode ser
 //    expulso para /cadastro por causa de uma falha transitória.
-async function fetchMarmorariaId(userId: string): Promise<string | null | undefined> {
+async function fetchUsuarioInfo(userId: string): Promise<UsuarioInfo | null | undefined> {
   try {
     const { data, error } = await withTimeout(
-      supabase.from('usuarios').select('marmoraria_id').eq('id', userId).single(),
+      supabase.from('usuarios').select('marmoraria_id, perfil').eq('id', userId).single(),
       8000,
-      'fetchMarmorariaId'
+      'fetchUsuarioInfo'
     )
-    if (!error) return data?.marmoraria_id ?? null
+    if (!error) return data ? { marmoraria_id: data.marmoraria_id ?? null, perfil: data.perfil ?? null } : null
 
-    console.error('[AuthContext] Erro ao buscar marmoraria_id, tentando novamente em 1s:', error)
+    console.error('[AuthContext] Erro ao buscar usuarios, tentando novamente em 1s:', error)
     await new Promise(r => setTimeout(r, 1000))
     const retry = await withTimeout(
-      supabase.from('usuarios').select('marmoraria_id').eq('id', userId).single(),
+      supabase.from('usuarios').select('marmoraria_id, perfil').eq('id', userId).single(),
       8000,
-      'fetchMarmorariaId (retry)'
+      'fetchUsuarioInfo (retry)'
     )
     if (retry.error) {
-      console.error('[AuthContext] Erro ao buscar marmoraria_id (retry também falhou) — indeterminado:', retry.error)
+      console.error('[AuthContext] Erro ao buscar usuarios (retry também falhou) — indeterminado:', retry.error)
       return undefined
     }
-    return retry.data?.marmoraria_id ?? null
+    return retry.data ? { marmoraria_id: retry.data.marmoraria_id ?? null, perfil: retry.data.perfil ?? null } : null
   } catch (err) {
-    console.error('[AuthContext] fetchMarmorariaId estourou o timeout — indeterminado:', err)
+    console.error('[AuthContext] fetchUsuarioInfo estourou o timeout — indeterminado:', err)
     return undefined
   }
 }
@@ -65,6 +69,7 @@ async function fetchMarmorariaId(userId: string): Promise<string | null | undefi
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [marmorariaId, setMarmorariaId] = useState<string | null>(null)
+  const [perfil, setPerfil] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const fetchedRef = useRef(false)
 
@@ -89,12 +94,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await supabase.auth.signOut()
           setUser(null)
           setMarmorariaId(null)
+          setPerfil(null)
         } else {
           setUser(authedUser)
-          const result = await fetchMarmorariaId(authedUser.id)
+          const result = await fetchUsuarioInfo(authedUser.id)
           // No carregamento inicial ainda não existe um valor anterior confiável
           // pra preservar, então indeterminado (undefined) vira null aqui.
-          setMarmorariaId(result === undefined ? null : result)
+          setMarmorariaId(result === undefined ? null : (result?.marmoraria_id ?? null))
+          setPerfil(result === undefined ? null : (result?.perfil ?? null))
         }
       } catch (err) {
         // getUser() nem respondeu a tempo — provável sessão local corrompida.
@@ -103,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut().catch(() => {})
         setUser(null)
         setMarmorariaId(null)
+        setPerfil(null)
       } finally {
         setLoading(false)
       }
@@ -139,19 +147,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setUser(null)
           setMarmorariaId(null)
+          setPerfil(null)
           setLoading(false)
           return
         }
 
         setUser(session.user)
-        const result = await fetchMarmorariaId(session.user.id)
+        const result = await fetchUsuarioInfo(session.user.id)
         if (result !== undefined) {
-          setMarmorariaId(result)
+          setMarmorariaId(result?.marmoraria_id ?? null)
+          setPerfil(result?.perfil ?? null)
         } else {
           // Não deu pra confirmar agora (falha transitória) — mantém o
-          // marmorariaId atual em vez de zerar e expulsar o usuário para
-          // /cadastro no meio do que ele está fazendo.
-          console.error('[AuthContext] Mantendo marmorariaId atual — não foi possível confirmar nesse evento')
+          // marmorariaId/perfil atuais em vez de zerar e expulsar o usuário
+          // para /cadastro no meio do que ele está fazendo.
+          console.error('[AuthContext] Mantendo marmorariaId/perfil atuais — não foi possível confirmar nesse evento')
         }
         setLoading(false)
       }
@@ -161,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, marmorariaId, loading }}>
+    <AuthContext.Provider value={{ user, marmorariaId, perfil, loading }}>
       {children}
     </AuthContext.Provider>
   )

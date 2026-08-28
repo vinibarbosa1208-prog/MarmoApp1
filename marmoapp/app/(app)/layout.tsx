@@ -67,6 +67,21 @@ function PaymentGate() {
   return null
 }
 
+// Instalador tem acesso restrito ao portal próprio — nunca vê o app completo
+// (orçamentos, valores, clientes). Se cair aqui por engano (link antigo,
+// digitou a URL), manda de volta pro portal dele.
+function PerfilGate() {
+  const { perfil, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (loading) return
+    if (perfil === 'instalador') router.replace('/portal-instalador')
+  }, [perfil, loading, router])
+
+  return null
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useApp()
   const { loading: authLoading } = useAuth()
@@ -94,6 +109,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       {/* Gate de pagamento — redireciona se trial_expira === null */}
       <Suspense fallback={null}><PaymentGate /></Suspense>
+      {/* Gate de perfil — instalador não usa o app completo, só o portal dele */}
+      <PerfilGate />
 
       {/* Mobile topbar */}
       <div className="mobile-topbar">

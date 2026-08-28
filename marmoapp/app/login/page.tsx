@@ -52,9 +52,16 @@ export default function LoginPage() {
         return
       }
 
+      // Instalador tem portal próprio, restrito — não usa o app completo.
+      const { data: usuarioRow } = await supabase
+        .from('usuarios')
+        .select('perfil')
+        .eq('id', data.session.user.id)
+        .maybeSingle()
+
       // Marca como navegando para não resetar o estado no bfcache antes de ir
       navigating.current = true
-      window.location.replace('/dashboard')
+      window.location.replace(usuarioRow?.perfil === 'instalador' ? '/portal-instalador' : '/dashboard')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao entrar. Tente novamente.'
       setError(msg)

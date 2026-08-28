@@ -18,6 +18,7 @@ interface Funcionario {
   telefone: string | null
   observacoes: string | null
   ativo: boolean
+  usuario_id: string | null
 }
 
 // ── Fixed project statuses (read-only) ───────────────────────
@@ -418,6 +419,73 @@ function FuncionarioModal({
   )
 }
 
+// ── Modal: criar acesso do instalador ao portal restrito ───────
+function CriarAcessoModal({ funcionario, onClose, onCreated }: {
+  funcionario: Funcionario
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function handleCriar() {
+    if (!email.trim()) { setErr('E-mail é obrigatório'); return }
+    if (senha.length < 6) { setErr('Senha precisa de pelo menos 6 caracteres'); return }
+    setSaving(true)
+    setErr('')
+    try {
+      const res = await apiFetch(`/api/funcionarios/${funcionario.id}/criar-acesso`, {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim(), senha }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao criar acesso')
+      onCreated()
+      onClose()
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Erro ao criar acesso')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="modal-overlay open" style={{ zIndex: 9000 }}>
+      <div className="modal" style={{ maxWidth: 440 }}>
+        <div className="modal-header">
+          <div className="modal-title">Criar acesso — {funcionario.nome}</div>
+          <button className="btn-close" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 16 }}>
+            Cria um login restrito para {funcionario.nome} acessar o portal do instalador
+            (só vê as obras dele, sem valores). Informe essas credenciais a ele depois de criar.
+          </p>
+          <div className="form-group">
+            <label className="form-label">E-MAIL *</label>
+            <input className="form-input" type="email" placeholder="instalador@email.com" value={email} onChange={e => { setEmail(e.target.value); setErr('') }} autoFocus />
+          </div>
+          <div className="form-group">
+            <label className="form-label">SENHA *</label>
+            <input className="form-input" type="text" placeholder="Mínimo 6 caracteres" value={senha} onChange={e => { setSenha(e.target.value); setErr('') }} />
+          </div>
+          {err && <div style={{ color: 'var(--red)', fontSize: 13 }}>{err}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-gold" onClick={handleCriar} disabled={saving}>{saving ? 'Criando...' : '🔑 Criar acesso'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Empresa card (no add button) ──────────────────────────────
 function EmpresaCard({ children }: { children: React.ReactNode }) {
   return (
@@ -509,6 +577,7 @@ export default function ConfiguracoesPage() {
   // Section 5 — funcionários
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
   const [funcModal, setFuncModal] = useState<{ open: boolean; item: Funcionario | null }>({ open: false, item: null })
+  const [acessoModal, setAcessoModal] = useState<Funcionario | null>(null)
 
   const [loading, setLoading] = useState(true)
 
@@ -908,6 +977,17 @@ export default function ConfiguracoesPage() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
+                      {f.cargo === 'instalador' && (
+                        f.usuario_id ? (
+                          <span className="badge badge-approved" style={{ fontSize: 11, marginRight: 6 }} title="Já tem login no portal do instalador">
+                            🔑 Acesso ativo
+                          </span>
+                        ) : (
+                          <button className="btn btn-ghost btn-icon" title="Criar acesso ao portal do instalador" onClick={() => setAcessoModal(f)} style={{ color: 'var(--gray)' }}>
+                            🔑
+                          </button>
+                        )
+                      )}
                       <EditBtn onClick={() => setFuncModal({ open: true, item: f })} />
                     </td>
                   </tr>
@@ -959,6 +1039,14 @@ export default function ConfiguracoesPage() {
           initial={funcModal.item ?? {}}
           onSave={saveFuncionario}
           onClose={() => setFuncModal({ open: false, item: null })}
+        />
+      )}
+
+      {acessoModal && (
+        <CriarAcessoModal
+          funcionario={acessoModal}
+          onClose={() => setAcessoModal(null)}
+          onCreated={() => { loadAll(); toast('Acesso criado — informe as credenciais ao instalador', 'ok') }}
         />
       )}
     </div>
