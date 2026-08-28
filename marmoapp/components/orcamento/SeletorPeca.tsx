@@ -3,7 +3,7 @@
 export type TipoPeca =
   | 'bancada_simples'
   | 'escada' | 'soleira' | 'nicho'
-  | 'pia_l' | 'pia_u' | 'lavatorio_simples' | 'lavatorio_extensao'
+  | 'pia_l' | 'pia_u' | 'pia_retangular' | 'lavatorio_simples' | 'lavatorio_extensao'
   | 'servico'
 
 export const PECA_LABELS: Record<string, string> = {
@@ -13,6 +13,7 @@ export const PECA_LABELS: Record<string, string> = {
   nicho:              'Nicho',
   pia_l:              'Pia em L',
   pia_u:              'Pia em U',
+  pia_retangular:     'Pia Retangular',
   lavatorio_simples:  'Lavatório Simples',
   lavatorio_extensao: 'Lavatório c/ Extensão',
   servico:            'Serviço',
@@ -25,6 +26,7 @@ export function getLateraisDaPeca(tipo: string, dadosExtras?: Record<string, unk
     case 'nicho':
       return ['esquerda', 'direita', 'superior', 'inferior']
     case 'lavatorio_simples':
+    case 'pia_retangular':
       return ['esquerda', 'direita', 'frente', 'fundo']
     case 'pia_l':
       return ['esquerda', 'direita', 'frente_seg1', 'frente_seg2', 'fundo']
@@ -244,6 +246,16 @@ function SvgLavatorioExtensao() {
   )
 }
 
+function SvgPiaRetangular() {
+  return (
+    <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="14" width="144" height="62" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="2"/>
+      <rect x="24" y="26" width="112" height="38" fill="none" stroke="#3498db" strokeWidth="1.5" strokeDasharray="4 2"/>
+      <text x="80" y="49" textAnchor="middle" fontSize="7" fill="#3498db">cuba</text>
+    </svg>
+  )
+}
+
 function SvgServico() {
   return (
     <svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg">
@@ -266,6 +278,7 @@ const SVG_MAP: Record<string, React.ReactNode> = {
   nicho:              <SvgNicho />,
   pia_l:              <SvgPiaL />,
   pia_u:              <SvgPiaU />,
+  pia_retangular:     <SvgPiaRetangular />,
   lavatorio_simples:  <SvgLavatorioSimples />,
   lavatorio_extensao: <SvgLavatorioExtensao />,
   servico:            <SvgServico />,
@@ -646,6 +659,59 @@ export default function SeletorPeca(props: Props) {
                 {showErrors && !((dados_extras.seg3_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
+          )}
+
+          {/* ── Pia Retangular ── */}
+          {peca === 'pia_retangular' && (
+            <>
+              <div className="form-row form-row-2">
+                <div className="form-group">
+                  <label className="form-label">LARGURA (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.20"
+                    value={(dados_extras.largura as number) || ''}
+                    onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+                <div className="form-group">
+                  <label className="form-label">PROFUNDIDADE (m)</label>
+                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                    value={(dados_extras.profundidade as number) || ''}
+                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                  {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox"
+                    checked={!!(dados_extras.cuba_pedra as boolean)}
+                    onChange={e => {
+                      const checked = e.target.checked
+                      onChange({ dados_extras: { ...dados_extras, cuba_pedra: checked, qtd_cuba_pedra: checked ? 1 : 0, valor_cuba_pedra: checked ? 350 : 0 } })
+                    }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Cuba de pedra</span>
+                </label>
+                {!!(dados_extras.cuba_pedra as boolean) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, paddingLeft: 26 }}>
+                    <label style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>Quantidade:</label>
+                    <input
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={(dados_extras.qtd_cuba_pedra as number) || 1}
+                      onChange={e => {
+                        const qtd = Math.max(1, parseInt(e.target.value) || 1)
+                        onChange({ dados_extras: { ...dados_extras, qtd_cuba_pedra: qtd, valor_cuba_pedra: qtd * 350 } })
+                      }}
+                      style={{ width: 70 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--dark)', fontWeight: 600 }}>
+                      {(dados_extras.qtd_cuba_pedra as number) || 1}× Cuba de pedra: R$ {(((dados_extras.qtd_cuba_pedra as number) || 1) * 350).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* ── Lavatório Simples ── */}

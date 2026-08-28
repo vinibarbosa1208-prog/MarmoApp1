@@ -66,6 +66,8 @@ export interface OrcamentoItem {
   cortado_por?: string | null
   acabado_em?: string | null
   acabado_por?: string | null
+  desenho_tipo?: string | null
+  desenho_params?: Record<string, unknown> | null
 }
 
 export type ProducaoStatus =

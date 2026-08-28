@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { fmt, orcTotal, areaCortadaItens, mlAcabamentoItens, taxaMediaPorCargo } from '@/lib/utils'
 import type { OrcamentoItem } from '@/lib/types'
 import type { OrcamentoPDF, ItemPDF } from '@/lib/pdf/gerar-orcamento-pdf'
+import DesenhoTecnico from '@/components/orcamento/DesenhoTecnico'
 
 const STATUS_LABEL: Record<string, string> = {
   rascunho: 'Rascunho', enviado: 'Enviado', aprovado: 'Aprovado', recusado: 'Recusado',
@@ -347,6 +348,8 @@ export default function VerOrcamentoPage() {
                     {itens.map((item, idx) => {
                       const totalItem = item.total_item || item.total || item.preco_unitario * item.quantidade
                       const temBreakdown = item.tipo === 'material' && !!item.area && !!item.custo_m2
+                      const temDesenho = !!item.tipo_peca
+                      const podeExpandir = temBreakdown || temDesenho
                       const expandido = itensExpandidos.has(idx)
                       const custoMaterialItem = temBreakdown ? (item.area || 0) * (item.custo_m2 || 0) : 0
                       return (
@@ -358,18 +361,37 @@ export default function VerOrcamentoPage() {
                             <td>{fmt(item.preco_unitario)}</td>
                             <td className="font-bold">{fmt(totalItem)}</td>
                             <td style={{ textAlign: 'center' }}>
-                              {temBreakdown && (
+                              {podeExpandir && (
                                 <button
                                   className="btn btn-ghost btn-sm btn-icon"
                                   onClick={() => toggleItemExpandido(idx)}
-                                  title="Como esse valor foi calculado"
+                                  title="Ver desenho e como esse valor foi calculado"
                                 >{expandido ? '▲' : '▾'}</button>
                               )}
                             </td>
                           </tr>
-                          {temBreakdown && expandido && (
+                          {podeExpandir && expandido && (
                             <tr>
                               <td colSpan={6} style={{ background: 'var(--light)', padding: '10px 16px' }}>
+                                {temDesenho && (
+                                  <div style={{ marginBottom: temBreakdown ? 16 : 0 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>
+                                      Desenho técnico
+                                    </div>
+                                    <DesenhoTecnico params={{
+                                      tipo_peca: item.tipo_peca || '',
+                                      largura: item.largura,
+                                      altura: item.altura,
+                                      dados_extras: item.dados_extras,
+                                      acabamento_esquerda: item.acabamento_esquerda,
+                                      acabamento_direita: item.acabamento_direita,
+                                      acabamento_frente: item.acabamento_frente,
+                                      acabamento_fundo: item.acabamento_fundo,
+                                    }} />
+                                  </div>
+                                )}
+                                {temBreakdown && (
+                                <>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>
                                   Como esse valor foi calculado
                                 </div>
@@ -409,6 +431,8 @@ export default function VerOrcamentoPage() {
                                     </div>
                                   )}
                                 </div>
+                                </>
+                                )}
                               </td>
                             </tr>
                           )}

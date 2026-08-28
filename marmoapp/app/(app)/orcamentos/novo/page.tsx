@@ -70,6 +70,23 @@ function calcArea(item: ItemForm): number {
     return base + lateralExtras
   }
 
+  if (item.tipo_peca === 'pia_retangular') {
+    const largura = (ex.largura as number) || 0
+    const profundidade = (ex.profundidade as number) || 0
+    if (!largura || !profundidade) return 0
+    const base = largura * profundidade
+    const dimMap: Record<string, number> = { frente: largura, fundo: largura, esquerda: profundidade, direita: profundidade }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
+  }
+
   if (item.tipo_peca === 'lavatorio_extensao') {
     const compTampo = (ex.comp_tampo as number) || 0
     const compExtensao = (ex.comp_extensao as number) || 0
@@ -211,7 +228,7 @@ function calcArea(item: ItemForm): number {
 
 function calcTotal(item: ItemForm): number {
   const area = calcArea(item)
-  const temCubaExtra = item.tipo_peca === 'lavatorio_extensao' || item.tipo_peca === 'lavatorio_simples'
+  const temCubaExtra = item.tipo_peca === 'lavatorio_extensao' || item.tipo_peca === 'lavatorio_simples' || item.tipo_peca === 'pia_retangular'
   const cubaExtra = temCubaExtra && (item.dados_extras.cuba_pedra as boolean)
     ? ((item.dados_extras.valor_cuba_pedra as number) || 350)
     : 0
@@ -267,6 +284,10 @@ function validarItem(item: ItemForm): boolean {
   }
   if (peca === 'lavatorio_simples') {
     if (!((ex.comprimento as number) > 0)) return false
+    if (!((ex.profundidade as number) > 0)) return false
+  }
+  if (peca === 'pia_retangular') {
+    if (!((ex.largura as number) > 0)) return false
     if (!((ex.profundidade as number) > 0)) return false
   }
   if (peca === 'bancada_cuba' && !ex.tipo_cuba) return false
@@ -808,6 +829,18 @@ export default function NovoOrcamentoPage() {
           altura_frontao: i.altura_frontao || null,
           dados_extras: Object.keys(i.dados_extras).length > 0 ? i.dados_extras : null,
           variante: i.variante || null,
+          // Snapshot pro desenho técnico (SVG gerado a partir dos dados) —
+          // reaproveitável fora da tela de orçamento (ex: portal do instalador).
+          desenho_tipo: i.tipo_peca || null,
+          desenho_params: i.tipo_peca ? {
+            largura: i.largura || null,
+            altura: i.altura || null,
+            dados_extras: i.dados_extras,
+            acabamento_esquerda: i.acabamento_esquerda || null,
+            acabamento_direita: i.acabamento_direita || null,
+            acabamento_frente: i.acabamento_frente || null,
+            acabamento_fundo: i.acabamento_fundo || null,
+          } : null,
         }))
         const { error: itensErr } = await sbSave(supabase.from('orcamento_itens').insert(payload))
         if (itensErr) throw itensErr

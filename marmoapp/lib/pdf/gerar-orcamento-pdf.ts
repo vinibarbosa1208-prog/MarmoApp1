@@ -59,6 +59,11 @@ const PECA_LABELS_PDF: Record<string, string> = {
   escada: 'Escada em Pedra',
   soleira: 'Soleira / Peitoril',
   nicho: 'Nicho em Pedra',
+  pia_l: 'Pia em L',
+  pia_u: 'Pia em U',
+  pia_retangular: 'Pia Retangular',
+  lavatorio_simples: 'Lavatório Simples',
+  lavatorio_extensao: 'Lavatório c/ Extensão',
 }
 
 const ACAB_LABELS_PDF: Record<string, string> = {
