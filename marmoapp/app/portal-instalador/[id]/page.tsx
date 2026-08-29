@@ -56,8 +56,98 @@ function fmtData(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', weekday: 'short' })
 }
 
-function ItemCard({ item }: { item: ItemObra }) {
+function fmtValor(v: number): string {
+  return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+}
+
+// Formulário de registro: metro linear + foto obrigatória. Some quando o
+// item já está instalado ou quando a obra inteira já foi concluída.
+function RegistrarItemForm({ funcionarioId, agendaEventId, item, onRegistrado }: {
+  funcionarioId: string
+  agendaEventId: string
+  item: ItemObra
+  onRegistrado: (valorCalculado: number, obraConcluida: boolean) => void
+}) {
   const [aberto, setAberto] = useState(false)
+  const [metros, setMetros] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+
+  async function salvar() {
+    const metrosNum = parseFloat(metros.replace(',', '.'))
+    if (!metrosNum || metrosNum <= 0) { setErro('Informe o metro linear'); return }
+    if (!foto) { setErro('A foto é obrigatória'); return }
+    setSalvando(true)
+    setErro('')
+    try {
+      const fd = new FormData()
+      fd.set('funcionario_id', funcionarioId)
+      fd.set('agenda_event_id', agendaEventId)
+      fd.set('orcamento_item_id', item.id)
+      fd.set('metros_lineares', String(metrosNum))
+      fd.set('foto', foto)
+      const res = await fetch('/api/portal-instalador/registrar-item', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao registrar')
+      onRegistrado(json.valor_calculado, json.obra_concluida)
+    } catch (e: unknown) {
+      setErro(e instanceof Error ? e.message : 'Erro ao registrar')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => setAberto(true)}
+        className="btn btn-gold btn-sm"
+        style={{ marginTop: 8 }}
+      >
+        Marcar como instalada
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: 10, background: 'var(--light)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Metro linear</label>
+        <input
+          type="number" inputMode="decimal" step="0.01" placeholder="0.00"
+          value={metros} onChange={e => { setMetros(e.target.value); setErro('') }}
+          className="form-input" style={{ marginTop: 4 }}
+        />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Foto da instalação *</label>
+        <input
+          type="file" accept="image/*" capture="environment"
+          onChange={e => { setFoto(e.target.files?.[0] ?? null); setErro('') }}
+          style={{ marginTop: 4, display: 'block', fontSize: 13 }}
+        />
+      </div>
+      {erro && <div style={{ color: 'var(--red)', fontSize: 13 }}>{erro}</div>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn btn-outline btn-sm" onClick={() => setAberto(false)} disabled={salvando}>Cancelar</button>
+        <button className="btn btn-gold btn-sm" onClick={salvar} disabled={salvando}>
+          {salvando ? 'Enviando...' : '✓ Confirmar instalação'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, onRegistrado }: {
+  item: ItemObra
+  funcionarioId: string
+  agendaEventId: string
+  obraStatus: Obra['status']
+  onRegistrado: (valorCalculado: number, obraConcluida: boolean) => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const [valorRegistrado, setValorRegistrado] = useState<number | null>(null)
   const temDesenho = !!(item.desenho_tipo && item.desenho_params)
 
   return (
@@ -75,7 +165,7 @@ function ItemCard({ item }: { item: ItemObra }) {
         </div>
         {item.instalado && (
           <span style={{ fontSize: 10, fontWeight: 700, color: '#27AE60', background: '#27AE6018', borderRadius: 10, padding: '2px 8px', whiteSpace: 'nowrap' }}>
-            ✓ Instalado
+            ✓ Instalado{valorRegistrado != null && <> · {fmtValor(valorRegistrado)}</>}
           </span>
         )}
       </div>
@@ -94,11 +184,23 @@ function ItemCard({ item }: { item: ItemObra }) {
           )}
         </div>
       )}
+      {!item.instalado && obraStatus === 'agendado' && (
+        <RegistrarItemForm
+          funcionarioId={funcionarioId}
+          agendaEventId={agendaEventId}
+          item={item}
+          onRegistrado={(valor, obraConcluida) => { setValorRegistrado(valor); onRegistrado(valor, obraConcluida) }}
+        />
+      )}
     </div>
   )
 }
 
-function ObraCard({ obra }: { obra: Obra }) {
+function ObraCard({ obra, funcionarioId, onObraAtualizada }: {
+  obra: Obra
+  funcionarioId: string
+  onObraAtualizada: (obraId: string, itemId: string, obraConcluida: boolean) => void
+}) {
   const c = obra.cliente
   return (
     <div style={{ background: '#fff', borderRadius: 10, boxShadow: 'var(--shadow)', overflow: 'hidden', marginBottom: 16 }}>
@@ -113,6 +215,12 @@ function ObraCard({ obra }: { obra: Obra }) {
       </div>
 
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {obra.status === 'concluido' && (
+          <div style={{ background: '#27AE6018', color: '#27AE60', borderRadius: 6, padding: 10, fontSize: 13, fontWeight: 600 }}>
+            🎉 Obra concluída — todas as peças foram instaladas.
+          </div>
+        )}
+
         {c && (
           <div style={{ fontSize: 13 }}>
             <div style={{ fontWeight: 600 }}>{c.nome}</div>
@@ -141,7 +249,16 @@ function ObraCard({ obra }: { obra: Obra }) {
         {obra.orcamento && obra.orcamento.itens.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Peças</div>
-            {obra.orcamento.itens.map(i => <ItemCard key={i.id} item={i} />)}
+            {obra.orcamento.itens.map(i => (
+              <ItemCard
+                key={i.id}
+                item={i}
+                funcionarioId={funcionarioId}
+                agendaEventId={obra.id}
+                obraStatus={obra.status}
+                onRegistrado={(_valor, obraConcluida) => onObraAtualizada(obra.id, i.id, obraConcluida)}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -167,6 +284,22 @@ export default function PortalInstaladorObrasPage() {
       .then(setObras)
       .catch(() => setErro(prev => prev || 'Não foi possível carregar suas obras.'))
   }, [id])
+
+  // Atualiza localmente sem precisar recarregar tudo — marca o item como
+  // instalado e, se a obra concluiu, atualiza o status pra 'concluido'.
+  function onObraAtualizada(obraId: string, itemId: string, obraConcluida: boolean) {
+    setObras(prev => prev?.map(o => {
+      if (o.id !== obraId || !o.orcamento) return o
+      return {
+        ...o,
+        status: obraConcluida ? 'concluido' : o.status,
+        orcamento: {
+          ...o.orcamento,
+          itens: o.orcamento.itens.map(i => i.id === itemId ? { ...i, instalado: true } : i),
+        },
+      }
+    }) ?? null)
+  }
 
   if (erro) {
     return (
@@ -198,7 +331,9 @@ export default function PortalInstaladorObrasPage() {
           Nenhuma obra atribuída a você ainda. O gestor precisa te colocar como responsável num evento de &ldquo;Entrega/Instalação&rdquo; na agenda.
         </div>
       )}
-      {obras?.map(o => <ObraCard key={o.id} obra={o} />)}
+      {obras?.map(o => (
+        <ObraCard key={o.id} obra={o} funcionarioId={id} onObraAtualizada={onObraAtualizada} />
+      ))}
     </div>
   )
 }
