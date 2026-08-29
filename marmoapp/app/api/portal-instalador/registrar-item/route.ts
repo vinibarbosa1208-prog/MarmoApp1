@@ -119,6 +119,10 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     // Se algo falhou depois do upload, remove a foto órfã.
     if (fotoPath) await supabase.storage.from('comprovantes-instalacao').remove([fotoPath]).catch(() => {})
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
+    // Erros do Supabase (PostgrestError/StorageError) não são instâncias de
+    // Error — pegar .message direto evita mascarar a causa real com "Erro interno".
+    const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Erro interno')
+    console.error('[registrar-item] erro:', e)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
