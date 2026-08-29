@@ -467,6 +467,175 @@ function AbaInstalacoes({ funcionarios }: { funcionarios: Funcionario[] }) {
   )
 }
 
+// ─── Sub-aba: Aprovações (fechamento semanal do portal do instalador) ────────
+
+interface ApontamentoPendente {
+  id: string
+  funcionario: { id: string; nome: string } | null
+  data: string
+  metros_lineares: number
+  valor_calculado: number | null
+  is_retroativo: boolean
+  obra: { numero_os?: string | null; titulo?: string | null; nome?: string | null; local?: string | null }
+  item_descricao: string | null
+  foto_url: string | null
+}
+
+function AbaAprovacoes() {
+  const { toast } = useApp()
+  const [semana, setSemana] = useState(getMondayOfWeek)
+  const [pendentes, setPendentes] = useState<ApontamentoPendente[]>([])
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(false)
+  const [processando, setProcessando] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await apiFetch(`/api/funcionarios/apontamentos-pendentes?semana=${semana}`)
+    if (res.ok) setPendentes(await res.json())
+    setSelecionados(new Set())
+    setLoading(false)
+  }, [semana])
+
+  useEffect(() => { load() }, [load])
+
+  const porFuncionario = new Map<string, ApontamentoPendente[]>()
+  for (const p of pendentes) {
+    const nome = p.funcionario?.nome ?? 'Sem funcionário'
+    porFuncionario.set(nome, [...(porFuncionario.get(nome) ?? []), p])
+  }
+
+  function toggle(id: string) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleGrupo(itens: ApontamentoPendente[]) {
+    const ids = itens.map(i => i.id)
+    const todosSelecionados = ids.every(id => selecionados.has(id))
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => todosSelecionados ? next.delete(id) : next.add(id))
+      return next
+    })
+  }
+
+  async function aprovarSelecionados() {
+    if (selecionados.size === 0) { toast('Selecione ao menos um item', 'err'); return }
+    setProcessando(true)
+    const res = await apiFetch('/api/funcionarios/apontamentos-pendentes/aprovar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apontamento_ids: [...selecionados], semana_referencia: semana }),
+    })
+    if (res.ok) {
+      const d = await res.json()
+      toast(`${d.aprovados} apontamento(s) aprovado(s) — pagamento da semana atualizado`, 'ok2')
+      load()
+    } else {
+      const d = await res.json()
+      toast(d.error || 'Erro ao aprovar', 'err')
+    }
+    setProcessando(false)
+  }
+
+  async function rejeitar(id: string) {
+    const res = await apiFetch('/api/funcionarios/apontamentos-pendentes/rejeitar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apontamento_id: id }),
+    })
+    if (res.ok) {
+      toast('Apontamento rejeitado', 'ok')
+      load()
+    } else {
+      const d = await res.json()
+      toast(d.error || 'Erro ao rejeitar', 'err')
+    }
+  }
+
+  const totalSelecionado = pendentes.filter(p => selecionados.has(p.id)).reduce((acc, p) => acc + (p.valor_calculado ?? 0), 0)
+
+  return (
+    <div style={{ padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <WeekSelector semana={semana} onChange={setSemana} />
+        <button className="btn btn-gold btn-sm" onClick={aprovarSelecionados} disabled={processando || selecionados.size === 0}>
+          {processando ? 'Aprovando...' : `✓ Aprovar selecionados (${selecionados.size}) — ${fmt(totalSelecionado)}`}
+        </button>
+      </div>
+
+      {loading && <div style={{ color: 'var(--gray)' }}>Carregando…</div>}
+      {!loading && pendentes.length === 0 && (
+        <div className="empty-state"><h3>Nenhum apontamento pendente nessa semana</h3></div>
+      )}
+
+      {[...porFuncionario.entries()].map(([nome, itens]) => (
+        <div key={nome} style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <input
+              type="checkbox"
+              checked={itens.every(i => selecionados.has(i.id))}
+              onChange={() => toggleGrupo(itens)}
+              style={{ width: 16, height: 16, accentColor: 'var(--gold)' }}
+            />
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{nome}</div>
+            <div style={{ fontSize: 12, color: 'var(--gray)' }}>
+              {itens.length} item(ns) · {fmt(itens.reduce((acc, i) => acc + (i.valor_calculado ?? 0), 0))}
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 30 }}></th>
+                  <th>Data</th>
+                  <th>Obra</th>
+                  <th>Peça</th>
+                  <th style={{ textAlign: 'right' }}>Metro linear</th>
+                  <th style={{ textAlign: 'right' }}>Valor</th>
+                  <th>Foto</th>
+                  <th style={{ width: 90 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {itens.map(p => (
+                  <tr key={p.id}>
+                    <td>
+                      <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggle(p.id)} style={{ width: 16, height: 16, accentColor: 'var(--gold)' }} />
+                    </td>
+                    <td className="text-sm text-gray">{fmtDate(p.data)}</td>
+                    <td className="text-sm">
+                      {p.is_retroativo
+                        ? <>{p.obra.nome} <span style={{ color: 'var(--gray)' }}>({p.obra.local})</span> <span className="badge badge-pending" style={{ fontSize: 10 }}>Retroativa</span></>
+                        : (p.obra.titulo || p.obra.numero_os || '—')}
+                    </td>
+                    <td className="text-sm text-gray">{p.item_descricao ?? '—'}</td>
+                    <td style={{ textAlign: 'right' }}>{p.metros_lineares.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(p.valor_calculado ?? 0)}</td>
+                    <td>
+                      {p.foto_url
+                        ? <a href={p.foto_url} target="_blank" rel="noreferrer"><img src={p.foto_url} alt="Comprovação" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} /></a>
+                        : <span className="text-sm text-gray">—</span>}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => rejeitar(p.id)}>Rejeitar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Sub-aba: Histórico & Pagamentos ─────────────────────────────────────────
 
 function AbaHistorico({ funcionarios }: { funcionarios: Funcionario[] }) {
@@ -655,11 +824,12 @@ function AbaHistorico({ funcionarios }: { funcionarios: Funcionario[] }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-type Aba = 'presenca' | 'instalacoes' | 'historico'
+type Aba = 'presenca' | 'instalacoes' | 'aprovacoes' | 'historico'
 
 const ABAS: { id: Aba; label: string }[] = [
   { id: 'presenca', label: 'Presença Semanal' },
   { id: 'instalacoes', label: 'Instalações' },
+  { id: 'aprovacoes', label: 'Aprovações (portal do instalador)' },
   { id: 'historico', label: 'Histórico & Pagamentos' },
 ]
 
@@ -703,6 +873,7 @@ export default function FuncionariosPage() {
 
         {aba === 'presenca' && <AbaPresenca funcionarios={funcionarios} />}
         {aba === 'instalacoes' && <AbaInstalacoes funcionarios={funcionarios} />}
+        {aba === 'aprovacoes' && <AbaAprovacoes />}
         {aba === 'historico' && <AbaHistorico funcionarios={funcionarios} />}
       </div>
     </div>

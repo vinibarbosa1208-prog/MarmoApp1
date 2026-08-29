@@ -51,3 +51,29 @@ export async function getMarmorariaId(_ignored?: string | null): Promise<string 
 
   return marmoraria?.id ?? null
 }
+
+// Id do usuário logado (usuarios.id = auth.uid()) — usado onde a rota
+// precisa registrar quem fez a ação (ex: aprovado_por no fechamento
+// semanal do portal do instalador), não só o tenant.
+export async function getAuthUserId(): Promise<string | null> {
+  const cookieStore = await cookies()
+
+  const authClient = createServerClient(SUPABASE_URL, ANON_KEY, {
+    cookies: {
+      getAll() { return cookieStore.getAll() },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        } catch {
+          // Route handlers não podem definir cookies após o início da resposta
+        }
+      },
+    },
+  })
+
+  const { data: { user }, error } = await authClient.auth.getUser()
+  if (error || !user) return null
+  return user.id
+}
