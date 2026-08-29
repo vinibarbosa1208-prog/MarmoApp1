@@ -7,6 +7,7 @@ import DesenhoTecnico from '@/components/orcamento/DesenhoTecnico'
 interface Instalador {
   id: string
   nome: string
+  valor_metro_linear: number | null
 }
 
 interface Cliente {
@@ -60,23 +61,32 @@ function fmtValor(v: number): string {
   return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
 }
 
-// Formulário de registro: metro linear + foto obrigatória. Some quando o
-// item já está instalado ou quando a obra inteira já foi concluída.
-function RegistrarItemForm({ funcionarioId, agendaEventId, item, onRegistrado }: {
+// Formulário de registro: metro linear + valor sugerido (editável) + foto
+// obrigatória. Some quando o item já está instalado ou quando a obra
+// inteira já foi concluída.
+function RegistrarItemForm({ funcionarioId, agendaEventId, item, valorMetroLinearPadrao, onRegistrado }: {
   funcionarioId: string
   agendaEventId: string
   item: ItemObra
+  valorMetroLinearPadrao: number | null
   onRegistrado: (valorCalculado: number, obraConcluida: boolean) => void
 }) {
   const [aberto, setAberto] = useState(false)
   const [metros, setMetros] = useState('')
+  // Pré-preenchido com o padrão do cadastro, mas editável — peças menores
+  // (pingadeira, soleira etc.) valem menos que o padrão.
+  const [valorMetro, setValorMetro] = useState(() => valorMetroLinearPadrao != null ? String(valorMetroLinearPadrao) : '')
   const [foto, setFoto] = useState<File | null>(null)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
+  const metrosNum = parseFloat(metros.replace(',', '.'))
+  const valorMetroNum = parseFloat(valorMetro.replace(',', '.'))
+  const totalPreview = (metrosNum > 0 && valorMetroNum > 0) ? metrosNum * valorMetroNum : null
+
   async function salvar() {
-    const metrosNum = parseFloat(metros.replace(',', '.'))
     if (!metrosNum || metrosNum <= 0) { setErro('Informe o metro linear'); return }
+    if (!valorMetroNum || valorMetroNum <= 0) { setErro('Informe o valor por metro'); return }
     if (!foto) { setErro('A foto é obrigatória'); return }
     setSalvando(true)
     setErro('')
@@ -86,6 +96,7 @@ function RegistrarItemForm({ funcionarioId, agendaEventId, item, onRegistrado }:
       fd.set('agenda_event_id', agendaEventId)
       fd.set('orcamento_item_id', item.id)
       fd.set('metros_lineares', String(metrosNum))
+      fd.set('valor_metro_linear_aplicado', String(valorMetroNum))
       fd.set('foto', foto)
       const res = await fetch('/api/portal-instalador/registrar-item', { method: 'POST', body: fd })
       const json = await res.json()
@@ -121,6 +132,17 @@ function RegistrarItemForm({ funcionarioId, agendaEventId, item, onRegistrado }:
         />
       </div>
       <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Valor sugerido por metro (R$)</label>
+        <input
+          type="number" inputMode="decimal" step="0.01" placeholder="0.00"
+          value={valorMetro} onChange={e => { setValorMetro(e.target.value); setErro('') }}
+          className="form-input" style={{ marginTop: 4 }}
+        />
+        <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 2 }}>
+          Peças menores (pingadeira, soleira etc.) costumam valer menos que o padrão. O gestor confere no fechamento semanal.
+        </div>
+      </div>
+      <div>
         <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Foto da instalação *</label>
         <input
           type="file" accept="image/*" capture="environment"
@@ -128,6 +150,9 @@ function RegistrarItemForm({ funcionarioId, agendaEventId, item, onRegistrado }:
           style={{ marginTop: 4, display: 'block', fontSize: 13 }}
         />
       </div>
+      {totalPreview != null && (
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Valor sugerido: {fmtValor(totalPreview)}</div>
+      )}
       {erro && <div style={{ color: 'var(--red)', fontSize: 13 }}>{erro}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-outline btn-sm" onClick={() => setAberto(false)} disabled={salvando}>Cancelar</button>
@@ -139,11 +164,12 @@ function RegistrarItemForm({ funcionarioId, agendaEventId, item, onRegistrado }:
   )
 }
 
-function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, onRegistrado }: {
+function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, valorMetroLinearPadrao, onRegistrado }: {
   item: ItemObra
   funcionarioId: string
   agendaEventId: string
   obraStatus: Obra['status']
+  valorMetroLinearPadrao: number | null
   onRegistrado: (valorCalculado: number, obraConcluida: boolean) => void
 }) {
   const [aberto, setAberto] = useState(false)
@@ -189,6 +215,7 @@ function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, onRegistrado
           funcionarioId={funcionarioId}
           agendaEventId={agendaEventId}
           item={item}
+          valorMetroLinearPadrao={valorMetroLinearPadrao}
           onRegistrado={(valor, obraConcluida) => { setValorRegistrado(valor); onRegistrado(valor, obraConcluida) }}
         />
       )}
@@ -196,9 +223,10 @@ function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, onRegistrado
   )
 }
 
-function ObraCard({ obra, funcionarioId, onObraAtualizada }: {
+function ObraCard({ obra, funcionarioId, valorMetroLinearPadrao, onObraAtualizada }: {
   obra: Obra
   funcionarioId: string
+  valorMetroLinearPadrao: number | null
   onObraAtualizada: (obraId: string, itemId: string, obraConcluida: boolean) => void
 }) {
   const c = obra.cliente
@@ -256,6 +284,7 @@ function ObraCard({ obra, funcionarioId, onObraAtualizada }: {
                 funcionarioId={funcionarioId}
                 agendaEventId={obra.id}
                 obraStatus={obra.status}
+                valorMetroLinearPadrao={valorMetroLinearPadrao}
                 onRegistrado={(_valor, obraConcluida) => onObraAtualizada(obra.id, i.id, obraConcluida)}
               />
             ))}
@@ -332,7 +361,13 @@ export default function PortalInstaladorObrasPage() {
         </div>
       )}
       {obras?.map(o => (
-        <ObraCard key={o.id} obra={o} funcionarioId={id} onObraAtualizada={onObraAtualizada} />
+        <ObraCard
+          key={o.id}
+          obra={o}
+          funcionarioId={id}
+          valorMetroLinearPadrao={instalador?.valor_metro_linear ?? null}
+          onObraAtualizada={onObraAtualizada}
+        />
       ))}
     </div>
   )

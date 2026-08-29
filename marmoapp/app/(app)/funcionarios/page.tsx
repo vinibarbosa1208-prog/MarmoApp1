@@ -471,10 +471,11 @@ function AbaInstalacoes({ funcionarios }: { funcionarios: Funcionario[] }) {
 
 interface ApontamentoPendente {
   id: string
-  funcionario: { id: string; nome: string } | null
+  funcionario: { id: string; nome: string; valor_metro_linear: number | null } | null
   data: string
   metros_lineares: number
   valor_calculado: number | null
+  valor_metro_linear_aplicado: number | null
   is_retroativo: boolean
   obra: { numero_os?: string | null; titulo?: string | null; nome?: string | null; local?: string | null }
   item_descricao: string | null
@@ -486,6 +487,10 @@ function AbaAprovacoes() {
   const [semana, setSemana] = useState(getMondayOfWeek)
   const [pendentes, setPendentes] = useState<ApontamentoPendente[]>([])
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  // Valor pode ser ajustado pelo gestor antes de aprovar — decisão de 29/08,
+  // não é mais 100% automático. Só guarda aqui os que foram editados;
+  // os demais usam o valor_calculado que já veio da API.
+  const [valoresEditados, setValoresEditados] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(false)
   const [processando, setProcessando] = useState(false)
 
@@ -494,10 +499,25 @@ function AbaAprovacoes() {
     const res = await apiFetch(`/api/funcionarios/apontamentos-pendentes?semana=${semana}`)
     if (res.ok) setPendentes(await res.json())
     setSelecionados(new Set())
+    setValoresEditados(new Map())
     setLoading(false)
   }, [semana])
 
   useEffect(() => { load() }, [load])
+
+  function valorAtual(p: ApontamentoPendente): number {
+    return valoresEditados.get(p.id) ?? (p.valor_calculado ?? 0)
+  }
+
+  function editarValor(id: string, valor: string) {
+    const num = parseFloat(valor.replace(',', '.'))
+    setValoresEditados(prev => {
+      const next = new Map(prev)
+      if (Number.isFinite(num) && num > 0) next.set(id, num)
+      else next.delete(id)
+      return next
+    })
+  }
 
   const porFuncionario = new Map<string, ApontamentoPendente[]>()
   for (const p of pendentes) {
@@ -527,10 +547,11 @@ function AbaAprovacoes() {
   async function aprovarSelecionados() {
     if (selecionados.size === 0) { toast('Selecione ao menos um item', 'err'); return }
     setProcessando(true)
+    const apontamentos = [...selecionados].map(id => ({ id, valor_calculado: valoresEditados.get(id) }))
     const res = await apiFetch('/api/funcionarios/apontamentos-pendentes/aprovar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apontamento_ids: [...selecionados], semana_referencia: semana }),
+      body: JSON.stringify({ apontamentos, semana_referencia: semana }),
     })
     if (res.ok) {
       const d = await res.json()
@@ -558,7 +579,7 @@ function AbaAprovacoes() {
     }
   }
 
-  const totalSelecionado = pendentes.filter(p => selecionados.has(p.id)).reduce((acc, p) => acc + (p.valor_calculado ?? 0), 0)
+  const totalSelecionado = pendentes.filter(p => selecionados.has(p.id)).reduce((acc, p) => acc + valorAtual(p), 0)
 
   return (
     <div style={{ padding: '16px 20px' }}>
@@ -585,7 +606,7 @@ function AbaAprovacoes() {
             />
             <div style={{ fontWeight: 700, fontSize: 14 }}>{nome}</div>
             <div style={{ fontSize: 12, color: 'var(--gray)' }}>
-              {itens.length} item(ns) · {fmt(itens.reduce((acc, i) => acc + (i.valor_calculado ?? 0), 0))}
+              {itens.length} item(ns) · {fmt(itens.reduce((acc, i) => acc + valorAtual(i), 0))}
             </div>
           </div>
           <div className="table-wrap">
@@ -597,36 +618,57 @@ function AbaAprovacoes() {
                   <th>Obra</th>
                   <th>Peça</th>
                   <th style={{ textAlign: 'right' }}>Metro linear</th>
-                  <th style={{ textAlign: 'right' }}>Valor</th>
+                  <th style={{ textAlign: 'right' }}>R$/m aplicado</th>
+                  <th style={{ textAlign: 'right', width: 140 }}>Valor (ajustável)</th>
                   <th>Foto</th>
                   <th style={{ width: 90 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {itens.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggle(p.id)} style={{ width: 16, height: 16, accentColor: 'var(--gold)' }} />
-                    </td>
-                    <td className="text-sm text-gray">{fmtDate(p.data)}</td>
-                    <td className="text-sm">
-                      {p.is_retroativo
-                        ? <>{p.obra.nome} <span style={{ color: 'var(--gray)' }}>({p.obra.local})</span> <span className="badge badge-pending" style={{ fontSize: 10 }}>Retroativa</span></>
-                        : (p.obra.titulo || p.obra.numero_os || '—')}
-                    </td>
-                    <td className="text-sm text-gray">{p.item_descricao ?? '—'}</td>
-                    <td style={{ textAlign: 'right' }}>{p.metros_lineares.toFixed(2)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(p.valor_calculado ?? 0)}</td>
-                    <td>
-                      {p.foto_url
-                        ? <a href={p.foto_url} target="_blank" rel="noreferrer"><img src={p.foto_url} alt="Comprovação" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} /></a>
-                        : <span className="text-sm text-gray">—</span>}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => rejeitar(p.id)}>Rejeitar</button>
-                    </td>
-                  </tr>
-                ))}
+                {itens.map(p => {
+                  const padrao = p.funcionario?.valor_metro_linear ?? null
+                  const forDoPadrao = padrao != null && p.valor_metro_linear_aplicado != null && Math.abs(p.valor_metro_linear_aplicado - padrao) > 0.001
+                  const editado = valoresEditados.has(p.id)
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggle(p.id)} style={{ width: 16, height: 16, accentColor: 'var(--gold)' }} />
+                      </td>
+                      <td className="text-sm text-gray">{fmtDate(p.data)}</td>
+                      <td className="text-sm">
+                        {p.is_retroativo
+                          ? <>{p.obra.nome} <span style={{ color: 'var(--gray)' }}>({p.obra.local})</span> <span className="badge badge-pending" style={{ fontSize: 10 }}>Retroativa</span></>
+                          : (p.obra.titulo || p.obra.numero_os || '—')}
+                      </td>
+                      <td className="text-sm text-gray">{p.item_descricao ?? '—'}</td>
+                      <td style={{ textAlign: 'right' }}>{p.metros_lineares.toFixed(2)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {p.valor_metro_linear_aplicado != null ? fmt(p.valor_metro_linear_aplicado) : '—'}
+                        {forDoPadrao && (
+                          <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 600 }} title={`Padrão do cadastro: ${fmt(padrao!)}/m`}>
+                            ≠ padrão ({fmt(padrao!)})
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <input
+                          type="number" step="0.01" inputMode="decimal"
+                          value={editado ? valoresEditados.get(p.id) : (p.valor_calculado ?? 0)}
+                          onChange={e => editarValor(p.id, e.target.value)}
+                          className="form-input" style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 600 }}
+                        />
+                      </td>
+                      <td>
+                        {p.foto_url
+                          ? <a href={p.foto_url} target="_blank" rel="noreferrer"><img src={p.foto_url} alt="Comprovação" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} /></a>
+                          : <span className="text-sm text-gray">—</span>}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => rejeitar(p.id)}>Rejeitar</button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

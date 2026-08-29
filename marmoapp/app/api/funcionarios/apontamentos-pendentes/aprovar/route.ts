@@ -6,6 +6,12 @@ import { getMarmorariaId, getAuthUserId, apiSupabase as supabase } from '@/lib/a
 // lançamento manual de hoje — mantém relatórios/aba Instalações
 // funcionando sem mudança) e soma o valor no lançamento de pagamento da
 // semana em funcionario_pagamentos (gera se não existir, soma se já existir).
+//
+// Decisão de 29/08: o valor sugerido pelo instalador não é mais 100%
+// automático — o gestor pode ajustar antes de aprovar (peças menores
+// valem menos). Por isso recebe `apontamentos: [{id, valor_calculado}]`
+// em vez de só uma lista de ids; se o valor vier diferente do que está
+// salvo, atualiza antes de somar no pagamento.
 export async function POST(req: NextRequest) {
   try {
     const marmoraria_id = await getMarmorariaId(req.headers.get('authorization'))
@@ -14,27 +20,39 @@ export async function POST(req: NextRequest) {
     if (!usuario_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await req.json()
-    const apontamento_ids: string[] = Array.isArray(body.apontamento_ids) ? body.apontamento_ids : []
+    const itensRecebidos: { id: string; valor_calculado?: number }[] = Array.isArray(body.apontamentos) ? body.apontamentos : []
     const semana_referencia: string = String(body.semana_referencia ?? '')
-    if (apontamento_ids.length === 0) return NextResponse.json({ error: 'Nenhum apontamento selecionado' }, { status: 400 })
+    if (itensRecebidos.length === 0) return NextResponse.json({ error: 'Nenhum apontamento selecionado' }, { status: 400 })
     if (!semana_referencia) return NextResponse.json({ error: 'Semana de referência obrigatória' }, { status: 400 })
+
+    const valorAjustadoPorId = new Map(
+      itensRecebidos.filter(i => Number.isFinite(i.valor_calculado) && (i.valor_calculado as number) > 0)
+        .map(i => [i.id, i.valor_calculado as number])
+    )
 
     const { data: apontamentos, error: apontErr } = await supabase
       .from('producao_apontamentos')
       .select('id, funcionario_id, orcamento_id, quantidade, valor_calculado, data, status')
       .eq('marmoraria_id', marmoraria_id)
       .eq('etapa', 'instalacao')
-      .in('id', apontamento_ids)
+      .in('id', itensRecebidos.map(i => i.id))
     if (apontErr) throw apontErr
 
-    const pendentes = (apontamentos ?? []).filter(a => a.status === 'pendente')
+    // Aplica o ajuste do gestor (se houver) antes de seguir — o valor final
+    // usado em tudo daqui pra frente (funcionario_instalacoes, pagamento) é
+    // este, não o que o instalador sugeriu originalmente.
+    const pendentes = (apontamentos ?? [])
+      .filter(a => a.status === 'pendente')
+      .map(a => ({ ...a, valor_calculado: valorAjustadoPorId.get(a.id) ?? a.valor_calculado }))
     if (pendentes.length === 0) return NextResponse.json({ error: 'Nenhum dos apontamentos está pendente' }, { status: 400 })
 
-    const { error: updErr } = await supabase
-      .from('producao_apontamentos')
-      .update({ status: 'aprovado', aprovado_por: usuario_id, aprovado_em: new Date().toISOString() })
-      .in('id', pendentes.map(a => a.id))
-    if (updErr) throw updErr
+    for (const a of pendentes) {
+      const { error } = await supabase
+        .from('producao_apontamentos')
+        .update({ status: 'aprovado', aprovado_por: usuario_id, aprovado_em: new Date().toISOString(), valor_calculado: a.valor_calculado })
+        .eq('id', a.id)
+      if (error) throw error
+    }
 
     // Replica em funcionario_instalacoes — formato idêntico ao lançamento
     // manual já existente, só que preenchido sozinho a partir da aprovação.
@@ -92,6 +110,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, aprovados: pendentes.length })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
+    // Erros do Supabase (PostgrestError) não são instâncias de Error.
+    const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Erro interno')
+    console.error('[apontamentos-pendentes/aprovar] erro:', e)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

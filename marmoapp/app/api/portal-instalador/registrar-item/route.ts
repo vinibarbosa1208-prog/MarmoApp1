@@ -25,6 +25,11 @@ export async function POST(req: NextRequest) {
     const agenda_event_id = String(form.get('agenda_event_id') ?? '')
     const orcamento_item_id = String(form.get('orcamento_item_id') ?? '')
     const metros_lineares = Number(form.get('metros_lineares'))
+    // Valor por metro sugerido pro instalador nessa peça específica — decisão
+    // de 29/08: peças menores (pingadeira, soleira etc.) valem menos que o
+    // padrão do cadastro, então não é mais sempre funcionarios.valor_metro_linear.
+    // O gestor ainda pode ajustar no fechamento semanal antes de aprovar.
+    const valor_metro_linear_aplicado = Number(form.get('valor_metro_linear_aplicado'))
     const foto = form.get('foto')
 
     if (!funcionario_id || !agenda_event_id || !orcamento_item_id) {
@@ -33,13 +38,16 @@ export async function POST(req: NextRequest) {
     if (!Number.isFinite(metros_lineares) || metros_lineares <= 0) {
       return NextResponse.json({ error: 'Metro linear inválido' }, { status: 400 })
     }
+    if (!Number.isFinite(valor_metro_linear_aplicado) || valor_metro_linear_aplicado <= 0) {
+      return NextResponse.json({ error: 'Valor por metro inválido' }, { status: 400 })
+    }
     if (!(foto instanceof File) || foto.size === 0) {
       return NextResponse.json({ error: 'Foto obrigatória' }, { status: 400 })
     }
 
     const { data: funcionario, error: funcErr } = await supabase
       .from('funcionarios')
-      .select('id, valor_metro_linear')
+      .select('id')
       .eq('id', funcionario_id)
       .eq('marmoraria_id', marmoraria_id)
       .eq('cargo', 'instalador')
@@ -75,7 +83,7 @@ export async function POST(req: NextRequest) {
       .upload(fotoPath, Buffer.from(await foto.arrayBuffer()), { contentType: foto.type || 'image/jpeg' })
     if (uploadErr) throw uploadErr
 
-    const valor_calculado = metros_lineares * (funcionario.valor_metro_linear || 0)
+    const valor_calculado = metros_lineares * valor_metro_linear_aplicado
     const hoje = new Date().toISOString().split('T')[0]
 
     const { error: apontErr } = await supabase.from('producao_apontamentos').insert({
@@ -91,6 +99,7 @@ export async function POST(req: NextRequest) {
       status: 'pendente',
       foto_storage_path: fotoPath,
       valor_calculado,
+      valor_metro_linear_aplicado,
       is_retroativo: false,
     })
     if (apontErr) throw apontErr

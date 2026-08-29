@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const { data, error } = await supabase
       .from('funcionarios')
-      .select('id, nome')
+      .select('id, nome, valor_metro_linear')
       .eq('id', id)
       .eq('marmoraria_id', marmoraria_id)
       .eq('cargo', 'instalador')

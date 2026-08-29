@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const { data: apontamentos, error } = await supabase
       .from('producao_apontamentos')
-      .select('id, funcionario_id, orcamento_id, orcamento_item_id, quantidade, unidade, data, foto_storage_path, valor_calculado, obra_nome_avulso, obra_local_avulso, is_retroativo, funcionarios(id, nome)')
+      .select('id, funcionario_id, orcamento_id, orcamento_item_id, quantidade, unidade, data, foto_storage_path, valor_calculado, valor_metro_linear_aplicado, obra_nome_avulso, obra_local_avulso, is_retroativo, funcionarios(id, nome, valor_metro_linear)')
       .eq('marmoraria_id', marmoraria_id)
       .eq('etapa', 'instalacao')
       .eq('status', 'pendente')
@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
       data: a.data,
       metros_lineares: a.quantidade,
       valor_calculado: a.valor_calculado,
+      valor_metro_linear_aplicado: a.valor_metro_linear_aplicado,
       is_retroativo: a.is_retroativo,
       obra: a.is_retroativo
         ? { nome: a.obra_nome_avulso, local: a.obra_local_avulso }
