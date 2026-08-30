@@ -164,6 +164,133 @@ function RegistrarItemForm({ funcionarioId, agendaEventId, item, valorMetroLinea
   )
 }
 
+// Serviço avulso — obra que nunca vai ter orçamento no MarmoApp (obra
+// antiga, cliente atendido fora do sistema). Mesmo padrão visual do
+// RegistrarItemForm (metro + valor sugerido editável + foto), mas com
+// nome do cliente e local em texto livre em vez de um item de orçamento.
+function RegistrarAvulsoForm({ funcionarioId, valorMetroLinearPadrao }: {
+  funcionarioId: string
+  valorMetroLinearPadrao: number | null
+}) {
+  const [aberto, setAberto] = useState(false)
+  const [clienteNome, setClienteNome] = useState('')
+  const [local, setLocal] = useState('')
+  const [metros, setMetros] = useState('')
+  const [valorMetro, setValorMetro] = useState(() => valorMetroLinearPadrao != null ? String(valorMetroLinearPadrao) : '')
+  const [foto, setFoto] = useState<File | null>(null)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const [sucesso, setSucesso] = useState(false)
+
+  const metrosNum = parseFloat(metros.replace(',', '.'))
+  const valorMetroNum = parseFloat(valorMetro.replace(',', '.'))
+  const totalPreview = (metrosNum > 0 && valorMetroNum > 0) ? metrosNum * valorMetroNum : null
+
+  async function salvar() {
+    if (!clienteNome.trim()) { setErro('Informe o nome do cliente'); return }
+    if (!local.trim()) { setErro('Informe o local/referência da obra'); return }
+    if (!metrosNum || metrosNum <= 0) { setErro('Informe o metro linear'); return }
+    if (!valorMetroNum || valorMetroNum <= 0) { setErro('Informe o valor por metro'); return }
+    if (!foto) { setErro('A foto é obrigatória'); return }
+    setSalvando(true)
+    setErro('')
+    setSucesso(false)
+    try {
+      const fd = new FormData()
+      fd.set('funcionario_id', funcionarioId)
+      fd.set('obra_nome_avulso', clienteNome.trim())
+      fd.set('obra_local_avulso', local.trim())
+      fd.set('metros_lineares', String(metrosNum))
+      fd.set('valor_metro_linear_aplicado', String(valorMetroNum))
+      fd.set('foto', foto)
+      const res = await fetch('/api/portal-instalador/registrar-avulso', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao registrar')
+      setSucesso(true)
+      setClienteNome('')
+      setLocal('')
+      setMetros('')
+      setFoto(null)
+    } catch (e: unknown) {
+      setErro(e instanceof Error ? e.message : 'Erro ao registrar')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        onClick={() => { setAberto(true); setSucesso(false) }}
+        className="btn btn-outline btn-sm"
+        style={{ marginBottom: 20 }}
+      >
+        + Registrar serviço avulso (obra fora do sistema)
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 8, padding: 16, boxShadow: 'var(--shadow)', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontWeight: 700, fontSize: 14 }}>Serviço avulso (obra fora do sistema)</div>
+      <div style={{ fontSize: 12, color: 'var(--gray)', marginTop: -4, marginBottom: 4 }}>
+        Pra obras antigas ou clientes que não estão cadastrados no MarmoApp.
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Nome do cliente</label>
+        <input
+          type="text" placeholder="Ex: José da Silva"
+          value={clienteNome} onChange={e => { setClienteNome(e.target.value); setErro('') }}
+          className="form-input" style={{ marginTop: 4 }}
+        />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Local / referência da obra</label>
+        <input
+          type="text" placeholder="Ex: Rua das Flores, 123 — Itaquá"
+          value={local} onChange={e => { setLocal(e.target.value); setErro('') }}
+          className="form-input" style={{ marginTop: 4 }}
+        />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Metro linear</label>
+        <input
+          type="number" inputMode="decimal" step="0.01" placeholder="0.00"
+          value={metros} onChange={e => { setMetros(e.target.value); setErro('') }}
+          className="form-input" style={{ marginTop: 4 }}
+        />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Valor sugerido por metro (R$)</label>
+        <input
+          type="number" inputMode="decimal" step="0.01" placeholder="0.00"
+          value={valorMetro} onChange={e => { setValorMetro(e.target.value); setErro('') }}
+          className="form-input" style={{ marginTop: 4 }}
+        />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase' }}>Foto da instalação *</label>
+        <input
+          type="file" accept="image/*" capture="environment"
+          onChange={e => { setFoto(e.target.files?.[0] ?? null); setErro('') }}
+          style={{ marginTop: 4, display: 'block', fontSize: 13 }}
+        />
+      </div>
+      {totalPreview != null && (
+        <div style={{ fontSize: 13, fontWeight: 600 }}>Valor sugerido: {fmtValor(totalPreview)}</div>
+      )}
+      {sucesso && <div style={{ color: '#27AE60', fontSize: 13, fontWeight: 600 }}>✓ Registrado! Vai aparecer no fechamento semanal do gestor.</div>}
+      {erro && <div style={{ color: 'var(--red)', fontSize: 13 }}>{erro}</div>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn btn-outline btn-sm" onClick={() => setAberto(false)} disabled={salvando}>Fechar</button>
+        <button className="btn btn-gold btn-sm" onClick={salvar} disabled={salvando}>
+          {salvando ? 'Enviando...' : '✓ Confirmar registro'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, valorMetroLinearPadrao, onRegistrado }: {
   item: ItemObra
   funcionarioId: string
@@ -350,9 +477,11 @@ export default function PortalInstaladorObrasPage() {
       <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, marginBottom: 4 }}>
         Olá, {instalador?.nome ?? '…'}
       </h1>
-      <p style={{ color: 'var(--gray)', fontSize: 14, marginBottom: 20 }}>
+      <p style={{ color: 'var(--gray)', fontSize: 14, marginBottom: 12 }}>
         Suas obras atribuídas
       </p>
+
+      <RegistrarAvulsoForm funcionarioId={id} valorMetroLinearPadrao={instalador?.valor_metro_linear ?? null} />
 
       {obras === null && <div style={{ color: 'var(--gray)' }}>Carregando…</div>}
       {obras?.length === 0 && (

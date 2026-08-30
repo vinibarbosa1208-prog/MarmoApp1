@@ -637,7 +637,7 @@ function AbaAprovacoes() {
                       <td className="text-sm text-gray">{fmtDate(p.data)}</td>
                       <td className="text-sm">
                         {p.is_retroativo
-                          ? <>{p.obra.nome} <span style={{ color: 'var(--gray)' }}>({p.obra.local})</span> <span className="badge badge-pending" style={{ fontSize: 10 }}>Retroativa</span></>
+                          ? <>{p.obra.nome} <span style={{ color: 'var(--gray)' }}>({p.obra.local})</span> <span className="badge badge-pending" style={{ fontSize: 10 }}>Avulsa (sem orçamento)</span></>
                           : (p.obra.titulo || p.obra.numero_os || '—')}
                       </td>
                       <td className="text-sm text-gray">{p.item_descricao ?? '—'}</td>
