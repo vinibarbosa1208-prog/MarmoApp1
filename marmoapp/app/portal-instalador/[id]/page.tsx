@@ -8,6 +8,9 @@ interface Instalador {
   id: string
   nome: string
   valor_metro_linear: number | null
+  // Fase 12: valores padronizados por tipo de peça (R$/metro linear) —
+  // pré-preenche por peça; sem entrada específica cai no valor_metro_linear.
+  valores_peca: Record<string, number>
 }
 
 interface Cliente {
@@ -291,17 +294,21 @@ function RegistrarAvulsoForm({ funcionarioId, valorMetroLinearPadrao }: {
   )
 }
 
-function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, valorMetroLinearPadrao, onRegistrado }: {
+function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, valorMetroLinear, valoresPeca, onRegistrado }: {
   item: ItemObra
   funcionarioId: string
   agendaEventId: string
   obraStatus: Obra['status']
-  valorMetroLinearPadrao: number | null
+  valorMetroLinear: number | null
+  valoresPeca: Record<string, number>
   onRegistrado: (valorCalculado: number, obraConcluida: boolean) => void
 }) {
   const [aberto, setAberto] = useState(false)
   const [valorRegistrado, setValorRegistrado] = useState<number | null>(null)
   const temDesenho = !!(item.desenho_tipo && item.desenho_params)
+  // Fase 12: valor específico do instalador pra esse tipo de peça, se ele
+  // tiver cadastrado; senão cai no valor_metro_linear geral do cadastro.
+  const valorPadraoDaPeca = (item.tipo_peca ? valoresPeca[item.tipo_peca] : undefined) ?? valorMetroLinear
 
   return (
     <div style={{ background: '#fff', borderRadius: 8, padding: 14, boxShadow: 'var(--shadow)' }}>
@@ -342,7 +349,7 @@ function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, valorMetroLi
           funcionarioId={funcionarioId}
           agendaEventId={agendaEventId}
           item={item}
-          valorMetroLinearPadrao={valorMetroLinearPadrao}
+          valorMetroLinearPadrao={valorPadraoDaPeca}
           onRegistrado={(valor, obraConcluida) => { setValorRegistrado(valor); onRegistrado(valor, obraConcluida) }}
         />
       )}
@@ -350,10 +357,11 @@ function ItemCard({ item, funcionarioId, agendaEventId, obraStatus, valorMetroLi
   )
 }
 
-function ObraCard({ obra, funcionarioId, valorMetroLinearPadrao, onObraAtualizada }: {
+function ObraCard({ obra, funcionarioId, valorMetroLinear, valoresPeca, onObraAtualizada }: {
   obra: Obra
   funcionarioId: string
-  valorMetroLinearPadrao: number | null
+  valorMetroLinear: number | null
+  valoresPeca: Record<string, number>
   onObraAtualizada: (obraId: string, itemId: string, obraConcluida: boolean) => void
 }) {
   const c = obra.cliente
@@ -411,7 +419,8 @@ function ObraCard({ obra, funcionarioId, valorMetroLinearPadrao, onObraAtualizad
                 funcionarioId={funcionarioId}
                 agendaEventId={obra.id}
                 obraStatus={obra.status}
-                valorMetroLinearPadrao={valorMetroLinearPadrao}
+                valorMetroLinear={valorMetroLinear}
+                valoresPeca={valoresPeca}
                 onRegistrado={(_valor, obraConcluida) => onObraAtualizada(obra.id, i.id, obraConcluida)}
               />
             ))}
@@ -494,7 +503,8 @@ export default function PortalInstaladorObrasPage() {
           key={o.id}
           obra={o}
           funcionarioId={id}
-          valorMetroLinearPadrao={instalador?.valor_metro_linear ?? null}
+          valorMetroLinear={instalador?.valor_metro_linear ?? null}
+          valoresPeca={instalador?.valores_peca ?? {}}
           onObraAtualizada={onObraAtualizada}
         />
       ))}

@@ -6,6 +6,12 @@ import { useApp } from '@/contexts/AppContext'
 import type { AgendaEventType } from '@/lib/agenda/types'
 import type { ProjectCostType } from '@/lib/projetos/types'
 import type { ProjectCustomStatus, ClientCustomField, FieldType } from '@/lib/configuracoes/types'
+import { PECA_LABELS } from '@/components/orcamento/SeletorPeca'
+
+// ilha_cozinha é usada em orçamentos reais mas não tem rótulo no
+// PECA_LABELS do seletor (nunca virou uma opção lá) — fallback aqui pra
+// não sumir da lista de valores por peça do instalador.
+const PECA_LABELS_COM_FALLBACK: Record<string, string> = { ...PECA_LABELS, ilha_cozinha: 'Ilha de Cozinha' }
 
 // ── Funcionário type ──────────────────────────────────────────
 interface Funcionario {
@@ -330,7 +336,21 @@ function FuncionarioModal({
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
+  // Fase 12: valores padronizados por tipo de peça (R$/metro linear) --
+  // só existe pra instalador já cadastrado (precisa do id pra salvar).
+  const [valoresPeca, setValoresPeca] = useState<Record<string, string>>({})
+
   const isInstalador = form.cargo === 'instalador'
+
+  useEffect(() => {
+    if (!initial.id || !isInstalador) return
+    apiFetch(`/api/funcionarios/${initial.id}/valores-peca`)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { tipo_peca: string; valor_metro_linear: number }[]) => {
+        setValoresPeca(Object.fromEntries(data.map(v => [v.tipo_peca, String(v.valor_metro_linear)])))
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.id])
 
   async function handleSave() {
     if (!form.nome.trim()) { setErr('Nome é obrigatório'); return }
@@ -345,6 +365,18 @@ function FuncionarioModal({
         observacoes: form.observacoes.trim() || null,
         ativo: form.ativo,
       })
+
+      if (initial.id && isInstalador) {
+        const valores = Object.entries(valoresPeca)
+          .filter(([, v]) => v.trim() !== '' && parseFloat(v) > 0)
+          .map(([tipo_peca, v]) => ({ tipo_peca, valor_metro_linear: parseFloat(v) }))
+        const res = await apiFetch(`/api/funcionarios/${initial.id}/valores-peca`, {
+          method: 'PUT',
+          body: JSON.stringify({ valores }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao salvar valores por peça')
+      }
+
       onClose()
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : 'Erro ao salvar')
@@ -403,6 +435,27 @@ function FuncionarioModal({
             <label className="form-label">OBSERVAÇÕES</label>
             <input className="form-input" placeholder="Anotações..." value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />
           </div>
+          {initial.id && isInstalador && (
+            <div className="form-group">
+              <label className="form-label">VALORES POR TIPO DE PEÇA (R$/METRO LINEAR)</label>
+              <div style={{ fontSize: 12, color: 'var(--gray)', marginTop: -4, marginBottom: 8 }}>
+                Opcional — pré-preenche o valor no portal do instalador pra essa peça específica. Sem preencher, cai no valor por metro linear geral acima.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+                {Object.entries(PECA_LABELS_COM_FALLBACK).map(([tipo, label]) => (
+                  <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <label style={{ fontSize: 12, color: 'var(--gray)', flex: 1 }}>{label}</label>
+                    <input
+                      className="form-input" type="number" step="0.01" placeholder="—"
+                      style={{ width: 90 }}
+                      value={valoresPeca[tipo] ?? ''}
+                      onChange={e => setValoresPeca(v => ({ ...v, [tipo]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {initial.id && (
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <input type="checkbox" id="func-ativo" checked={form.ativo} onChange={e => setForm(f => ({ ...f, ativo: e.target.checked }))} style={{ width: 'auto' }} />
