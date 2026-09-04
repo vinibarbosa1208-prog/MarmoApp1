@@ -324,7 +324,135 @@ function ModalNovoPedido({ insumos, onClose, onSaved }: { insumos: Insumo[]; onC
   )
 }
 
-// ─── Aba Estoque ──────────────────────────────────────────────────────────────
+// ─── Modal: Resetar Insumo (individual) ────────────────────────────────────
+
+function ModalResetInsumo({ insumo, onClose, onSaved }: { insumo: Insumo; onClose: () => void; onSaved: (novoEstoque: number, alerta: boolean, retiradasRemovidas: number) => void }) {
+  const [novaContagem, setNovaContagem] = useState(String(insumo.estoque_atual))
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState('')
+
+  async function confirmar() {
+    const valor = parseFloat(novaContagem)
+    if (novaContagem === '' || Number.isNaN(valor) || valor < 0) { setErro('Informe a nova contagem'); return }
+    setLoading(true)
+    const res = await apiFetch(`/api/insumos/${insumo.id}/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ novo_estoque: valor }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErro(data.error || 'Erro ao resetar'); setLoading(false); return }
+    onSaved(data.estoque_atual, data.alerta_estoque, data.retiradas_removidas || 0)
+    onClose()
+  }
+
+  return (
+    <div className="modal-overlay open" style={{ zIndex: 9000 }}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">Resetar Contagem — {insumo.nome}</div>
+          <button className="btn-close" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>
+            ⚠️ Isso apaga todo o histórico de retiradas deste insumo (não afeta pedidos de compra). O estoque mínimo continua o mesmo, então o alerta de estoque baixo segue funcionando.
+          </div>
+          <div className="form-group">
+            <label className="form-label">NOVA CONTAGEM ({insumo.unidade}) *</label>
+            <input className="form-input" type="number" step="0.01" placeholder="0" value={novaContagem} onChange={e => setNovaContagem(e.target.value)} autoFocus />
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--gray)' }}>
+            Estoque atual no sistema: <strong>{insumo.estoque_atual} {insumo.unidade}</strong>
+          </div>
+          {erro && <div style={{ color: 'var(--red)', fontSize: 13, marginTop: 8 }}>{erro}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-danger" onClick={confirmar} disabled={loading}>{loading ? 'Resetando...' : '🔄 Confirmar reset'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Modal: Resetar Contagem Geral ────────────────────────────────────────
+
+function ModalResetGeral({ insumos, onClose, onSaved }: { insumos: Insumo[]; onClose: () => void; onSaved: (retiradasRemovidas: number) => void }) {
+  const [contagens, setContagens] = useState<Record<string, string>>(() =>
+    Object.fromEntries(insumos.map(i => [i.id, String(i.estoque_atual)]))
+  )
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState('')
+
+  function up(id: string, v: string) { setContagens(c => ({ ...c, [id]: v })) }
+
+  async function confirmar() {
+    const entradas = Object.entries(contagens)
+    for (const [, v] of entradas) {
+      if (v === '' || Number.isNaN(parseFloat(v)) || parseFloat(v) < 0) {
+        setErro('Preencha a nova contagem de todos os insumos com números válidos')
+        return
+      }
+    }
+    setLoading(true)
+    const res = await apiFetch('/api/insumos/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contagens: entradas.map(([insumo_id, v]) => ({ insumo_id, novo_estoque: parseFloat(v) })),
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErro(data.error || 'Erro ao resetar'); setLoading(false); return }
+    onSaved(data.retiradas_removidas || 0)
+    onClose()
+  }
+
+  return (
+    <div className="modal-overlay open" style={{ zIndex: 9000 }}>
+      <div className="modal" style={{ maxWidth: 640 }}>
+        <div className="modal-header">
+          <div className="modal-title">Resetar Contagem de Todos os Insumos</div>
+          <button className="btn-close" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--red)', marginBottom: 16 }}>
+            ⚠️ Isso apaga TODO o histórico de retiradas de TODOS os insumos (pedidos de compra não são afetados). Confira a contagem física de cada item abaixo antes de confirmar — essa ação não pode ser desfeita.
+          </div>
+          <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid var(--card-border)', borderRadius: 8 }}>
+            <table>
+              <thead>
+                <tr><th>Insumo</th><th>Estoque atual</th><th style={{ width: 160 }}>Nova contagem</th></tr>
+              </thead>
+              <tbody>
+                {insumos.map(i => (
+                  <tr key={i.id}>
+                    <td style={{ fontWeight: 500 }}>{i.nome}</td>
+                    <td className="text-sm">{i.estoque_atual} {i.unidade}</td>
+                    <td>
+                      <input className="form-input" type="number" step="0.01" value={contagens[i.id] ?? ''} onChange={e => up(i.id, e.target.value)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {erro && <div style={{ color: 'var(--red)', fontSize: 13, marginTop: 8 }}>{erro}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-danger" onClick={confirmar} disabled={loading}>{loading ? 'Resetando...' : '🔄 Confirmar reset geral'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Aba Estoque ──────────────────────────────────────────────────────────────────────
 
 function AbaEstoque() {
   const { toast } = useApp()
@@ -333,6 +461,8 @@ function AbaEstoque() {
   const [query, setQuery] = useState('')
   const [modalNovo, setModalNovo] = useState(false)
   const [retiradaTarget, setRetiradaTarget] = useState<Insumo | null>(null)
+  const [resetTarget, setResetTarget] = useState<Insumo | null>(null)
+  const [modalResetGeral, setModalResetGeral] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -383,6 +513,7 @@ function AbaEstoque() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <input className="form-input" style={{ width: 200, paddingLeft: 32 }} placeholder="Buscar..." value={query} onChange={e => setQuery(e.target.value)} />
             </div>
+            <button className="btn btn-outline" onClick={() => setModalResetGeral(true)}>♻️ Resetar contagem</button>
             <button className="btn btn-gold" onClick={() => setModalNovo(true)}>+ Novo insumo</button>
           </div>
         </div>
@@ -415,6 +546,9 @@ function AbaEstoque() {
                       <button className="btn btn-ghost btn-sm" onClick={() => setRetiradaTarget(i)} title="Registrar retirada">
                         📤 Retirar
                       </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setResetTarget(i)} title="Resetar contagem deste insumo">
+                        🔄 Resetar
+                      </button>
                       <button className="btn btn-ghost btn-sm btn-icon" onClick={() => excluir(i.id)}>🗑️</button>
                     </div>
                   </td>
@@ -442,6 +576,31 @@ function AbaEstoque() {
               : i
             ))
             toast('Retirada registrada', 'ok2')
+          }}
+        />
+      )}
+
+      {resetTarget && (
+        <ModalResetInsumo
+          insumo={resetTarget}
+          onClose={() => setResetTarget(null)}
+          onSaved={(novoEstoque, alerta, retiradasRemovidas) => {
+            setInsumos(ins => ins.map(i => i.id === resetTarget.id
+              ? { ...i, estoque_atual: novoEstoque, alerta_estoque: alerta }
+              : i
+            ))
+            toast(`Contagem resetada — ${retiradasRemovidas} retirada(s) apagada(s)`, 'ok2')
+          }}
+        />
+      )}
+
+      {modalResetGeral && (
+        <ModalResetGeral
+          insumos={insumos}
+          onClose={() => setModalResetGeral(false)}
+          onSaved={(retiradasRemovidas) => {
+            load()
+            toast(`Contagem geral resetada — ${retiradasRemovidas} retirada(s) apagada(s)`, 'ok2')
           }}
         />
       )}
