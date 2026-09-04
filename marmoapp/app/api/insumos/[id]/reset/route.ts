@@ -63,6 +63,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       retiradas_removidas: removidas?.length || 0,
     })
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Erro interno' }, { status: 500 })
+    // Erros do Supabase/Postgrest (ex: permissao negada por falta de GRANT,
+    // violacao de constraint) nao sao instancias de Error do JS -- sem isso
+    // a causa real ficava escondida atras de "Erro interno" generico.
+    const msg = e instanceof Error
+      ? e.message
+      : (e && typeof e === 'object' && 'message' in e && typeof (e as { message?: unknown }).message === 'string')
+        ? (e as { message: string }).message
+        : 'Erro interno'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
