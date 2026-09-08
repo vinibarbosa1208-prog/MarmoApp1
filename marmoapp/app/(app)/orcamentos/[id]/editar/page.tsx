@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
-import { fmt } from '@/lib/utils'
+import { fmt, authErrorMessage, parseNumBR, parseIntBR } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import SeletorPeca, { getLateraisDaPeca, PECA_LABELS, type SeletorPecaState } from '@/components/orcamento/SeletorPeca'
 import AcabamentosLaterais from '@/components/orcamento/AcabamentosLaterais'
@@ -308,6 +308,9 @@ export default function EditarOrcamentoPage() {
   const [novoItem, setNovoItem] = useState<ItemForm>({ ...ITEM_DEFAULTS })
   const [servicoIdSel, setServicodeIdSel] = useState('')
   const [editandoIdx, setEditandoIdx] = useState<number | null>(null)
+  // Lote de peças do mesmo desenho (ex: 3 soleiras de tamanhos diferentes):
+  // cada peça vira um item independente, com medida/acabamento/preço próprios.
+  const [pecaAtual, setPecaAtual] = useState(1)
   // Alteração em lote
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set())
   const [lote, setLote] = useState({ novoMaterial: '', custo_m2: '', markup: '', preco_unitario: '' })
@@ -389,15 +392,53 @@ export default function EditarOrcamentoPage() {
     setMostrarErros(true)
     if (!novoItem.descricao) { toast('Descrição do item é obrigatória', 'err'); return }
     if (!itemValido) { toast('Preencha todos os campos obrigatórios do item', 'err'); return }
+
     if (editandoIdx !== null) {
       setItens(prev => prev.map((item, i) => i === editandoIdx ? { ...novoItem } : item))
       setEditandoIdx(null)
-    } else {
-      setItens(prev => [...prev, { ...novoItem }])
+      setNovoItem({ ...ITEM_DEFAULTS })
+      setServicodeIdSel('')
+      setMostrarErros(false)
+      setPecaAtual(1)
+      return
     }
+
+    // Peças de um desenho com quantidade > 1: cada peça vira um item
+    // independente, com sua própria medida/acabamento/preço.
+    const pecasTotal = isMaterialComPeca ? Math.max(1, Math.round(novoItem.quantidade || 1)) : 1
+
+    if (pecasTotal > 1) {
+      const descBase = novoItem.descricao.replace(/\s*\(\d+\/\d+\)$/, '')
+      const itemPeca: ItemForm = { ...novoItem, descricao: `${descBase} (${pecaAtual}/${pecasTotal})`, quantidade: 1 }
+      setItens(prev => [...prev, itemPeca])
+
+      if (pecaAtual < pecasTotal) {
+        setNovoItem({
+          ...ITEM_DEFAULTS,
+          tipo: novoItem.tipo,
+          tipo_peca: novoItem.tipo_peca,
+          descricao: descBase,
+          quantidade: pecasTotal,
+        })
+        setPecaAtual(prev => prev + 1)
+        setMostrarErros(false)
+        toast(`Peça ${pecaAtual}/${pecasTotal} adicionada — preencha a próxima`, 'ok2')
+        return
+      }
+
+      setPecaAtual(1)
+      setNovoItem({ ...ITEM_DEFAULTS })
+      setServicodeIdSel('')
+      setMostrarErros(false)
+      toast(`${pecasTotal} peças adicionadas ao orçamento`, 'ok2')
+      return
+    }
+
+    setItens(prev => [...prev, { ...novoItem }])
     setNovoItem({ ...ITEM_DEFAULTS })
     setServicodeIdSel('')
     setMostrarErros(false)
+    setPecaAtual(1)
   }
 
   function editarItem(idx: number) {
@@ -413,6 +454,7 @@ export default function EditarOrcamentoPage() {
     setEditandoIdx(null)
     setServicodeIdSel('')
     setMostrarErros(false)
+    setPecaAtual(1)
   }
 
   function removerItem(idx: number) {
@@ -462,9 +504,9 @@ export default function EditarOrcamentoPage() {
       if (!selecionados.has(i)) return item
       const updates: Partial<ItemForm> = {}
       if (lote.novoMaterial.trim()) updates.descricao = lote.novoMaterial.trim()
-      if (lote.custo_m2 !== '') updates.custo_m2 = parseFloat(lote.custo_m2) || 0
-      if (lote.markup !== '') updates.markup = parseFloat(lote.markup) || 1
-      if (lote.preco_unitario !== '') updates.preco_unitario = parseFloat(lote.preco_unitario) || 0
+      if (lote.custo_m2 !== '') updates.custo_m2 = parseNumBR(lote.custo_m2) || 0
+      if (lote.markup !== '') updates.markup = parseNumBR(lote.markup) || 1
+      if (lote.preco_unitario !== '') updates.preco_unitario = parseNumBR(lote.preco_unitario) || 0
       // Recalcular preço se custo+markup informados mas preço não
       if ((lote.custo_m2 !== '' || lote.markup !== '') && lote.preco_unitario === '') {
         const custo = updates.custo_m2 ?? item.custo_m2
@@ -498,8 +540,8 @@ export default function EditarOrcamentoPage() {
   const servicoUnit = servicoIdSel ? (servicos.find(s => s.id === servicoIdSel)?.unidade || '') : ''
 
   const subtotal = itens.reduce((s, i) => s + calcTotal(i), 0)
-  const maoObra = parseFloat(form.mao_obra) || 0
-  const desconto = parseFloat(form.desconto_rs) || 0
+  const maoObra = parseNumBR(form.mao_obra) || 0
+  const desconto = parseNumBR(form.desconto_rs) || 0
   const totalFinal = subtotal + maoObra - desconto
   const descontoExcede = desconto > 0 && desconto > subtotal + maoObra
 
@@ -592,7 +634,7 @@ export default function EditarOrcamentoPage() {
       toast('Orçamento atualizado!', 'ok2')
       router.push('/orcamentos/' + orcId)
     } catch (e: unknown) {
-      toast(e instanceof Error ? e.message : 'Erro ao salvar', 'err')
+      toast(authErrorMessage(e, 'Erro ao salvar'), 'err')
     } finally {
       setSaving(false)
     }
@@ -722,16 +764,16 @@ export default function EditarOrcamentoPage() {
                         <div className="form-row form-row-2">
                           <div className="form-group">
                             <label className="form-label">LARGURA (m)</label>
-                            <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 2.00"
+                            <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="Ex: 2.00"
                               value={novoItem.largura || ''}
-                              onChange={e => upItem({ largura: parseFloat(e.target.value) || 0 })} />
+                              onChange={e => upItem({ largura: parseNumBR(e.target.value) || 0 })} />
                           </div>
                           {novoItem.tipo_peca !== 'escada' && (
                             <div className="form-group">
                               <label className="form-label">PROFUNDIDADE (m)</label>
-                              <input className="form-input" type="number" min="0" step="0.01" placeholder="Ex: 0.60"
+                              <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="Ex: 0.60"
                                 value={novoItem.altura || ''}
-                                onChange={e => upItem({ altura: parseFloat(e.target.value) || 0 })} />
+                                onChange={e => upItem({ altura: parseNumBR(e.target.value) || 0 })} />
                             </div>
                           )}
                         </div>
@@ -849,36 +891,43 @@ export default function EditarOrcamentoPage() {
                 {isMaterialComPeca ? (
                   <>
                     <div className="form-group" style={{ marginTop: 10 }}>
-                      <label className="form-label">QUANTIDADE</label>
-                      <input className="form-input" type="number" step="0.01" value={novoItem.quantidade}
-                        onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
+                      <label className="form-label">QUANTIDADE DE PEÇAS</label>
+                      <input className="form-input" type="text" inputMode="numeric" min="1" step="1" value={novoItem.quantidade}
+                        onChange={e => upItem({ quantidade: parseIntBR(e.target.value) || 1 })} />
+                      {novoItem.quantidade > 1 && (
+                        <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, marginTop: 6 }}>
+                          Peça {pecaAtual} de {Math.max(1, Math.round(novoItem.quantidade))} — preencha a medida
+                          desta peça e clique em &quot;Salvar peça e continuar&quot;. Cada peça pode ter medida,
+                          acabamento e preço diferentes; as já salvas aparecem na lista abaixo.
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
                       <div className="form-group">
                         <label className="form-label">CUSTO DE COMPRA (R$/m²)</label>
-                        <input className="form-input" type="number" min="0" step="0.01" placeholder="0,00"
+                        <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="0,00"
                           value={novoItem.custo_m2 || ''}
                           onChange={e => {
-                            const custo = parseFloat(e.target.value) || 0
+                            const custo = parseNumBR(e.target.value) || 0
                             upItem({ custo_m2: custo, preco_unitario: custo * (novoItem.markup || 3) })
                           }} />
                       </div>
                       <div className="form-group">
                         <label className="form-label">FATOR (×)</label>
-                        <input className="form-input" type="number" min="0.1" step="0.5" placeholder="3"
+                        <input className="form-input" type="text" inputMode="decimal" min="0.1" step="0.5" placeholder="3"
                           value={novoItem.markup || ''}
                           onChange={e => {
-                            const markup = parseFloat(e.target.value) || 1
+                            const markup = parseNumBR(e.target.value) || 1
                             upItem({ markup, preco_unitario: (novoItem.custo_m2 || 0) * markup })
                           }} />
                       </div>
                       <div className="form-group">
                         <label className="form-label">PREÇO DE VENDA (R$/m²)</label>
-                        <input className="form-input" type="number" min="0" step="0.01" placeholder="0,00"
+                        <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="0,00"
                           value={novoItem.preco_unitario || ''}
                           style={{ color: 'var(--gold)', fontWeight: 700 }}
                           onChange={e => {
-                            const venda = parseFloat(e.target.value) || 0
+                            const venda = parseNumBR(e.target.value) || 0
                             const markup = novoItem.custo_m2 > 0
                               ? Math.round((venda / novoItem.custo_m2) * 100) / 100
                               : novoItem.markup
@@ -891,13 +940,13 @@ export default function EditarOrcamentoPage() {
                   <div className="form-row form-row-2" style={{ marginTop: 10 }}>
                     <div className="form-group">
                       <label className="form-label">{novoItem.tipo === 'servico' && servicoUnit ? `QUANTIDADE (${servicoUnit})` : 'QUANTIDADE'}</label>
-                      <input className="form-input" type="number" step="0.01" value={novoItem.quantidade}
-                        onChange={e => upItem({ quantidade: parseFloat(e.target.value) || 0 })} />
+                      <input className="form-input" type="text" inputMode="decimal" step="0.01" value={novoItem.quantidade}
+                        onChange={e => upItem({ quantidade: parseNumBR(e.target.value) || 0 })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">{calcArea(novoItem) > 0 ? 'PREÇO POR M² (R$)' : 'PREÇO/UN (R$)'}</label>
-                      <input className="form-input" type="number" step="0.01" value={novoItem.preco_unitario}
-                        onChange={e => upItem({ preco_unitario: parseFloat(e.target.value) || 0 })} />
+                      <input className="form-input" type="text" inputMode="decimal" step="0.01" value={novoItem.preco_unitario}
+                        onChange={e => upItem({ preco_unitario: parseNumBR(e.target.value) || 0 })} />
                     </div>
                   </div>
                 )}
@@ -910,7 +959,16 @@ export default function EditarOrcamentoPage() {
                     )}
                     <button className="btn btn-gold" onClick={adicionarItem}
                       disabled={mostrarErros && !itemValido}>
-                      {editandoIdx !== null ? '💾 Salvar Alterações' : '+ Adicionar'}
+                      {(() => {
+                        if (editandoIdx !== null) return '💾 Salvar Alterações'
+                        const pecasTotal = isMaterialComPeca ? Math.max(1, Math.round(novoItem.quantidade || 1)) : 1
+                        if (pecasTotal > 1) {
+                          return pecaAtual < pecasTotal
+                            ? `💾 Salvar peça ${pecaAtual}/${pecasTotal} e continuar`
+                            : `+ Salvar última peça (${pecasTotal}/${pecasTotal})`
+                        }
+                        return '+ Adicionar'
+                      })()}
                     </button>
                   </div>
                 </div>
@@ -1017,7 +1075,7 @@ export default function EditarOrcamentoPage() {
                   />
                   <input
                     placeholder="Custo R$/m²"
-                    type="number"
+                    type="text" inputMode="decimal"
                     min="0"
                     step="0.01"
                     value={lote.custo_m2}
@@ -1026,7 +1084,7 @@ export default function EditarOrcamentoPage() {
                   />
                   <input
                     placeholder="Fator (×)"
-                    type="number"
+                    type="text" inputMode="decimal"
                     min="0.1"
                     step="0.5"
                     value={lote.markup}
@@ -1035,7 +1093,7 @@ export default function EditarOrcamentoPage() {
                   />
                   <input
                     placeholder="Preço venda"
-                    type="number"
+                    type="text" inputMode="decimal"
                     min="0"
                     step="0.01"
                     value={lote.preco_unitario}
@@ -1066,11 +1124,11 @@ export default function EditarOrcamentoPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">MÃO DE OBRA (R$)</label>
-                <input className="form-input" type="number" step="0.01" value={form.mao_obra} onChange={e => up('mao_obra', e.target.value)} />
+                <input className="form-input" type="text" inputMode="decimal" step="0.01" value={form.mao_obra} onChange={e => up('mao_obra', e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">DESCONTO (R$)</label>
-                <input className="form-input" type="number" min="0" step="0.01" value={form.desconto_rs} onChange={e => up('desconto_rs', e.target.value)} />
+                <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" value={form.desconto_rs} onChange={e => up('desconto_rs', e.target.value)} />
                 {descontoExcede && (
                   <p style={{ color: '#c0392b', fontSize: 11, marginTop: 3 }}>
                     Desconto não pode ser maior que o total.

@@ -1,5 +1,23 @@
 import type { Orcamento, OrcamentoItem } from './types'
 
+// Campos de medida/preço do orçamento aceitam vírgula OU ponto como
+// separador decimal (input type="text" + inputMode="decimal", não
+// type="number" — o número nativo do navegador rejeita vírgula conforme o
+// idioma do sistema e o campo simplesmente não preenche).
+export function parseNumBR(str: string | number | null | undefined): number {
+  if (str === null || str === undefined) return 0
+  if (typeof str === 'number') return isNaN(str) ? 0 : str
+  const n = parseFloat(str.replace(',', '.').trim())
+  return isNaN(n) ? 0 : n
+}
+
+export function parseIntBR(str: string | number | null | undefined): number {
+  if (str === null || str === undefined) return 0
+  if (typeof str === 'number') return isNaN(str) ? 0 : Math.round(str)
+  const n = parseInt(str.replace(',', '.').trim(), 10)
+  return isNaN(n) ? 0 : n
+}
+
 // Wrapper seguro para operações Supabase: timeout de 12s + garante setLoading(false) via finally
 type SbResult = { data: any; error: any }
 export async function sbSave(
@@ -13,6 +31,20 @@ export async function sbSave(
     )
   )
   return Promise.race([operation as Promise<SbResult>, timeout])
+}
+
+// Erros de RLS/JWT expirado (ex: sessão caiu durante a edição) chegam como
+// 401/403 ou código do Postgrest — a mensagem crua confunde o usuário, então
+// trocamos por uma orientação clara pra recarregar e renovar a sessão.
+export function authErrorMessage(err: any, fallback = 'Erro ao salvar. Tente novamente.'): string {
+  const isAuthError =
+    err?.code === 'PGRST301' ||
+    err?.code === '42501' ||
+    err?.status === 401 ||
+    /jwt|token/i.test(err?.message || '')
+  return isAuthError
+    ? 'Sua sessão expirou. Recarregue a página e faça login novamente.'
+    : (err?.message || err?.details || fallback)
 }
 
 export function fmt(v: number | string | undefined | null): string {

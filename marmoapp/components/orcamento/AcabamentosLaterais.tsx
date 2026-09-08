@@ -1,5 +1,7 @@
 'use client'
 
+import { parseIntBR } from '@/lib/utils'
+
 import { getLateraisDaPeca } from './SeletorPeca'
 
 export const ACABAMENTO_LABELS: Record<string, string> = {
@@ -170,11 +172,11 @@ export default function AcabamentosLaterais({
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Raio (mm):</label>
                   <input
                     className="form-input"
-                    type="number"
+                    type="text" inputMode="decimal"
                     min="1"
                     step="1"
                     value={raio}
-                    onChange={e => onRaioChange(lateral, parseInt(e.target.value) || 20)}
+                    onChange={e => onRaioChange(lateral, parseIntBR(e.target.value) || 20)}
                     style={{ width: 70 }}
                   />
                 </div>
@@ -185,11 +187,11 @@ export default function AcabamentosLaterais({
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Altura (cm):</label>
                   <input
                     className="form-input"
-                    type="number"
+                    type="text" inputMode="decimal"
                     min="1"
                     step="1"
                     value={Math.round(((dadosExtras[`altura_frontao_${lateral}`] as number) || 0.10) * 100)}
-                    onChange={e => onLateralExtrasChange(lateral, 'altura_frontao', (parseInt(e.target.value) || 10) / 100)}
+                    onChange={e => onLateralExtrasChange(lateral, 'altura_frontao', (parseIntBR(e.target.value) || 10) / 100)}
                     style={{ width: 70 }}
                   />
                 </div>
@@ -213,11 +215,11 @@ export default function AcabamentosLaterais({
                       <>
                         <input
                           className="form-input"
-                          type="number"
+                          type="text" inputMode="decimal"
                           min="1"
                           step="1"
                           value={Math.round(((dadosExtras[`altura_saia_${lateral}`] as number) || 0.10) * 100)}
-                          onChange={e => onLateralExtrasChange(lateral, 'altura_saia', (parseInt(e.target.value) || 10) / 100)}
+                          onChange={e => onLateralExtrasChange(lateral, 'altura_saia', (parseIntBR(e.target.value) || 10) / 100)}
                           style={{ width: 60 }}
                         />
                         <span style={{ fontSize: 11, color: 'var(--gray)' }}>cm</span>

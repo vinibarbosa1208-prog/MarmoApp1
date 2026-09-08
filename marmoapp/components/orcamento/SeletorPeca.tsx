@@ -1,5 +1,7 @@
 'use client'
 
+import { parseNumBR, parseIntBR } from '@/lib/utils'
+
 export type TipoPeca =
   | 'bancada_simples'
   | 'escada' | 'soleira' | 'nicho'
@@ -114,12 +116,12 @@ function LadoConfig({
         <div style={{ marginTop: 6 }}>
           <input
             className="form-input"
-            type="number"
+            type="text" inputMode="decimal"
             min="1"
             step="0.1"
             placeholder="Altura da saia (cm)"
             value={(dados_extras[`altura_saia_${lado}`] as number) || ''}
-            onChange={e => setExtra(`altura_saia_${lado}`, parseFloat(e.target.value) || 0)}
+            onChange={e => setExtra(`altura_saia_${lado}`, parseNumBR(e.target.value) || 0)}
           />
           {showErrors && !((dados_extras[`altura_saia_${lado}`] as number) > 0) && (
             <Err msg="Informe a altura da saia." />
@@ -130,12 +132,12 @@ function LadoConfig({
         <div style={{ marginTop: 6 }}>
           <input
             className="form-input"
-            type="number"
+            type="text" inputMode="decimal"
             min="1"
             step="0.1"
             placeholder="Altura do frontão (cm)"
             value={(dados_extras[`altura_frontao_${lado}`] as number) || ''}
-            onChange={e => setExtra(`altura_frontao_${lado}`, parseFloat(e.target.value) || 0)}
+            onChange={e => setExtra(`altura_frontao_${lado}`, parseNumBR(e.target.value) || 0)}
           />
           {showErrors && !((dados_extras[`altura_frontao_${lado}`] as number) > 0) && (
             <Err msg="Informe a altura do frontão." />
@@ -402,12 +404,12 @@ export default function SeletorPeca(props: Props) {
                   <label className="form-label">QUANTIDADE ({servicoAtual.unidade})</label>
                   <input
                     className="form-input"
-                    type="number"
+                    type="text" inputMode="decimal"
                     min="0.01"
                     step="0.01"
                     placeholder={`Ex: 1,00 ${servicoAtual.unidade}`}
                     value={(dados_extras.servico_quantidade as number) || ''}
-                    onChange={e => setExtra('servico_quantidade', parseFloat(e.target.value) || 0)}
+                    onChange={e => setExtra('servico_quantidade', parseNumBR(e.target.value) || 0)}
                   />
                   {showErrors && !((dados_extras.servico_quantidade as number) > 0) && (
                     <Err msg="Informe a quantidade." />
@@ -422,23 +424,23 @@ export default function SeletorPeca(props: Props) {
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">Nº DE DEGRAUS</label>
-                <input className="form-input" type="number" min="1" step="1" placeholder="Ex: 10"
+                <input className="form-input" type="text" inputMode="decimal" min="1" step="1" placeholder="Ex: 10"
                   value={(dados_extras.num_degraus as number) || ''}
-                  onChange={e => setExtra('num_degraus', parseInt(e.target.value) || 0)} />
+                  onChange={e => setExtra('num_degraus', parseIntBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.num_degraus as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">LARGURA DO PISO (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 30"
+                <input className="form-input" type="text" inputMode="decimal" min="1" step="0.1" placeholder="Ex: 30"
                   value={(dados_extras.largura_piso as number) || ''}
-                  onChange={e => setExtra('largura_piso', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('largura_piso', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.largura_piso as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">ALTURA DO ESPELHO (cm)</label>
-                <input className="form-input" type="number" min="1" step="0.1" placeholder="Ex: 18"
+                <input className="form-input" type="text" inputMode="decimal" min="1" step="0.1" placeholder="Ex: 18"
                   value={(dados_extras.altura_espelho as number) || ''}
-                  onChange={e => setExtra('altura_espelho', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('altura_espelho', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.altura_espelho as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
@@ -450,16 +452,16 @@ export default function SeletorPeca(props: Props) {
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">COMPRIMENTO (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.75"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 1.75"
                     value={(dados_extras.comprimento as number) || ''}
-                    onChange={e => setExtra('comprimento', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('comprimento', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.comprimento as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">LARGURA (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.19"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.19"
                     value={(dados_extras.largura as number) || ''}
-                    onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('largura', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
@@ -489,23 +491,23 @@ export default function SeletorPeca(props: Props) {
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">LARGURA (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                     value={(dados_extras.largura as number) || ''}
-                    onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('largura', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">ALTURA (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.30"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.30"
                     value={(dados_extras.altura as number) || ''}
-                    onChange={e => setExtra('altura', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('altura', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.altura as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">PROFUNDIDADE (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.20"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.20"
                     value={(dados_extras.profundidade as number) || ''}
-                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('profundidade', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
@@ -528,9 +530,9 @@ export default function SeletorPeca(props: Props) {
                 {!!(dados_extras.tem_saia_nicho as boolean) && (
                   <div className="form-group" style={{ paddingLeft: 26, marginBottom: 0 }}>
                     <label className="form-label">ALTURA DA SAIA (cm)</label>
-                    <input className="form-input" type="number" min="1" step="1" placeholder="Ex: 10"
+                    <input className="form-input" type="text" inputMode="decimal" min="1" step="1" placeholder="Ex: 10"
                       value={(dados_extras.altura_saia_nicho as number) || ''}
-                      onChange={e => setExtra('altura_saia_nicho', parseFloat(e.target.value) || 0)} />
+                      onChange={e => setExtra('altura_saia_nicho', parseNumBR(e.target.value) || 0)} />
                     {showErrors && !((dados_extras.altura_saia_nicho as number) > 0) && <Err msg="Informe a altura da saia." />}
                   </div>
                 )}
@@ -584,30 +586,30 @@ export default function SeletorPeca(props: Props) {
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">SEG1 — COMPRIMENTO (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 2.00"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 2.00"
                   value={(dados_extras.seg1_comprimento as number) || ''}
-                  onChange={e => setExtra('seg1_comprimento', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg1_comprimento', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg1_comprimento as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG1 — PROFUNDIDADE (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                   value={(dados_extras.seg1_profundidade as number) || ''}
-                  onChange={e => setExtra('seg1_profundidade', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg1_profundidade', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg1_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG2 — COMPRIMENTO (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.20"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 1.20"
                   value={(dados_extras.seg2_comprimento as number) || ''}
-                  onChange={e => setExtra('seg2_comprimento', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg2_comprimento', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg2_comprimento as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG2 — PROFUNDIDADE (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                   value={(dados_extras.seg2_profundidade as number) || ''}
-                  onChange={e => setExtra('seg2_profundidade', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg2_profundidade', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg2_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
@@ -618,44 +620,44 @@ export default function SeletorPeca(props: Props) {
             <div className="form-row form-row-2">
               <div className="form-group">
                 <label className="form-label">SEG1 — COMPRIMENTO (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.00"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 1.00"
                   value={(dados_extras.seg1_comprimento as number) || ''}
-                  onChange={e => setExtra('seg1_comprimento', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg1_comprimento', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg1_comprimento as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG1 — PROFUNDIDADE (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                   value={(dados_extras.seg1_profundidade as number) || ''}
-                  onChange={e => setExtra('seg1_profundidade', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg1_profundidade', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg1_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG2 — COMPRIMENTO (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 2.00"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 2.00"
                   value={(dados_extras.seg2_comprimento as number) || ''}
-                  onChange={e => setExtra('seg2_comprimento', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg2_comprimento', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg2_comprimento as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG2 — PROFUNDIDADE (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                   value={(dados_extras.seg2_profundidade as number) || ''}
-                  onChange={e => setExtra('seg2_profundidade', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg2_profundidade', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg2_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG3 — COMPRIMENTO (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.00"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 1.00"
                   value={(dados_extras.seg3_comprimento as number) || ''}
-                  onChange={e => setExtra('seg3_comprimento', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg3_comprimento', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg3_comprimento as number) > 0) && <Err msg="Obrigatório." />}
               </div>
               <div className="form-group">
                 <label className="form-label">SEG3 — PROFUNDIDADE (m)</label>
-                <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                   value={(dados_extras.seg3_profundidade as number) || ''}
-                  onChange={e => setExtra('seg3_profundidade', parseFloat(e.target.value) || 0)} />
+                  onChange={e => setExtra('seg3_profundidade', parseNumBR(e.target.value) || 0)} />
                 {showErrors && !((dados_extras.seg3_profundidade as number) > 0) && <Err msg="Obrigatório." />}
               </div>
             </div>
@@ -667,16 +669,16 @@ export default function SeletorPeca(props: Props) {
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">LARGURA (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.20"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 1.20"
                     value={(dados_extras.largura as number) || ''}
-                    onChange={e => setExtra('largura', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('largura', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">PROFUNDIDADE (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                     value={(dados_extras.profundidade as number) || ''}
-                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('profundidade', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
@@ -695,12 +697,12 @@ export default function SeletorPeca(props: Props) {
                     <label style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>Quantidade:</label>
                     <input
                       className="form-input"
-                      type="number"
+                      type="text" inputMode="decimal"
                       min="1"
                       step="1"
                       value={(dados_extras.qtd_cuba_pedra as number) || 1}
                       onChange={e => {
-                        const qtd = Math.max(1, parseInt(e.target.value) || 1)
+                        const qtd = Math.max(1, parseIntBR(e.target.value) || 1)
                         onChange({ dados_extras: { ...dados_extras, qtd_cuba_pedra: qtd, valor_cuba_pedra: qtd * 350 } })
                       }}
                       style={{ width: 70 }}
@@ -720,16 +722,16 @@ export default function SeletorPeca(props: Props) {
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">COMPRIMENTO (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.80"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.80"
                     value={(dados_extras.comprimento as number) || ''}
-                    onChange={e => setExtra('comprimento', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('comprimento', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.comprimento as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">PROFUNDIDADE (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.55"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.55"
                     value={(dados_extras.profundidade as number) || ''}
-                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('profundidade', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
@@ -748,12 +750,12 @@ export default function SeletorPeca(props: Props) {
                     <label style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>Quantidade:</label>
                     <input
                       className="form-input"
-                      type="number"
+                      type="text" inputMode="decimal"
                       min="1"
                       step="1"
                       value={(dados_extras.qtd_cuba_pedra as number) || 1}
                       onChange={e => {
-                        const qtd = Math.max(1, parseInt(e.target.value) || 1)
+                        const qtd = Math.max(1, parseIntBR(e.target.value) || 1)
                         onChange({ dados_extras: { ...dados_extras, qtd_cuba_pedra: qtd, valor_cuba_pedra: qtd * 350 } })
                       }}
                       style={{ width: 70 }}
@@ -793,23 +795,23 @@ export default function SeletorPeca(props: Props) {
               <div className="form-row form-row-2">
                 <div className="form-group">
                   <label className="form-label">COMPRIMENTO DO TAMPO (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 1.20"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 1.20"
                     value={(dados_extras.comp_tampo as number) || ''}
-                    onChange={e => setExtra('comp_tampo', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('comp_tampo', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.comp_tampo as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">PROFUNDIDADE (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.55"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.55"
                     value={(dados_extras.profundidade as number) || ''}
-                    onChange={e => setExtra('profundidade', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('profundidade', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.profundidade as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
                 <div className="form-group">
                   <label className="form-label">COMPRIMENTO DA EXTENSÃO (m)</label>
-                  <input className="form-input" type="number" min="0.01" step="0.01" placeholder="Ex: 0.60"
+                  <input className="form-input" type="text" inputMode="decimal" min="0.01" step="0.01" placeholder="Ex: 0.60"
                     value={(dados_extras.comp_extensao as number) || ''}
-                    onChange={e => setExtra('comp_extensao', parseFloat(e.target.value) || 0)} />
+                    onChange={e => setExtra('comp_extensao', parseNumBR(e.target.value) || 0)} />
                   {showErrors && !((dados_extras.comp_extensao as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
@@ -828,12 +830,12 @@ export default function SeletorPeca(props: Props) {
                     <label style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap' }}>Quantidade:</label>
                     <input
                       className="form-input"
-                      type="number"
+                      type="text" inputMode="decimal"
                       min="1"
                       step="1"
                       value={(dados_extras.qtd_cuba_pedra as number) || 1}
                       onChange={e => {
-                        const qtd = Math.max(1, parseInt(e.target.value) || 1)
+                        const qtd = Math.max(1, parseIntBR(e.target.value) || 1)
                         onChange({ dados_extras: { ...dados_extras, qtd_cuba_pedra: qtd, valor_cuba_pedra: qtd * 350 } })
                       }}
                       style={{ width: 70 }}
