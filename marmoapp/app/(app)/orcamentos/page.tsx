@@ -6,6 +6,7 @@ import { useApp } from '@/contexts/AppContext'
 import { fmt, orcTotal } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { Orcamento } from '@/lib/types'
+import PrevisaoInstalacaoModal from '@/components/orcamento/PrevisaoInstalacaoModal'
 
 const STATUS_BADGE: Record<string, [string, string]> = {
   rascunho: ['badge-draft', 'Rascunho'], enviado: ['badge-sent', 'Enviado'],
@@ -55,6 +56,7 @@ export default function OrcamentosPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; numero: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [projetoMap, setProjetoMap] = useState<Record<string, string>>({})
+  const [previsaoModal, setPrevisaoModal] = useState<{ open: boolean; orcId: string; orcLabel: string; pendingUpdate: Record<string, unknown> }>({ open: false, orcId: '', orcLabel: '', pendingUpdate: {} })
 
   useEffect(() => {
     fetch('/api/projetos', { credentials: 'include' })
@@ -101,6 +103,20 @@ export default function OrcamentosPage() {
   }
 
   async function atualizarCRM(id: string, crmStatus: string) {
+    const o = orcamentos.find(x => x.id === id)
+    const producaoStatus = (o as any)?.producao_status || 'comercial'
+    // Fechou o pedido pela primeira vez (ainda não tinha saído da etapa Comercial
+    // na Fila de Serviços): dispara a entrada automática na Fila de Corte,
+    // pedindo a data prevista de instalação antes de confirmar.
+    if (crmStatus === 'fechado' && producaoStatus === 'comercial') {
+      setPrevisaoModal({
+        open: true,
+        orcId: id,
+        orcLabel: o?.descricao || `Orç. #${o?.numero || id.slice(0, 6)}`,
+        pendingUpdate: { crm_status: crmStatus },
+      })
+      return
+    }
     await supabase.from('orcamentos').update({ crm_status: crmStatus }).eq('id', id)
     await loadOrcamentos()
   }
@@ -112,9 +128,50 @@ export default function OrcamentosPage() {
     const payload: Record<string, unknown> = { status: newStatus }
     // Marca quando a venda foi confirmada — usado pro filtro por período em Relatórios
     if (newStatus === 'aprovado') payload.data_fechamento = new Date().toISOString().split('T')[0]
+
+    const producaoStatus = (o as any).producao_status || 'comercial'
+    if (newStatus === 'aprovado' && producaoStatus === 'comercial') {
+      setPrevisaoModal({
+        open: true,
+        orcId: o.id,
+        orcLabel: o.descricao || `Orç. #${o.numero || o.id.slice(0, 6)}`,
+        pendingUpdate: payload,
+      })
+      return
+    }
+
     await supabase.from('orcamentos').update(payload).eq('id', o.id)
     await loadOrcamentos()
     toast(`Status: ${newStatus}`, 'ok2')
+  }
+
+  // Confirma (ou pula) a data prevista de instalação e efetiva a mudança de
+  // status/CRM pendente, já avançando o pedido pra Fila de Corte.
+  async function confirmarPrevisao(dataPrevista: string) {
+    const { orcId, pendingUpdate } = previsaoModal
+    setPrevisaoModal({ open: false, orcId: '', orcLabel: '', pendingUpdate: {} })
+
+    const payload: Record<string, unknown> = {
+      ...pendingUpdate,
+      producao_status: 'corte',
+      producao_status_atualizado_em: new Date().toISOString(),
+      data_prevista_instalacao: dataPrevista || null,
+    }
+    const { error } = await supabase.from('orcamentos').update(payload).eq('id', orcId)
+    if (error) { toast('Erro: ' + error.message, 'err'); return }
+
+    const projetoId = projetoMap[orcId]
+    if (projetoId) {
+      fetch(`/api/projetos/${projetoId}/etapas`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ etapa: 'producao' }),
+      })
+    }
+
+    await loadOrcamentos()
+    toast('Pedido fechado — entrou na Fila de Corte', 'ok2')
   }
 
   async function excluirOrcamento() {
@@ -157,6 +214,14 @@ export default function OrcamentosPage() {
           onConfirm={excluirOrcamento}
           onCancel={() => setDeleteTarget(null)}
           busy={deleting}
+        />
+      )}
+      {previsaoModal.open && (
+        <PrevisaoInstalacaoModal
+          orcLabel={previsaoModal.orcLabel}
+          dataInicial=""
+          onCancelar={() => setPrevisaoModal({ open: false, orcId: '', orcLabel: '', pendingUpdate: {} })}
+          onConfirmar={confirmarPrevisao}
         />
       )}
       <div className="page-header">

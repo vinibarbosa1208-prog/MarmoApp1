@@ -125,6 +125,41 @@ export default function RelatoriosPage() {
 
   const alertas = materiais.filter(m => (m.estoque_atual ?? 0) < (m.estoque_minimo ?? 0))
 
+  // ---- Obras: pipeline de produção (Comercial -> Corte -> Acabamento ->
+  // Aguardando Data -> Instalação -> Finalizado), espelhando a Fila de
+  // Serviços. "Obra" aqui = pedido que já fechou (crm_status='fechado')
+  // ou que já tem producao_status definido.
+  const PIPELINE_OBRAS = [
+    { id: 'comercial',       label: 'Comercial',              cor: '#2980B9' },
+    { id: 'corte',           label: 'Corte',                  cor: '#8E44AD' },
+    { id: 'acabamento',      label: 'Acabamento',             cor: '#E67E22' },
+    { id: 'aguardando_data', label: 'Aguardando Data',        cor: '#16A085' },
+    { id: 'instalacao',      label: 'Instalação Confirmada',  cor: '#27AE60' },
+    { id: 'finalizado',      label: 'Finalizado',             cor: '#2C3E50' },
+  ] as const
+
+  function diasNaEtapaAtual(dataStr?: string | null): number {
+    if (!dataStr) return 0
+    return Math.max(0, Math.floor((new Date().getTime() - new Date(dataStr).getTime()) / 86400000))
+  }
+  function diasAteData(dataStr: string): number {
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0)
+    return Math.round((new Date(dataStr + 'T00:00:00').getTime() - hoje.getTime()) / 86400000)
+  }
+
+  const obras = orcamentos.filter(o =>
+    o.crm_status !== 'perdido' && (o.crm_status === 'fechado' || !!(o as any).producao_status)
+  )
+  const obrasAndamento = obras.filter(o => ((o as any).producao_status || 'comercial') !== 'finalizado')
+  const obrasFinalizadas = obras.filter(o => ((o as any).producao_status || 'comercial') === 'finalizado')
+  const obrasPorEtapa = PIPELINE_OBRAS.map(e => ({
+    ...e,
+    count: obras.filter(o => ((o as any).producao_status || 'comercial') === e.id).length,
+  }))
+  const obrasAndamentoOrdenadas = [...obrasAndamento].sort((a, b) =>
+    diasNaEtapaAtual((b as any).producao_status_atualizado_em) - diasNaEtapaAtual((a as any).producao_status_atualizado_em)
+  )
+
   return (
     <div className="page-inner">
       <div className="page-header">
@@ -283,6 +318,91 @@ export default function RelatoriosPage() {
                 </div>
               )}
             </>
+          )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-header"><span className="card-title">🏗️ Obras — Fila de Serviços</span></div>
+        <div className="card-body">
+          <div className="stats-grid" style={{ marginBottom: 20 }}>
+            <div className="stat-card">
+              <div className="stat-icon">🏗️</div>
+              <div className="stat-info">
+                <div className="stat-value">{obrasAndamento.length}</div>
+                <div className="stat-label">Obras em andamento agora</div>
+              </div>
+            </div>
+            <div className="stat-card" style={{ borderLeftColor: 'var(--green)' }}>
+              <div className="stat-icon" style={{ background: 'rgba(39,174,96,0.12)', fontSize: 22 }}>✅</div>
+              <div className="stat-info">
+                <div className="stat-value">{obrasFinalizadas.length}</div>
+                <div className="stat-label">Obras finalizadas</div>
+              </div>
+            </div>
+            <div className="stat-card" style={{ borderLeftColor: 'var(--blue)' }}>
+              <div className="stat-icon" style={{ background: 'rgba(41,128,185,0.12)', fontSize: 22 }}>📦</div>
+              <div className="stat-info">
+                <div className="stat-value">{obras.length}</div>
+                <div className="stat-label">Total no pipeline</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 10 }}>
+            Quantas obras rodando em cada etapa (ao mesmo tempo)
+          </div>
+          {obrasPorEtapa.map(e => (
+            <div key={e.id} style={{ marginBottom: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                <span>{e.label}</span>
+                <strong>{e.count}</strong>
+              </div>
+              <div className="pipeline-bar">
+                <div className="pipeline-seg" style={{ width: obras.length ? `${e.count / obras.length * 100}%` : '0%', background: e.cor }} />
+              </div>
+            </div>
+          ))}
+
+          {obrasAndamento.length > 0 && (
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>
+                Obras em andamento — detalhe
+              </div>
+              <table>
+                <thead><tr><th>Pedido</th><th>Cliente</th><th>Etapa</th><th>Dias na etapa</th><th>Instalação prevista</th></tr></thead>
+                <tbody>
+                  {obrasAndamentoOrdenadas.map(o => {
+                    const cli = clientes.find(c => c.id === (o.clienteId || o.cliente_id))
+                    const etapaId = (o as any).producao_status || 'comercial'
+                    const etapaInfo = PIPELINE_OBRAS.find(e => e.id === etapaId)
+                    const dias = diasNaEtapaAtual((o as any).producao_status_atualizado_em)
+                    const dataPrevista = (o as any).data_prevista_instalacao as string | undefined
+                    return (
+                      <tr key={o.id}>
+                        <td style={{ fontWeight: 500 }}>{o.descricao || `Orç. #${o.numero || o.id.slice(0, 6)}`}</td>
+                        <td className="text-gray text-sm">{cli?.nome || '—'}</td>
+                        <td>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: etapaInfo?.cor || '#888' }}>
+                            {etapaInfo?.label || etapaId}
+                          </span>
+                        </td>
+                        <td className="text-sm" style={{ color: dias >= 7 ? 'var(--red)' : dias >= 3 ? '#F39C12' : 'var(--gray)' }}>
+                          {dias} dia{dias !== 1 ? 's' : ''}
+                        </td>
+                        <td className="text-sm">
+                          {dataPrevista ? (
+                            <span style={{ color: diasAteData(dataPrevista) < 0 ? 'var(--red)' : 'var(--text)' }}>
+                              {new Date(dataPrevista + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            </span>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
