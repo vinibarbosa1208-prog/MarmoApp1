@@ -33,7 +33,7 @@ const BOTTOM_NAV = [
 
 function PaymentGate() {
   const { marmoraria } = useApp()
-  const { loading: authLoading, marmorariaId, authError, retryAuth } = useAuth()
+  const { user, loading: authLoading, marmorariaId, authError, retryAuth } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -50,6 +50,14 @@ function PaymentGate() {
     if (authLoading) return
     // Veio do Stripe agora — não bloqueia
     if (fromCheckout.current) return
+
+    // Sem usuário autenticado (sessão inválida/expirada/ainda não
+    // confirmada) — isso NÃO é "usuário sem cadastro", é "não logado".
+    // Quem decide o que fazer aqui é o AppLayout (manda pro /login).
+    // Sem essa checagem, esse efeito corria antes do redirect pro /login
+    // (que tem um delay de 500ms) e mandava erroneamente pro /cadastro
+    // qualquer sessão que caísse — mesmo com o cadastro 100% ok no banco.
+    if (!user) return
 
     // Não foi possível CONFIRMAR marmoraria_id (falha transitória de rede/
     // timeout, ex: logo após o login) — isso NÃO é o mesmo que "usuário sem
@@ -79,7 +87,7 @@ function PaymentGate() {
     if (marmoraria.trial_expira === null) {
       router.replace('/checkout')
     }
-  }, [marmoraria, marmorariaId, authLoading, authError, searchParams, router, pathname, retryAuth])
+  }, [user, marmoraria, marmorariaId, authLoading, authError, searchParams, router, pathname, retryAuth])
 
   if (stuck) {
     return (
