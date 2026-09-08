@@ -9,6 +9,12 @@ type AuthContextType = {
   marmorariaId: string | null
   perfil: string | null
   loading: boolean
+  // true quando NÃO foi possível confirmar marmoraria_id/perfil (falha
+  // transitória de rede/timeout) — diferente de "confirmado que o usuário
+  // não tem marmoraria". Quem consome isso (ex: PaymentGate) não deve
+  // tratar authError como "sem cadastro" e mandar pra /cadastro.
+  authError: boolean
+  retryAuth: () => void
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +22,8 @@ const AuthContext = createContext<AuthContextType>({
   marmorariaId: null,
   perfil: null,
   loading: true,
+  authError: false,
+  retryAuth: () => {},
 })
 
 // Nunca deixa uma chamada ao Supabase travar o loading pra sempre
@@ -40,30 +48,27 @@ type UsuarioInfo = { marmoraria_id: string | null; perfil: string | null }
 //    não deve tratar undefined como null, senão um usuário válido pode ser
 //    expulso para /cadastro por causa de uma falha transitória.
 async function fetchUsuarioInfo(userId: string): Promise<UsuarioInfo | null | undefined> {
-  try {
-    const { data, error } = await withTimeout(
-      supabase.from('usuarios').select('marmoraria_id, perfil').eq('id', userId).single(),
-      8000,
-      'fetchUsuarioInfo'
-    )
-    if (!error) return data ? { marmoraria_id: data.marmoraria_id ?? null, perfil: data.perfil ?? null } : null
-
-    console.error('[AuthContext] Erro ao buscar usuarios, tentando novamente em 1s:', error)
-    await new Promise(r => setTimeout(r, 1000))
-    const retry = await withTimeout(
-      supabase.from('usuarios').select('marmoraria_id, perfil').eq('id', userId).single(),
-      8000,
-      'fetchUsuarioInfo (retry)'
-    )
-    if (retry.error) {
-      console.error('[AuthContext] Erro ao buscar usuarios (retry também falhou) — indeterminado:', retry.error)
-      return undefined
+  // 3 tentativas (com backoff) antes de desistir. Isso reduz bastante a
+  // chance de um blip transitório (ex: cold start do banco logo após o
+  // login) ser tratado como indeterminado — o que antes podia fazer um
+  // usuário com cadastro válido ser mandado pra /cadastro por engano.
+  const backoffsMs = [0, 1000, 2500]
+  for (let attempt = 0; attempt < backoffsMs.length; attempt++) {
+    if (backoffsMs[attempt] > 0) await new Promise(r => setTimeout(r, backoffsMs[attempt]))
+    try {
+      const { data, error } = await withTimeout(
+        supabase.from('usuarios').select('marmoraria_id, perfil').eq('id', userId).single(),
+        8000,
+        `fetchUsuarioInfo (tentativa ${attempt + 1}/${backoffsMs.length})`
+      )
+      if (!error) return data ? { marmoraria_id: data.marmoraria_id ?? null, perfil: data.perfil ?? null } : null
+      console.error(`[AuthContext] Erro ao buscar usuarios (tentativa ${attempt + 1}/${backoffsMs.length}):`, error)
+    } catch (err) {
+      console.error(`[AuthContext] fetchUsuarioInfo estourou o timeout (tentativa ${attempt + 1}/${backoffsMs.length}):`, err)
     }
-    return retry.data ? { marmoraria_id: retry.data.marmoraria_id ?? null, perfil: retry.data.perfil ?? null } : null
-  } catch (err) {
-    console.error('[AuthContext] fetchUsuarioInfo estourou o timeout — indeterminado:', err)
-    return undefined
   }
+  console.error('[AuthContext] fetchUsuarioInfo esgotou todas as tentativas — indeterminado (NÃO é confirmação de "sem marmoraria")')
+  return undefined
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -71,7 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [marmorariaId, setMarmorariaId] = useState<string | null>(null)
   const [perfil, setPerfil] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState(false)
   const fetchedRef = useRef(false)
+  const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     // Buscar sessão UMA vez no mount. Usamos getUser() em vez de getSession():
@@ -95,13 +102,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null)
           setMarmorariaId(null)
           setPerfil(null)
+          setAuthError(false)
         } else {
           setUser(authedUser)
+          userIdRef.current = authedUser.id
           const result = await fetchUsuarioInfo(authedUser.id)
-          // No carregamento inicial ainda não existe um valor anterior confiável
-          // pra preservar, então indeterminado (undefined) vira null aqui.
-          setMarmorariaId(result === undefined ? null : (result?.marmoraria_id ?? null))
-          setPerfil(result === undefined ? null : (result?.perfil ?? null))
+          if (result === undefined) {
+            // Indeterminado (rede/timeout) — NÃO é a mesma coisa que "sem
+            // marmoraria". Marca authError em vez de mandar o usuário pra
+            // /cadastro por causa de uma falha transitória.
+            setAuthError(true)
+            setMarmorariaId(null)
+            setPerfil(null)
+          } else {
+            setAuthError(false)
+            setMarmorariaId(result?.marmoraria_id ?? null)
+            setPerfil(result?.perfil ?? null)
+          }
         }
       } catch (err) {
         // getUser() nem respondeu a tempo — provável sessão local corrompida.
@@ -111,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
         setMarmorariaId(null)
         setPerfil(null)
+        setAuthError(false)
       } finally {
         setLoading(false)
       }
@@ -148,19 +166,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null)
           setMarmorariaId(null)
           setPerfil(null)
+          setAuthError(false)
           setLoading(false)
           return
         }
 
         setUser(session.user)
+        userIdRef.current = session.user.id
         const result = await fetchUsuarioInfo(session.user.id)
         if (result !== undefined) {
+          setAuthError(false)
           setMarmorariaId(result?.marmoraria_id ?? null)
           setPerfil(result?.perfil ?? null)
         } else {
           // Não deu pra confirmar agora (falha transitória) — mantém o
           // marmorariaId/perfil atuais em vez de zerar e expulsar o usuário
           // para /cadastro no meio do que ele está fazendo.
+          setAuthError(true)
           console.error('[AuthContext] Mantendo marmorariaId/perfil atuais — não foi possível confirmar nesse evento')
         }
         setLoading(false)
@@ -170,8 +192,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Permite re-tentar a busca de marmoraria_id/perfil sem precisar recarregar
+  // a página — usado pelo PaymentGate quando authError fica true.
+  const retryAuth = () => {
+    const uid = userIdRef.current
+    if (!uid) return
+    fetchUsuarioInfo(uid).then(result => {
+      if (result !== undefined) {
+        setAuthError(false)
+        setMarmorariaId(result?.marmoraria_id ?? null)
+        setPerfil(result?.perfil ?? null)
+      } else {
+        setAuthError(true)
+      }
+    })
+  }
+
   return (
-    <AuthContext.Provider value={{ user, marmorariaId, perfil, loading }}>
+    <AuthContext.Provider value={{ user, marmorariaId, perfil, loading, authError, retryAuth }}>
       {children}
     </AuthContext.Provider>
   )

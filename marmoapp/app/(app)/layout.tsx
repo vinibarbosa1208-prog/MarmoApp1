@@ -33,7 +33,7 @@ const BOTTOM_NAV = [
 
 function PaymentGate() {
   const { marmoraria } = useApp()
-  const { loading: authLoading, marmorariaId } = useAuth()
+  const { loading: authLoading, marmorariaId, authError, retryAuth } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
@@ -42,6 +42,8 @@ function PaymentGate() {
   if (searchParams.get('checkout') === 'success') {
     fromCheckout.current = true
   }
+  const retriedRef = useRef(false)
+  const [stuck, setStuck] = useState(false)
 
   useEffect(() => {
     // Aguarda auth terminar de carregar
@@ -49,7 +51,22 @@ function PaymentGate() {
     // Veio do Stripe agora — não bloqueia
     if (fromCheckout.current) return
 
-    // Auth carregou mas usuário não tem marmoraria vinculada → enviar para cadastro
+    // Não foi possível CONFIRMAR marmoraria_id (falha transitória de rede/
+    // timeout, ex: logo após o login) — isso NÃO é o mesmo que "usuário sem
+    // cadastro". Não redireciona pra /cadastro aqui; tenta de novo uma vez
+    // automaticamente antes de admitir que algo está errado.
+    if (authError && !marmorariaId && !marmoraria) {
+      if (!retriedRef.current) {
+        retriedRef.current = true
+        const t = setTimeout(() => retryAuth(), 2500)
+        return () => clearTimeout(t)
+      }
+      setStuck(true)
+      return
+    }
+
+    // Auth carregou, CONFIRMOU (sem erro) e usuário realmente não tem
+    // marmoraria vinculada → enviar para cadastro
     if (!marmorariaId && !marmoraria) {
       router.replace('/cadastro')
       return
@@ -62,7 +79,21 @@ function PaymentGate() {
     if (marmoraria.trial_expira === null) {
       router.replace('/checkout')
     }
-  }, [marmoraria, marmorariaId, authLoading, searchParams, router, pathname])
+  }, [marmoraria, marmorariaId, authLoading, authError, searchParams, router, pathname, retryAuth])
+
+  if (stuck) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, zIndex: 9999, padding: 24, textAlign: 'center' }}>
+        <p style={{ color: '#374151', fontSize: 15, maxWidth: 320 }}>Não foi possível carregar os dados da sua conta. Verifique sua internet e tente novamente.</p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: '#111827', color: '#fff', fontSize: 14, cursor: 'pointer' }}
+        >
+          Recarregar
+        </button>
+      </div>
+    )
+  }
 
   return null
 }
