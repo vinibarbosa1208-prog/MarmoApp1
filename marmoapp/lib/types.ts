@@ -62,6 +62,7 @@ export interface OrcamentoItem {
   dados_extras?: Record<string, unknown>
   variante?: string
   nome_variante?: string
+  ambiente?: string
   cortado_em?: string | null
   cortado_por?: string | null
   acabado_em?: string | null
