@@ -158,7 +158,11 @@ function RegistrarProducaoModal({ orcLabel, etapa, itensPendentes, funcionarios,
   onCancelar: () => void
   onSalvar: (itensSelecionadosIds: string[], funcionarioId: string, data: string) => void
 }) {
-  const [selecionados, setSelecionados] = useState<Set<string>>(new Set(itensPendentes.map(i => i.id!)))
+  // Começa tudo desmarcado — o gestor marca só o que o formulário impresso
+  // confirma como concluído, em vez de desmarcar exceções a partir de um
+  // "tudo pronto" pré-selecionado (risco de avançar a etapa sem querer com
+  // peça faltando, especialmente ao clicar rápido).
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [funcionarioId, setFuncionarioId] = useState('')
   const [data, setData] = useState(new Date().toISOString().split('T')[0])
   const [erro, setErro] = useState('')
@@ -195,7 +199,7 @@ function RegistrarProducaoModal({ orcLabel, etapa, itensPendentes, funcionarios,
           <div style={{ fontSize: 12, color: 'var(--gray)', marginBottom: 12 }}>Orçamento: <b>{orcLabel}</b></div>
 
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 6 }}>
-            Peças concluídas hoje (desmarque as que ainda não)
+            Marque só as peças que o formulário impresso confirma como concluídas
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}>
             {itensPendentes.map(i => (
@@ -307,17 +311,19 @@ export default function FilaPage() {
 
   const ativos = orcamentos.filter(o => o.crm_status !== 'perdido' && (o.crm_status === 'fechado' || o.producao_status))
 
-  // Carrega os itens dos pedidos que estão em Corte ou Acabamento (é o que
-  // precisa da checklist por peça). Recarrega sempre que a lista de pedidos
-  // nessas duas etapas mudar.
-  const idsCorteAcabamento = ativos
-    .filter(o => ((o.producao_status || 'comercial') as string) === 'corte' || ((o.producao_status || 'comercial') as string) === 'acabamento')
+  // Carrega os itens dos pedidos que estão em Corte, Acabamento, Aguardando
+  // Data ou Instalação Confirmada — as duas primeiras usam pra checklist por
+  // peça, as duas últimas só pra conferir se sobrou alguma peça sem
+  // corte/acabamento confirmado antes de agendar a instalação (ver
+  // pendentesResiduais mais abaixo). Recarrega sempre que essa lista mudar.
+  const idsComChecklist = ativos
+    .filter(o => ['corte', 'acabamento', 'aguardando_data', 'instalacao'].includes((o.producao_status || 'comercial') as string))
     .map(o => o.id)
     .sort()
     .join(',')
 
   useEffect(() => {
-    const ids = idsCorteAcabamento ? idsCorteAcabamento.split(',') : []
+    const ids = idsComChecklist ? idsComChecklist.split(',') : []
     if (ids.length === 0) { setItensPorOrc({}); return }
     supabase.from('orcamento_itens').select('*').in('orcamento_id', ids).then(({ data }) => {
       const porOrc: Record<string, OrcamentoItem[]> = {}
@@ -329,7 +335,7 @@ export default function FilaPage() {
       setItensPorOrc(porOrc)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsCorteAcabamento])
+  }, [idsComChecklist])
 
   async function recarregarItensOrc(orcId: string) {
     const { data } = await supabase.from('orcamento_itens').select('*').eq('orcamento_id', orcId)
@@ -459,6 +465,43 @@ export default function FilaPage() {
     toast(`Voltou para ${labelAnterior}`, 'ok2')
   }
 
+  // Gera o formulário de produção em PDF pra imprimir e deixar junto do
+  // desenho técnico do pedido — um formulário por etapa (Corte / Colagem e
+  // Acabamento), agrupado por ambiente, com o que já está marcado no sistema
+  // pré-preenchido (pra reimpressões não pedirem de novo o que já foi
+  // confirmado). O botão já vive dentro da coluna de cada etapa, então o
+  // pedido só está numa etapa por vez — não precisa gerar as duas juntas.
+  async function abrirFormularioProducao(o: Orcamento, etapaId: 'corte' | 'acabamento') {
+    if (!marmoraria) { toast('Dados da empresa não disponíveis', 'err'); return }
+    const todosItens = itensPorOrc[o.id] || []
+    const cli = clientes.find(c => c.id === (o.clienteId || o.cliente_id))
+    const nomesFuncionarios = Object.fromEntries(funcionarios.map(f => [f.id, f.nome]))
+    // Só pré-imprime o responsável quando existe um único funcionário ativo
+    // pro cargo daquela etapa (ex: um serrador só) — com mais de um (vários
+    // acabadores), não dá pra saber de antemão quem vai fazer, então fica
+    // em branco pra preencher na hora.
+    const equipeEtapa = etapaId === 'corte' ? serradores : acabadores
+    const responsavelPadrao = equipeEtapa.length === 1 ? equipeEtapa[0].nome : undefined
+    const { gerarFormularioProducaoPDF } = await import('@/lib/pdf/gerar-formulario-producao-pdf')
+    const doc = gerarFormularioProducaoPDF(
+      {
+        numero: o.numero,
+        descricao: o.descricao,
+        created_at: o.created_at,
+        data_prevista_instalacao: o.data_prevista_instalacao || null,
+        itens: todosItens,
+        nomesFuncionarios,
+        responsavelPadrao,
+      },
+      etapaId,
+      marmoraria,
+      cli || null
+    )
+    const blob = doc.output('blob')
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+  }
+
   async function marcarPerdido(orcId: string) {
     if (!confirm('Marcar este orçamento como perdido? Ele sai da Fila de Serviços (continua no CRM de Orçamentos).')) return
     const { error } = await supabase.from('orcamentos').update({ crm_status: 'perdido' }).eq('id', orcId)
@@ -523,6 +566,15 @@ export default function FilaPage() {
                   const relevantes = etapa.id === 'corte' ? itensRelevantesCorte(todosItens) : etapa.id === 'acabamento' ? itensRelevantesAcabamento(todosItens) : []
                   const concluidos = relevantes.filter(i => etapa.id === 'corte' ? i.cortado_em : i.acabado_em)
 
+                  // Rede de segurança: numa etapa que já devia estar com produção
+                  // 100% pronta (Aguardando Data / Instalação Confirmada), confere
+                  // se não ficou peça sem corte/acabamento pra trás — ex: item
+                  // adicionado ao orçamento depois que o pedido já tinha avançado.
+                  const isAguardandoOuInstalacao = etapa.id === 'aguardando_data' || etapa.id === 'instalacao'
+                  const pendentesResiduais = isAguardandoOuInstalacao
+                    ? todosItens.filter(i => ((i.area || 0) > 0 && !i.cortado_em) || (mlAcabamentoItens([i]) > 0 && !i.acabado_em))
+                    : []
+
                   return (
                     <div key={o.id} style={{ background: '#fff', borderRadius: 8, padding: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `3px solid ${etapa.cor}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
@@ -547,6 +599,12 @@ export default function FilaPage() {
                               <span>{i.descricao}</span>
                             </div>
                           ))}
+                        </div>
+                      )}
+
+                      {isAguardandoOuInstalacao && pendentesResiduais.length > 0 && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#C0392B', background: '#FDEDEC', border: '1px solid #F5B7B1', borderRadius: 6, padding: '4px 6px', marginBottom: 6 }}>
+                          ⚠️ {pendentesResiduais.length} peça{pendentesResiduais.length > 1 ? 's' : ''} sem corte/acabamento confirmado
                         </div>
                       )}
 
@@ -578,6 +636,14 @@ export default function FilaPage() {
                           style={{ width: '100%', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 6, padding: 6, color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}
                         >
                           ← {etapaAnterior.label}
+                        </button>
+                      )}
+                      {isCorteOuAcabamento && relevantes.length > 0 && (
+                        <button
+                          onClick={() => abrirFormularioProducao(o, etapa.id as 'corte' | 'acabamento')}
+                          style={{ width: '100%', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 6, padding: 6, color: 'var(--text-muted)', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}
+                        >
+                          🖨️ Formulário {etapa.id === 'corte' ? 'de Corte' : 'de Colagem/Acab.'}
                         </button>
                       )}
                       {isCorteOuAcabamento ? (

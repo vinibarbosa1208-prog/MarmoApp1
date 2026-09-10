@@ -1454,3 +1454,15 @@
   .bottom-nav-item.active { color: var(--gold); }
 }
 
+/* Impressão: esconde a navegação do app (sidebar, topbar mobile, bottom nav,
+   toast) em qualquer página — usado pelo formulário de produção da Fila de
+   Serviços e serve pra qualquer outra tela que vier a ter um botão de
+   imprimir depois, sem precisar repetir essa regra. */
+@media print {
+  .sidebar, .sidebar-backdrop, .mobile-topbar, .bottom-nav, #toast {
+    display: none !important;
+  }
+  .main { margin-left: 0 !important; }
+  #page-content { padding: 0 !important; }
+}
+
