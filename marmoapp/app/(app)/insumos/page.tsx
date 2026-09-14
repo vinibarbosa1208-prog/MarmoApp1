@@ -39,6 +39,22 @@ interface Retirada {
   observacao: string | null
 }
 
+interface Solicitacao {
+  id: string
+  insumo_id: string | null
+  descricao_livre: string | null
+  quantidade: number | null
+  unidade: string | null
+  solicitado_por: string
+  observacao: string | null
+  status: 'pendente' | 'comprado' | 'cancelado'
+  data_solicitacao: string
+  data_comprado: string | null
+  insumos: { nome: string; unidade: string; categoria: string | null } | null
+}
+
+interface Funcionario { id: string; nome: string; ativo: boolean }
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function apiFetch(url: string, init?: RequestInit) {
@@ -446,6 +462,124 @@ function ModalResetGeral({ insumos, onClose, onSaved }: { insumos: Insumo[]; onC
         <div className="modal-footer">
           <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
           <button className="btn btn-danger" onClick={confirmar} disabled={loading}>{loading ? 'Resetando...' : '🔄 Confirmar reset geral'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Modal: Nova Solicitação ───────────────────────────────────────────────
+
+// Pensada pra digitar a lista de papel/quadro do chão de fábrica de uma vez
+// só, item por item, sem reabrir o modal a cada peça: "Salvar e adicionar
+// outra" grava e limpa o formulário pra próxima; "Concluir" fecha e
+// atualiza a lista.
+function ModalNovaSolicitacao({ insumos, funcionarios, onClose, onSalvou }: {
+  insumos: Insumo[]
+  funcionarios: Funcionario[]
+  onClose: () => void
+  onSalvou: () => void
+}) {
+  const hoje = new Date().toISOString().split('T')[0]
+  const OUTRO = '__outro__'
+  const vazio = { insumo_id: '', descricao_livre: '', quantidade: '', unidade: '', solicitado_por: '', observacao: '', data_solicitacao: hoje }
+  const [form, setForm] = useState(vazio)
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState('')
+  const [salvos, setSalvos] = useState(0)
+
+  function up(k: keyof typeof vazio, v: string) { setForm(f => ({ ...f, [k]: v })) }
+
+  async function salvar(fechar: boolean) {
+    if (!form.solicitado_por.trim()) { setErro('Informe quem pediu'); return }
+    if (!form.insumo_id && !form.descricao_livre.trim()) { setErro('Selecione um insumo ou descreva o item'); return }
+    setLoading(true)
+    setErro('')
+    const insumoSelecionado = insumos.find(i => i.id === form.insumo_id)
+    const res = await apiFetch('/api/insumos/solicitacoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        insumo_id: form.insumo_id && form.insumo_id !== OUTRO ? form.insumo_id : null,
+        descricao_livre: !form.insumo_id || form.insumo_id === OUTRO ? form.descricao_livre.trim() : null,
+        quantidade: form.quantidade || null,
+        unidade: form.unidade || insumoSelecionado?.unidade || null,
+        solicitado_por: form.solicitado_por.trim(),
+        observacao: form.observacao || null,
+        data_solicitacao: form.data_solicitacao,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setErro(data.error || 'Erro ao salvar'); setLoading(false); return }
+    setLoading(false)
+    setSalvos(s => s + 1)
+    onSalvou()
+    if (fechar) { onClose(); return }
+    // Mantém quem pediu e a data (normalmente é a mesma pessoa/dia digitando
+    // vários itens da lista em sequência) e limpa só o item em si.
+    setForm(f => ({ ...vazio, solicitado_por: f.solicitado_por, data_solicitacao: f.data_solicitacao }))
+  }
+
+  const mostrarLivre = !form.insumo_id || form.insumo_id === OUTRO
+
+  return (
+    <div className="modal-overlay open" style={{ zIndex: 9000 }}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">Nova Solicitação{salvos > 0 ? ` (${salvos} adicionada${salvos > 1 ? 's' : ''})` : ''}</div>
+          <button className="btn-close" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label className="form-label">ITEM *</label>
+            <select className="form-select" value={form.insumo_id} onChange={e => up('insumo_id', e.target.value)}>
+              <option value="">— Selecione do catálogo —</option>
+              {insumos.map(ins => <option key={ins.id} value={ins.id}>{ins.nome} ({ins.unidade})</option>)}
+              <option value={OUTRO}>Outro (não cadastrado)</option>
+            </select>
+          </div>
+          {mostrarLivre && (
+            <div className="form-group">
+              <label className="form-label">DESCREVA O ITEM *</label>
+              <input className="form-input" placeholder="Ex: broca de vídea 8mm" value={form.descricao_livre} onChange={e => up('descricao_livre', e.target.value)} autoFocus />
+            </div>
+          )}
+          <div className="form-row form-row-2">
+            <div className="form-group">
+              <label className="form-label">QUANTIDADE</label>
+              <input className="form-input" type="number" step="0.01" placeholder="Opcional" value={form.quantidade} onChange={e => up('quantidade', e.target.value)} />
+            </div>
+            {mostrarLivre && (
+              <div className="form-group">
+                <label className="form-label">UNIDADE</label>
+                <input className="form-input" placeholder="un, cx, m..." value={form.unidade} onChange={e => up('unidade', e.target.value)} />
+              </div>
+            )}
+          </div>
+          <div className="form-row form-row-2">
+            <div className="form-group">
+              <label className="form-label">QUEM PEDIU *</label>
+              <input className="form-input" list="funcionarios-lista" placeholder="Nome" value={form.solicitado_por} onChange={e => up('solicitado_por', e.target.value)} />
+              <datalist id="funcionarios-lista">
+                {funcionarios.map(f => <option key={f.id} value={f.nome} />)}
+              </datalist>
+            </div>
+            <div className="form-group">
+              <label className="form-label">DATA DO PEDIDO</label>
+              <input className="form-input" type="date" value={form.data_solicitacao} onChange={e => up('data_solicitacao', e.target.value)} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">OBSERVAÇÃO</label>
+            <input className="form-input" placeholder="Opcional" value={form.observacao} onChange={e => up('observacao', e.target.value)} />
+          </div>
+          {erro && <div style={{ color: 'var(--red)', fontSize: 13 }}>{erro}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={() => salvar(true)} disabled={loading}>Concluir</button>
+          <button className="btn btn-gold" onClick={() => salvar(false)} disabled={loading}>{loading ? 'Salvando...' : '💾 Salvar e adicionar outra'}</button>
         </div>
       </div>
     </div>
@@ -888,15 +1022,220 @@ function AbaRetiradas() {
   )
 }
 
+// ─── Aba Solicitações da Equipe ────────────────────────────────────────────
+
+function nomeItemSolicitacao(s: Solicitacao): string {
+  return s.insumos?.nome || s.descricao_livre || 'Item'
+}
+
+function unidadeSolicitacao(s: Solicitacao): string | null {
+  return s.insumos?.unidade || s.unidade
+}
+
+function AbaSolicitacoes() {
+  const { toast, marmoraria } = useApp()
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([])
+  const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState<'pendente' | 'comprado' | 'todas'>('pendente')
+  const [modalNovo, setModalNovo] = useState(false)
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  const [gerandoPdf, setGerandoPdf] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [rSol, rIns, rFunc] = await Promise.all([
+      apiFetch('/api/insumos/solicitacoes'),
+      apiFetch('/api/insumos'),
+      apiFetch('/api/funcionarios'),
+    ])
+    if (rSol.ok) setSolicitacoes(await rSol.json())
+    if (rIns.ok) setInsumos(await rIns.json())
+    if (rFunc.ok) {
+      const f: Funcionario[] = await rFunc.json()
+      setFuncionarios(f.filter(x => x.ativo))
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const filtered = solicitacoes.filter(s => filtro === 'todas' || s.status === filtro)
+  const pendentes = solicitacoes.filter(s => s.status === 'pendente')
+
+  async function marcarComprado(id: string) {
+    const res = await apiFetch(`/api/insumos/solicitacoes/${id}/comprar`, { method: 'POST' })
+    if (res.ok) { toast('Marcado como comprado', 'ok2'); load(); setSelecionados(prev => { const n = new Set(prev); n.delete(id); return n }) }
+    else toast('Erro ao atualizar', 'err')
+  }
+
+  async function marcarCompradoLote() {
+    const ids = Array.from(selecionados)
+    if (!confirm(`Marcar ${ids.length} item(ns) como comprado(s)?`)) return
+    await Promise.all(ids.map(id => apiFetch(`/api/insumos/solicitacoes/${id}/comprar`, { method: 'POST' })))
+    toast(`${ids.length} item(ns) marcado(s) como comprado(s)`, 'ok2')
+    setSelecionados(new Set())
+    load()
+  }
+
+  async function excluir(id: string) {
+    if (!confirm('Excluir esta solicitação? (use isso só pra corrigir erro de digitação)')) return
+    const res = await apiFetch(`/api/insumos/solicitacoes/${id}`, { method: 'DELETE' })
+    if (res.ok) { toast('Solicitação excluída', 'ok2'); load() }
+    else toast('Erro ao excluir', 'err')
+  }
+
+  function toggleSel(id: string) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  async function gerarLista() {
+    if (!marmoraria) { toast('Dados da empresa não disponíveis', 'err'); return }
+    if (pendentes.length === 0) { toast('Não há solicitações pendentes', 'err'); return }
+    setGerandoPdf(true)
+    const { gerarListaInsumosPDF } = await import('@/lib/pdf/gerar-lista-insumos-pdf')
+    const doc = gerarListaInsumosPDF(
+      pendentes
+        .slice()
+        .sort((a, b) => nomeItemSolicitacao(a).localeCompare(nomeItemSolicitacao(b)))
+        .map(s => ({
+          id: s.id,
+          nome: nomeItemSolicitacao(s),
+          quantidade: s.quantidade,
+          unidade: unidadeSolicitacao(s),
+          solicitado_por: s.solicitado_por,
+          observacao: s.observacao,
+        })),
+      marmoraria
+    )
+    const blob = doc.output('blob')
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setGerandoPdf(false)
+  }
+
+  return (
+    <div>
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
+        <div className="stat-card">
+          <div className="stat-label">Pendentes</div>
+          <div className="stat-value">{pendentes.length}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Compradas este mês</div>
+          <div className="stat-value">
+            {solicitacoes.filter(s => s.status === 'comprado' && s.data_comprado?.startsWith(new Date().toISOString().slice(0, 7))).length}
+          </div>
+        </div>
+      </div>
+
+      {selecionados.size > 0 && (
+        <div style={{
+          background: 'var(--sidebar-bg)', color: '#fff', borderRadius: 10, padding: '12px 20px',
+          display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12,
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{selecionados.size} selecionado(s)</span>
+          <button className="btn btn-gold btn-sm" onClick={marcarCompradoLote}>✅ Marcar como comprado</button>
+          <button className="btn btn-ghost btn-sm" style={{ color: '#fff' }} onClick={() => setSelecionados(new Set())}>Cancelar</button>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-header" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <span className="card-title">Solicitações da Equipe</span>
+          <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
+            <select className="form-select" value={filtro} onChange={e => setFiltro(e.target.value as typeof filtro)} style={{ width: 160 }}>
+              <option value="pendente">Pendentes</option>
+              <option value="comprado">Compradas</option>
+              <option value="todas">Todas</option>
+            </select>
+            <button className="btn btn-outline" onClick={gerarLista} disabled={gerandoPdf || pendentes.length === 0}>
+              🖨️ Gerar lista da semana
+            </button>
+            <button className="btn btn-gold" onClick={() => setModalNovo(true)}>+ Nova solicitação</button>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}></th>
+                <th>Item</th>
+                <th>Qtd</th>
+                <th>Pedido por</th>
+                <th>Data</th>
+                <th>Observação</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8}><div className="empty-state"><p>Carregando...</p></div></td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={8}><div className="empty-state"><h3>Nenhuma solicitação {filtro === 'pendente' ? 'pendente' : filtro === 'comprado' ? 'comprada' : ''}</h3><p>Digite aqui o que a equipe escreveu na lista/quadro do chão de fábrica.</p></div></td></tr>
+              ) : filtered.map(s => (
+                <tr key={s.id}>
+                  <td>
+                    {s.status === 'pendente' && (
+                      <input type="checkbox" checked={selecionados.has(s.id)} onChange={() => toggleSel(s.id)} style={{ cursor: 'pointer', accentColor: 'var(--gold)' }} />
+                    )}
+                  </td>
+                  <td style={{ fontWeight: 500 }}>
+                    {nomeItemSolicitacao(s)}
+                    {!s.insumo_id && <span className="badge" style={{ marginLeft: 6, fontSize: 10, background: 'var(--light)', color: 'var(--text-muted)' }}>não catalogado</span>}
+                  </td>
+                  <td className="text-sm">{s.quantidade ? `${s.quantidade} ${unidadeSolicitacao(s) || ''}` : '—'}</td>
+                  <td className="text-sm">{s.solicitado_por}</td>
+                  <td className="text-sm">{fmtDate(s.data_solicitacao)}</td>
+                  <td className="text-gray text-sm">{s.observacao || '—'}</td>
+                  <td>
+                    {s.status === 'pendente' && <span className="badge badge-pending">Pendente</span>}
+                    {s.status === 'comprado' && <span className="badge badge-approved">✅ Comprado {s.data_comprado ? `(${fmtDate(s.data_comprado)})` : ''}</span>}
+                    {s.status === 'cancelado' && <span className="badge badge-rejected">Cancelado</span>}
+                  </td>
+                  <td>
+                    <div className="flex gap-2">
+                      {s.status === 'pendente' && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => marcarComprado(s.id)} title="Marcar como comprado">✅</button>
+                      )}
+                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => excluir(s.id)} title="Excluir">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modalNovo && (
+        <ModalNovaSolicitacao
+          insumos={insumos}
+          funcionarios={funcionarios}
+          onClose={() => { setModalNovo(false); load() }}
+          onSalvou={load}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function InsumosPage() {
-  const [aba, setAba] = useState<'estoque' | 'pedidos' | 'retiradas'>('estoque')
+  const [aba, setAba] = useState<'estoque' | 'pedidos' | 'retiradas' | 'solicitacoes'>('estoque')
 
   const abas = [
     { id: 'estoque', label: '📦 Estoque' },
     { id: 'pedidos', label: '🛒 Pedidos' },
     { id: 'retiradas', label: '📤 Retiradas' },
+    { id: 'solicitacoes', label: '🙋 Solicitações' },
   ] as const
 
   return (
@@ -920,6 +1259,7 @@ export default function InsumosPage() {
       {aba === 'estoque' && <AbaEstoque />}
       {aba === 'pedidos' && <AbaPedidos />}
       {aba === 'retiradas' && <AbaRetiradas />}
+      {aba === 'solicitacoes' && <AbaSolicitacoes />}
     </div>
   )
 }
