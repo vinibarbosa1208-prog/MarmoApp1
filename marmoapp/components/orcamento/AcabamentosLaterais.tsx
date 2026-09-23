@@ -60,11 +60,22 @@ function SvgFrontao() {
   )
 }
 
+function SvgSaia() {
+  return (
+    <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+      <rect x="8" y="8" width="34" height="10" fill="#f8f7f4" stroke="#1a1a1a" strokeWidth="1.8"/>
+      <rect x="8" y="18" width="34" height="24" fill="#f3e3c3" stroke="#1a1a1a" strokeWidth="1.8"/>
+      <line x1="8" y1="18" x2="20" y2="8" stroke="#e67e22" strokeWidth="1.5"/>
+    </svg>
+  )
+}
+
 const ACABAMENTO_SVG: Record<string, React.ReactNode> = {
   reto: <SvgReto />,
   boleado: <SvgBoleado />,
   meia_esquadria: <SvgMeiaEsquadria />,
   frontao: <SvgFrontao />,
+  saia: <SvgSaia />,
 }
 
 interface Props {
@@ -105,6 +116,17 @@ export default function AcabamentosLaterais({
     }
   }
 
+  // Altura padrão da saia: para escada, sugere a altura total (espelhos) do lance,
+  // já que a saia lateral cobre a escada inteira; para os demais desenhos, um rodapé padrão de 10cm.
+  function alturaSaiaPadrao(): number {
+    if (tipoPeca === 'escada') {
+      const n = (dadosExtras.num_degraus as number) || 0
+      const ae = (dadosExtras.altura_espelho as number) || 0
+      if (n > 0 && ae > 0) return (n * ae) / 100
+    }
+    return 0.10
+  }
+
   return (
     <div style={{ marginTop: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
@@ -113,6 +135,7 @@ export default function AcabamentosLaterais({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {laterais.map(lateral => {
           const current = getAcabamento(lateral)
+          const temSaia = !!(dadosExtras[`saia_${lateral}`] as boolean)
           const hasError = showErrors && !current
           const raioKey = `raio_${lateral}`
           const raio = (dadosExtras[raioKey] as number) || 20
@@ -128,13 +151,14 @@ export default function AcabamentosLaterais({
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dark)', minWidth: 110 }}>
                   {LATERAL_LABELS[lateral] || lateral}
                 </span>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {Object.keys(ACABAMENTO_LABELS).map(tipo => {
-                    const sel = current === tipo
+                    const sel = current === tipo && !temSaia
                     return (
                       <button
                         key={tipo}
                         type="button"
+                        disabled={temSaia}
                         onClick={() => {
                           setAcabamento(lateral, tipo)
                           if (tipo === 'boleado' && !dadosExtras[raioKey]) {
@@ -150,7 +174,8 @@ export default function AcabamentosLaterais({
                           borderRadius: 6,
                           background: sel ? '#fef8ec' : '#fff',
                           padding: '4px 6px',
-                          cursor: 'pointer',
+                          cursor: temSaia ? 'not-allowed' : 'pointer',
+                          opacity: temSaia ? 0.4 : 1,
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -164,10 +189,41 @@ export default function AcabamentosLaterais({
                       </button>
                     )
                   })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (temSaia) {
+                        onLateralExtrasChange(lateral, 'saia', false)
+                      } else {
+                        setAcabamento(lateral, 'meia_esquadria')
+                        onLateralExtrasChange(lateral, 'saia', true)
+                        if (!dadosExtras[`altura_saia_${lateral}`]) {
+                          onLateralExtrasChange(lateral, 'altura_saia', alturaSaiaPadrao())
+                        }
+                      }
+                    }}
+                    title="Saia (gera meia esquadria automaticamente)"
+                    style={{
+                      border: `2px solid ${temSaia ? 'var(--gold)' : 'var(--divider)'}`,
+                      borderRadius: 6,
+                      background: temSaia ? '#fef8ec' : '#fff',
+                      padding: '4px 6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                    }}
+                  >
+                    {ACABAMENTO_SVG.saia}
+                    <span style={{ fontSize: 9, color: temSaia ? 'var(--dark)' : '#888', fontWeight: temSaia ? 700 : 400 }}>
+                      Saia
+                    </span>
+                  </button>
                 </div>
               </div>
 
-              {current === 'boleado' && (
+              {current === 'boleado' && !temSaia && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Raio (mm):</label>
                   <input
@@ -182,7 +238,7 @@ export default function AcabamentosLaterais({
                 </div>
               )}
 
-              {current === 'frontao' && (
+              {current === 'frontao' && !temSaia && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Altura (cm):</label>
                   <input
@@ -197,35 +253,19 @@ export default function AcabamentosLaterais({
                 </div>
               )}
 
-              {['reto', 'boleado', 'meia_esquadria'].includes(current) && (
-                <div style={{ marginTop: 8 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!(dadosExtras[`saia_${lateral}`] as boolean)}
-                      onChange={e => {
-                        onLateralExtrasChange(lateral, 'saia', e.target.checked)
-                        if (e.target.checked && !dadosExtras[`altura_saia_${lateral}`]) {
-                          onLateralExtrasChange(lateral, 'altura_saia', 0.10)
-                        }
-                      }}
-                    />
-                    <span style={{ fontSize: 11, color: 'var(--gray)' }}>Saia</span>
-                    {!!(dadosExtras[`saia_${lateral}`] as boolean) && (
-                      <>
-                        <input
-                          className="form-input"
-                          type="text" inputMode="decimal"
-                          min="1"
-                          step="1"
-                          value={Math.round(((dadosExtras[`altura_saia_${lateral}`] as number) || 0.10) * 100)}
-                          onChange={e => onLateralExtrasChange(lateral, 'altura_saia', (parseIntBR(e.target.value) || 10) / 100)}
-                          style={{ width: 60 }}
-                        />
-                        <span style={{ fontSize: 11, color: 'var(--gray)' }}>cm</span>
-                      </>
-                    )}
-                  </label>
+              {temSaia && (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ fontSize: 11, color: 'var(--gray)' }}>Altura da saia (cm):</label>
+                  <input
+                    className="form-input"
+                    type="text" inputMode="decimal"
+                    min="1"
+                    step="1"
+                    value={Math.round(((dadosExtras[`altura_saia_${lateral}`] as number) || alturaSaiaPadrao()) * 100)}
+                    onChange={e => onLateralExtrasChange(lateral, 'altura_saia', (parseIntBR(e.target.value) || 10) / 100)}
+                    style={{ width: 70 }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--gray)' }}>· acabamento: meia esquadria (automático)</span>
                 </div>
               )}
 

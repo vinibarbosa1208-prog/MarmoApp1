@@ -38,23 +38,16 @@ export function getLateraisDaPeca(tipo: string, dadosExtras?: Record<string, unk
       const lado = (dadosExtras?.extensao_lado as string) || 'direita'
       return ['esquerda', 'direita', 'frente', 'fundo'].filter(l => l !== lado)
     }
+    case 'soleira':
+      return ['esquerda', 'direita', 'frente', 'fundo']
+    case 'escada':
+      return ['esquerda', 'direita']
     default:
       return []
   }
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
-
-const LADOS_BANCADA = ['esquerda', 'direita', 'frente', 'fundo'] as const
-
-const LADO_OPCOES = [
-  { value: 'nenhum',         label: 'Nenhum' },
-  { value: 'saia',           label: 'Saia' },
-  { value: 'frontao',        label: 'Frontão' },
-  { value: 'meia_esquadria', label: 'Meia Esquadria' },
-  { value: 'reto',           label: 'Reto' },
-  { value: 'boleado',        label: 'Boleado' },
-]
 
 const SERVICOS_LISTA = [
   { id: 'meia_esquadria',  label: 'Meia Esquadria',      preco: 55,  unidade: 'ml'  },
@@ -71,81 +64,6 @@ const SERVICOS_LISTA = [
 
 function Err({ msg }: { msg: string }) {
   return <p style={{ color: '#c0392b', fontSize: 11, marginTop: 3 }}>{msg}</p>
-}
-
-function LadoConfig({
-  lado, dados_extras, setExtra, showErrors,
-}: {
-  lado: string
-  dados_extras: Record<string, unknown>
-  setExtra: (key: string, val: unknown) => void
-  showErrors: boolean
-}) {
-  const chaveOpcao = `lado_${lado}`
-  const opcao = (dados_extras[chaveOpcao] as string) || 'nenhum'
-  const nome = lado.charAt(0).toUpperCase() + lado.slice(1)
-
-  return (
-    <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--divider)' }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#888', letterSpacing: '0.05em', marginBottom: 5 }}>
-        {nome.toUpperCase()}
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {LADO_OPCOES.map(op => (
-          <button
-            key={op.value}
-            type="button"
-            onClick={() => setExtra(chaveOpcao, op.value)}
-            style={{
-              padding: '3px 9px',
-              borderRadius: 5,
-              fontSize: 11,
-              fontWeight: opcao === op.value ? 700 : 500,
-              cursor: 'pointer',
-              border: `1.5px solid ${opcao === op.value ? 'var(--gold)' : 'var(--divider)'}`,
-              background: opcao === op.value ? '#fef8ec' : '#fff',
-              color: opcao === op.value ? 'var(--dark)' : '#666',
-              transition: 'border-color 0.1s, background 0.1s',
-            }}
-          >
-            {op.label}
-          </button>
-        ))}
-      </div>
-      {opcao === 'saia' && (
-        <div style={{ marginTop: 6 }}>
-          <input
-            className="form-input"
-            type="text" inputMode="decimal"
-            min="1"
-            step="0.1"
-            placeholder="Altura da saia (cm)"
-            value={(dados_extras[`altura_saia_${lado}`] as number) || ''}
-            onChange={e => setExtra(`altura_saia_${lado}`, parseNumBR(e.target.value) || 0)}
-          />
-          {showErrors && !((dados_extras[`altura_saia_${lado}`] as number) > 0) && (
-            <Err msg="Informe a altura da saia." />
-          )}
-        </div>
-      )}
-      {opcao === 'frontao' && (
-        <div style={{ marginTop: 6 }}>
-          <input
-            className="form-input"
-            type="text" inputMode="decimal"
-            min="1"
-            step="0.1"
-            placeholder="Altura do frontão (cm)"
-            value={(dados_extras[`altura_frontao_${lado}`] as number) || ''}
-            onChange={e => setExtra(`altura_frontao_${lado}`, parseNumBR(e.target.value) || 0)}
-          />
-          {showErrors && !((dados_extras[`altura_frontao_${lado}`] as number) > 0) && (
-            <Err msg="Informe a altura do frontão." />
-          )}
-        </div>
-      )}
-    </div>
-  )
 }
 
 // ── SVGs ──────────────────────────────────────────────────────────────────────
@@ -348,21 +266,6 @@ export default function SeletorPeca(props: Props) {
       {tipo_peca && (
         <div style={{ marginTop: 12, padding: 14, background: 'var(--page-bg)', border: '1px solid var(--card-border)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-          {/* ── Bancada — configuração por lado ── */}
-          {peca === 'bancada_simples' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {LADOS_BANCADA.map(lado => (
-                <LadoConfig
-                  key={lado}
-                  lado={lado}
-                  dados_extras={dados_extras}
-                  setExtra={setExtra}
-                  showErrors={showErrors}
-                />
-              ))}
-            </div>
-          )}
-
           {/* ── Serviço — lista selecionável ── */}
           {peca === 'servico' && (
             <>
@@ -518,24 +421,6 @@ export default function SeletorPeca(props: Props) {
                     onChange={e => setExtra('tem_fundo', e.target.checked)} />
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Tem fundo?</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
-                  <input type="checkbox"
-                    checked={!!(dados_extras.tem_saia_nicho as boolean)}
-                    onChange={e => {
-                      setExtra('tem_saia_nicho', e.target.checked)
-                      if (!e.target.checked) setExtra('altura_saia_nicho', 0)
-                    }} />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>Tem saia?</span>
-                </label>
-                {!!(dados_extras.tem_saia_nicho as boolean) && (
-                  <div className="form-group" style={{ paddingLeft: 26, marginBottom: 0 }}>
-                    <label className="form-label">ALTURA DA SAIA (cm)</label>
-                    <input className="form-input" type="text" inputMode="decimal" min="1" step="1" placeholder="Ex: 10"
-                      value={(dados_extras.altura_saia_nicho as number) || ''}
-                      onChange={e => setExtra('altura_saia_nicho', parseNumBR(e.target.value) || 0)} />
-                    {showErrors && !((dados_extras.altura_saia_nicho as number) > 0) && <Err msg="Informe a altura da saia." />}
-                  </div>
-                )}
               </div>
               {(() => {
                 const l = (dados_extras.largura as number) || 0
@@ -545,9 +430,7 @@ export default function SeletorPeca(props: Props) {
                 const aLat = 2 * p * a
                 const aTB = 2 * l * p
                 const aFundo = (dados_extras.tem_fundo as boolean) ? l * a : 0
-                const altSaia = ((dados_extras.altura_saia_nicho as number) || 0) / 100
-                const aSaia = (dados_extras.tem_saia_nicho as boolean) && altSaia > 0 ? l * altSaia : 0
-                const total = aLat + aTB + aFundo + aSaia
+                const total = aLat + aTB + aFundo
                 const d = (v: number) => v.toFixed(2).replace('.', ',')
                 return (
                   <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
@@ -565,15 +448,12 @@ export default function SeletorPeca(props: Props) {
                         <span style={{ fontFamily: 'monospace' }}>{d(l)} × {d(a)} = <strong>{d(aFundo)} m²</strong></span>
                       </div>
                     )}
-                    {aSaia > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                        <span>Saia</span>
-                        <span style={{ fontFamily: 'monospace' }}>{d(l)} × {d(altSaia)} = <strong>{d(aSaia)} m²</strong></span>
-                      </div>
-                    )}
                     <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                       <span>Total</span>
                       <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
+                      Saia/frontão por lateral: configure abaixo em &quot;Acabamento por lateral&quot;.
                     </div>
                   </div>
                 )

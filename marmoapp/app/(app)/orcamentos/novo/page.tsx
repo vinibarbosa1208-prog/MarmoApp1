@@ -109,7 +109,18 @@ function calcArea(item: ItemForm): number {
   if (item.tipo_peca === 'soleira') {
     const comp = (ex.comprimento as number) || 0
     const larg = (ex.largura as number) || 0
-    return comp * larg
+    if (!comp || !larg) return 0
+    const base = comp * larg
+    const dimMap: Record<string, number> = { frente: comp, fundo: comp, esquerda: larg, direita: larg }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
   }
 
   if (item.tipo_peca === 'nicho') {
@@ -120,9 +131,21 @@ function calcArea(item: ItemForm): number {
     const aLat = 2 * p * a
     const aTB = 2 * l * p
     const aFundo = (ex.tem_fundo as boolean) ? l * a : 0
-    const altSaia = ((ex.altura_saia_nicho as number) || 0) / 100
-    const aSaia = (ex.tem_saia_nicho as boolean) && altSaia > 0 ? l * altSaia : 0
-    return aLat + aTB + aFundo + aSaia
+    const dimMap: Record<string, number> = { esquerda: a, direita: a, superior: l, inferior: l }
+    const acabs: Record<string, string> = {
+      esquerda: item.acabamento_esquerda,
+      direita: item.acabamento_direita,
+      superior: (ex.acabamento_superior as string) || '',
+      inferior: (ex.acabamento_inferior as string) || '',
+    }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return aLat + aTB + aFundo + lateralExtras
   }
 
   if (item.tipo_peca === 'pia_l') {
@@ -193,37 +216,45 @@ function calcArea(item: ItemForm): number {
     return tampos + lateralExtras
   }
 
-  let base = 0
-  let saia = 0
-  let frontao = 0
-
   if (item.tipo_peca === 'escada') {
     const n = (ex.num_degraus as number) || 0
     const lp = (ex.largura_piso as number) || 0
     const ae = (ex.altura_espelho as number) || 0
     const w = item.largura || 0
-    base = w * (lp / 100) * n + w * (ae / 100) * n
-  } else {
+    if (!n || !lp || !ae || !w) return 0
+    const base = w * (lp / 100) * n + w * (ae / 100) * n
+    const comprimentoLateral = n * (lp / 100)
+    const dimMap: Record<string, number> = { esquerda: comprimentoLateral, direita: comprimentoLateral }
+    const acabs: Record<string, string> = { esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
+  }
+
+  if (item.tipo_peca === 'bancada_simples') {
     if (!item.largura || !item.altura) return 0
-    base = item.largura * item.altura
-    frontao = item.tem_frontao ? item.largura * item.altura_frontao : 0
-    saia = item.tem_saia ? item.largura * item.altura_saia : 0
+    const base = item.largura * item.altura
+    const dimMap: Record<string, number> = {
+      frente: item.largura, fundo: item.largura,
+      esquerda: item.altura, direita: item.altura,
+    }
+    const acabs: Record<string, string> = { frente: item.acabamento_frente, fundo: item.acabamento_fundo, esquerda: item.acabamento_esquerda, direita: item.acabamento_direita }
+    let lateralExtras = 0
+    for (const [lat, len] of Object.entries(dimMap)) {
+      const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+      const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+      if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
+      if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
+    }
+    return base + lateralExtras
   }
 
-  const dimMap: Record<string, number> = {
-    frente: item.largura, fundo: item.largura,
-    esquerda: item.altura, direita: item.altura,
-    superior: item.largura, inferior: item.largura,
-  }
-  let lateralExtras = 0
-  for (const [lat, len] of Object.entries(dimMap)) {
-    const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
-    const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
-    if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) lateralExtras += len * altSaia
-    if ((ex[`frontao_${lat}`] as boolean) && altFrontao > 0 && len > 0) lateralExtras += len * altFrontao
-  }
-
-  return base + saia + frontao + lateralExtras
+  return 0
 }
 
 function calcTotal(item: ItemForm): number {
@@ -243,20 +274,21 @@ function calcCusto(item: ItemForm): number {
 
 function calcAcabamentoLinear(item: ItemForm): number {
   if (item.tipo_peca !== 'bancada_simples') return 0
-  const ex = item.dados_extras
   const dimMap: Record<string, number> = {
     frente: item.largura,
     fundo: item.largura,
     esquerda: item.altura,
     direita: item.altura,
   }
+  const acabs: Record<string, string> = {
+    frente: item.acabamento_frente,
+    fundo: item.acabamento_fundo,
+    esquerda: item.acabamento_esquerda,
+    direita: item.acabamento_direita,
+  }
   let ml = 0
   for (const [lat, len] of Object.entries(dimMap)) {
-    if (len <= 0) continue
-    const ladoOpcao = (ex[`lado_${lat}`] as string) || 'nenhum'
-    const temSaia = !!(ex[`saia_${lat}`] as boolean)
-    const temFrontao = !!(ex[`frontao_${lat}`] as boolean)
-    if (ladoOpcao === 'saia' || ladoOpcao === 'frontao' || temSaia || temFrontao) ml += len
+    if (len > 0 && acabs[lat] === 'meia_esquadria') ml += len
   }
   return ml
 }
@@ -306,7 +338,6 @@ function validarItem(item: ItemForm): boolean {
     if (!((ex.largura as number) > 0)) return false
     if (!((ex.altura as number) > 0)) return false
     if (!((ex.profundidade as number) > 0)) return false
-    if ((ex.tem_saia_nicho as boolean) && !((ex.altura_saia_nicho as number) > 0)) return false
   }
   if (peca === 'pia_l') {
     if (!((ex.seg1_comprimento as number) > 0)) return false
@@ -1032,30 +1063,33 @@ export default function NovoOrcamentoPage() {
                   )
                 })() : novoItem.largura > 0 && novoItem.altura > 0 && (() => {
                   const d = (n: number) => n.toFixed(2).replace('.', ',')
+                  const ex = novoItem.dados_extras
                   const tampo = novoItem.largura * novoItem.altura
-                  const frontao = novoItem.tem_frontao ? novoItem.largura * novoItem.altura_frontao : 0
-                  const saia = novoItem.tem_saia ? novoItem.largura * novoItem.altura_saia : 0
-                  const total = tampo + frontao + saia
+                  const dimMap: Record<string, number> = { frente: novoItem.largura, fundo: novoItem.largura, esquerda: novoItem.altura, direita: novoItem.altura }
+                  const acabs: Record<string, string> = { frente: novoItem.acabamento_frente, fundo: novoItem.acabamento_fundo, esquerda: novoItem.acabamento_esquerda, direita: novoItem.acabamento_direita }
+                  const latLabels: Record<string, string> = { frente: 'Frente', fundo: 'Fundo', esquerda: 'Esq.', direita: 'Dir.' }
+                  const extras: { label: string; area: number }[] = []
+                  let total = tampo
+                  for (const [lat, len] of Object.entries(dimMap)) {
+                    const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
+                    const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
+                    if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) { const area = len * altSaia; extras.push({ label: `Saia ${latLabels[lat]}`, area }); total += area }
+                    if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) { const area = len * altFrontao; extras.push({ label: `Frontão ${latLabels[lat]}`, area }); total += area }
+                  }
                   const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
                   const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
                   return (
                     <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--card-bg)', borderRadius: 8, border: '1px solid rgba(25,135,84,0.2)', fontSize: 13 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: extras.length ? 4 : 0 }}>
                         <span style={{ color: 'var(--text-secondary)' }}>Tampo</span>
                         <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura)} = <strong>{d(tampo)} m²</strong></span>
                       </div>
-                      {novoItem.tem_frontao && novoItem.altura_frontao > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
-                          <span>Frontão</span>
-                          <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_frontao)} = <strong>{d(frontao)} m²</strong></span>
+                      {extras.map(({ label, area }, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
+                          <span>{label}</span>
+                          <span style={{ fontFamily: 'monospace' }}><strong>{d(area)} m²</strong></span>
                         </div>
-                      )}
-                      {novoItem.tem_saia && novoItem.altura_saia > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--text-muted)' }}>
-                          <span>Saia</span>
-                          <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura_saia)} = <strong>{d(saia)} m²</strong></span>
-                        </div>
-                      )}
+                      ))}
                       <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                         <span>Total</span>
                         <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
