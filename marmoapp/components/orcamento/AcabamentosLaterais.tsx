@@ -1,8 +1,7 @@
 'use client'
 
-import { parseIntBR } from '@/lib/utils'
-
 import { getLateraisDaPeca } from './SeletorPeca'
+import { IntInput } from '@/components/ui/NumInput'
 
 export const ACABAMENTO_LABELS: Record<string, string> = {
   reto: 'Reto',
@@ -226,13 +225,13 @@ export default function AcabamentosLaterais({
               {current === 'boleado' && !temSaia && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Raio (mm):</label>
-                  <input
+                  <IntInput
                     className="form-input"
-                    type="text" inputMode="decimal"
                     min="1"
                     step="1"
                     value={raio}
-                    onChange={e => onRaioChange(lateral, parseIntBR(e.target.value) || 20)}
+                    fallback={20}
+                    onChange={v => onRaioChange(lateral, v)}
                     style={{ width: 70 }}
                   />
                 </div>
@@ -241,13 +240,13 @@ export default function AcabamentosLaterais({
               {current === 'frontao' && !temSaia && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Altura (cm):</label>
-                  <input
+                  <IntInput
                     className="form-input"
-                    type="text" inputMode="decimal"
                     min="1"
                     step="1"
                     value={Math.round(((dadosExtras[`altura_frontao_${lateral}`] as number) || 0.10) * 100)}
-                    onChange={e => onLateralExtrasChange(lateral, 'altura_frontao', (parseIntBR(e.target.value) || 10) / 100)}
+                    fallback={10}
+                    onChange={v => onLateralExtrasChange(lateral, 'altura_frontao', v / 100)}
                     style={{ width: 70 }}
                   />
                 </div>
@@ -256,13 +255,13 @@ export default function AcabamentosLaterais({
               {temSaia && (
                 <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, color: 'var(--gray)' }}>Altura da saia (cm):</label>
-                  <input
+                  <IntInput
                     className="form-input"
-                    type="text" inputMode="decimal"
                     min="1"
                     step="1"
                     value={Math.round(((dadosExtras[`altura_saia_${lateral}`] as number) || alturaSaiaPadrao()) * 100)}
-                    onChange={e => onLateralExtrasChange(lateral, 'altura_saia', (parseIntBR(e.target.value) || 10) / 100)}
+                    fallback={10}
+                    onChange={v => onLateralExtrasChange(lateral, 'altura_saia', v / 100)}
                     style={{ width: 70 }}
                   />
                   <span style={{ fontSize: 11, color: 'var(--gray)' }}>· acabamento: meia esquadria (automático)</span>

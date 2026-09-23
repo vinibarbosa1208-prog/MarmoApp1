@@ -7,6 +7,7 @@ import { fmt, authErrorMessage, parseNumBR, parseIntBR } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import SeletorPeca, { getLateraisDaPeca, PECA_LABELS, type SeletorPecaState } from '@/components/orcamento/SeletorPeca'
 import AcabamentosLaterais from '@/components/orcamento/AcabamentosLaterais'
+import { NumInput, IntInput } from '@/components/ui/NumInput'
 
 interface ItemForm {
   id?: string
@@ -794,16 +795,16 @@ export default function EditarOrcamentoPage() {
                         <div className="form-row form-row-2">
                           <div className="form-group">
                             <label className="form-label">LARGURA (m)</label>
-                            <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="Ex: 2.00"
-                              value={novoItem.largura || ''}
-                              onChange={e => upItem({ largura: parseNumBR(e.target.value) || 0 })} />
+                            <NumInput className="form-input" min="0" step="0.01" placeholder="Ex: 2.00"
+                              value={novoItem.largura || 0}
+                              onChange={v => upItem({ largura: v || 0 })} />
                           </div>
                           {novoItem.tipo_peca !== 'escada' && (
                             <div className="form-group">
                               <label className="form-label">PROFUNDIDADE (m)</label>
-                              <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="Ex: 0.60"
-                                value={novoItem.altura || ''}
-                                onChange={e => upItem({ altura: parseNumBR(e.target.value) || 0 })} />
+                              <NumInput className="form-input" min="0" step="0.01" placeholder="Ex: 0.60"
+                                value={novoItem.altura || 0}
+                                onChange={v => upItem({ altura: v || 0 })} />
                             </div>
                           )}
                         </div>
@@ -925,8 +926,8 @@ export default function EditarOrcamentoPage() {
                   <>
                     <div className="form-group" style={{ marginTop: 10 }}>
                       <label className="form-label">QUANTIDADE DE PEÇAS</label>
-                      <input className="form-input" type="text" inputMode="numeric" min="1" step="1" value={novoItem.quantidade}
-                        onChange={e => upItem({ quantidade: parseIntBR(e.target.value) || 1 })} />
+                      <IntInput className="form-input" min="1" step="1" value={novoItem.quantidade}
+                        onChange={v => upItem({ quantidade: v || 1 })} />
                       {novoItem.quantidade > 1 && (
                         <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, marginTop: 6 }}>
                           Peça {pecaAtual} de {Math.max(1, Math.round(novoItem.quantidade))} — preencha a medida
@@ -938,29 +939,29 @@ export default function EditarOrcamentoPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
                       <div className="form-group">
                         <label className="form-label">CUSTO DE COMPRA (R$/m²)</label>
-                        <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="0,00"
-                          value={novoItem.custo_m2 || ''}
-                          onChange={e => {
-                            const custo = parseNumBR(e.target.value) || 0
+                        <NumInput className="form-input" min="0" step="0.01" placeholder="0,00"
+                          value={novoItem.custo_m2 || 0}
+                          onChange={v => {
+                            const custo = v || 0
                             upItem({ custo_m2: custo, preco_unitario: custo * (novoItem.markup || 3) })
                           }} />
                       </div>
                       <div className="form-group">
                         <label className="form-label">FATOR (×)</label>
-                        <input className="form-input" type="text" inputMode="decimal" min="0.1" step="0.5" placeholder="3"
-                          value={novoItem.markup || ''}
-                          onChange={e => {
-                            const markup = parseNumBR(e.target.value) || 1
+                        <NumInput className="form-input" min="0.1" step="0.5" placeholder="3"
+                          value={novoItem.markup || 0}
+                          onChange={v => {
+                            const markup = v || 1
                             upItem({ markup, preco_unitario: (novoItem.custo_m2 || 0) * markup })
                           }} />
                       </div>
                       <div className="form-group">
                         <label className="form-label">PREÇO DE VENDA (R$/m²)</label>
-                        <input className="form-input" type="text" inputMode="decimal" min="0" step="0.01" placeholder="0,00"
-                          value={novoItem.preco_unitario || ''}
+                        <NumInput className="form-input" min="0" step="0.01" placeholder="0,00"
+                          value={novoItem.preco_unitario || 0}
                           style={{ color: 'var(--gold)', fontWeight: 700 }}
-                          onChange={e => {
-                            const venda = parseNumBR(e.target.value) || 0
+                          onChange={v => {
+                            const venda = v || 0
                             const markup = novoItem.custo_m2 > 0
                               ? Math.round((venda / novoItem.custo_m2) * 100) / 100
                               : novoItem.markup
@@ -973,13 +974,13 @@ export default function EditarOrcamentoPage() {
                   <div className="form-row form-row-2" style={{ marginTop: 10 }}>
                     <div className="form-group">
                       <label className="form-label">{novoItem.tipo === 'servico' && servicoUnit ? `QUANTIDADE (${servicoUnit})` : 'QUANTIDADE'}</label>
-                      <input className="form-input" type="text" inputMode="decimal" step="0.01" value={novoItem.quantidade}
-                        onChange={e => upItem({ quantidade: parseNumBR(e.target.value) || 0 })} />
+                      <NumInput className="form-input" step="0.01" value={novoItem.quantidade}
+                        onChange={v => upItem({ quantidade: v })} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">{calcArea(novoItem) > 0 ? 'PREÇO POR M² (R$)' : 'PREÇO/UN (R$)'}</label>
-                      <input className="form-input" type="text" inputMode="decimal" step="0.01" value={novoItem.preco_unitario}
-                        onChange={e => upItem({ preco_unitario: parseNumBR(e.target.value) || 0 })} />
+                      <NumInput className="form-input" step="0.01" value={novoItem.preco_unitario}
+                        onChange={v => upItem({ preco_unitario: v })} />
                     </div>
                   </div>
                 )}
