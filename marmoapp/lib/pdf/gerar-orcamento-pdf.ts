@@ -343,10 +343,12 @@ export async function gerarOrcamentoPDF(
   }
 
   // ── Card de um item (mede e desenha) ────────────────────────
+  // Não exibe valor por item — só o que está incluso (descrição +
+  // especificações). O único valor em R$ que aparece é o subtotal do
+  // ambiente e o total geral, mais abaixo.
   const measureCard = (item: ItemPDF) => {
     const pad = 5.5
-    const priceW = 38
-    const titleW = CONTENT_W - pad * 2 - priceW
+    const titleW = CONTENT_W - pad * 2
     doc.setFontSize(10.5)
     doc.setFont('helvetica', 'bold')
     const titleLines = doc.splitTextToSize(item.descricao, titleW)
@@ -380,11 +382,6 @@ export async function gerarOrcamentoPDF(
       doc.setTextColor(...GRAY)
       doc.text(specLines, MARGIN + pad, ty + 1.5)
     }
-
-    doc.setFontSize(11.5)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...DARK)
-    doc.text(fmt(item.total_item), MARGIN + CONTENT_W - pad, startY + cardH / 2 + 1.5, { align: 'right' })
 
     return cardH
   }
