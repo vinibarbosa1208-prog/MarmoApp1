@@ -556,6 +556,17 @@ export default function VerOrcamentoPage() {
                   </div>
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Material a Cortar</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--dark)' }}>{areaTotal.toFixed(2)} m²</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Acabamento a Fazer</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--dark)' }}>{mlAcabamentoTotal.toFixed(2)} ml</div>
+                  </div>
+                </div>
+
                 <div style={{ marginBottom: projeto ? 16 : 0 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 6 }}>Instalações Executadas</div>
                   {instalacoes.length === 0 ? (
