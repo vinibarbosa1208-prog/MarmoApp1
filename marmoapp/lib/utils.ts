@@ -123,19 +123,145 @@ export function areaCortadaItens(itens: Pick<OrcamentoItem, 'area' | 'quantidade
   return itens.reduce((s, i) => s + ((i.area || 0) * (i.quantidade || 1)), 0)
 }
 
-// metros lineares de acabamento — soma o comprimento de cada lado que tem um
-// tipo de acabamento marcado (aproximação: não soma saia/frontão extras)
-export function mlAcabamentoItens(itens: Pick<OrcamentoItem,
-  'largura' | 'altura' | 'quantidade' | 'acabamento_esquerda' | 'acabamento_direita' | 'acabamento_frente' | 'acabamento_fundo'
->[]): number {
-  return itens.reduce((s, i) => {
-    let ml = 0
-    if (i.acabamento_frente) ml += i.largura || 0
-    if (i.acabamento_fundo) ml += i.largura || 0
-    if (i.acabamento_esquerda) ml += i.altura || 0
-    if (i.acabamento_direita) ml += i.altura || 0
-    return s + ml * (i.quantidade || 1)
-  }, 0)
+type ItemAcabamentoLinear = Pick<OrcamentoItem,
+  'tipo_peca' | 'dados_extras' | 'largura' | 'altura' | 'quantidade' |
+  'acabamento_esquerda' | 'acabamento_direita' | 'acabamento_frente' | 'acabamento_fundo'
+>
+
+// metros lineares de acabamento de UM item — soma o comprimento de cada
+// lateral que tem algum tipo de acabamento marcado (reto/boleado/meia
+// esquadria/frontão; saia conta pois força acabamento meia_esquadria na
+// lateral). Os comprimentos de cada lateral seguem a mesma lógica usada em
+// calcArea (novo/editar orçamento), lendo de dados_extras para os desenhos
+// cuja dimensão não fica salva em largura/altura.
+function mlAcabamentoItem(item: ItemAcabamentoLinear): number {
+  const ex = (item.dados_extras || {}) as Record<string, unknown>
+  let dimMap: Record<string, number> = {}
+  let acabs: Record<string, string> = {}
+
+  switch (item.tipo_peca) {
+    case 'bancada_simples': {
+      const l = item.largura || 0
+      const a = item.altura || 0
+      dimMap = { frente: l, fundo: l, esquerda: a, direita: a }
+      acabs = {
+        frente: item.acabamento_frente || '', fundo: item.acabamento_fundo || '',
+        esquerda: item.acabamento_esquerda || '', direita: item.acabamento_direita || '',
+      }
+      break
+    }
+    case 'lavatorio_simples': {
+      const comprimento = (ex.comprimento as number) || 0
+      const profundidade = (ex.profundidade as number) || 0
+      dimMap = { frente: comprimento, fundo: comprimento, esquerda: profundidade, direita: profundidade }
+      acabs = {
+        frente: item.acabamento_frente || '', fundo: item.acabamento_fundo || '',
+        esquerda: item.acabamento_esquerda || '', direita: item.acabamento_direita || '',
+      }
+      break
+    }
+    case 'pia_retangular': {
+      const largura = (ex.largura as number) || 0
+      const profundidade = (ex.profundidade as number) || 0
+      dimMap = { frente: largura, fundo: largura, esquerda: profundidade, direita: profundidade }
+      acabs = {
+        frente: item.acabamento_frente || '', fundo: item.acabamento_fundo || '',
+        esquerda: item.acabamento_esquerda || '', direita: item.acabamento_direita || '',
+      }
+      break
+    }
+    case 'lavatorio_extensao': {
+      const compTampo = (ex.comp_tampo as number) || 0
+      const compExtensao = (ex.comp_extensao as number) || 0
+      const prof = (ex.profundidade as number) || 0
+      const totalWidth = compTampo + compExtensao
+      dimMap = { frente: totalWidth, fundo: totalWidth, esquerda: prof, direita: prof }
+      acabs = {
+        frente: item.acabamento_frente || '', fundo: item.acabamento_fundo || '',
+        esquerda: item.acabamento_esquerda || '', direita: item.acabamento_direita || '',
+      }
+      break
+    }
+    case 'soleira': {
+      const comp = (ex.comprimento as number) || 0
+      const larg = (ex.largura as number) || 0
+      dimMap = { frente: comp, fundo: comp, esquerda: larg, direita: larg }
+      acabs = {
+        frente: item.acabamento_frente || '', fundo: item.acabamento_fundo || '',
+        esquerda: item.acabamento_esquerda || '', direita: item.acabamento_direita || '',
+      }
+      break
+    }
+    case 'nicho': {
+      const l = (ex.largura as number) || 0
+      const a = (ex.altura as number) || 0
+      dimMap = { esquerda: a, direita: a, superior: l, inferior: l }
+      acabs = {
+        esquerda: item.acabamento_esquerda || '',
+        direita: item.acabamento_direita || '',
+        superior: (ex.acabamento_superior as string) || '',
+        inferior: (ex.acabamento_inferior as string) || '',
+      }
+      break
+    }
+    case 'pia_l': {
+      const seg1c = (ex.seg1_comprimento as number) || 0
+      const seg1p = (ex.seg1_profundidade as number) || 0
+      const seg2c = (ex.seg2_comprimento as number) || 0
+      const seg2p = (ex.seg2_profundidade as number) || 0
+      dimMap = { esquerda: seg1p, direita: seg2p, frente_seg1: seg1c, frente_seg2: seg2c, fundo: seg1c }
+      acabs = {
+        esquerda: item.acabamento_esquerda || '',
+        direita: item.acabamento_direita || '',
+        fundo: item.acabamento_fundo || '',
+        frente_seg1: (ex.acabamento_frente_seg1 as string) || '',
+        frente_seg2: (ex.acabamento_frente_seg2 as string) || '',
+      }
+      break
+    }
+    case 'pia_u': {
+      const seg1c = (ex.seg1_comprimento as number) || 0
+      const seg1p = (ex.seg1_profundidade as number) || 0
+      const seg2c = (ex.seg2_comprimento as number) || 0
+      const seg3c = (ex.seg3_comprimento as number) || 0
+      const seg3p = (ex.seg3_profundidade as number) || 0
+      dimMap = { esquerda: seg1p, direita: seg3p, frente_seg1: seg1c, frente_seg2: seg2c, frente_seg3: seg3c, fundo: seg2c }
+      acabs = {
+        esquerda: item.acabamento_esquerda || '',
+        direita: item.acabamento_direita || '',
+        fundo: item.acabamento_fundo || '',
+        frente_seg1: (ex.acabamento_frente_seg1 as string) || '',
+        frente_seg2: (ex.acabamento_frente_seg2 as string) || '',
+        frente_seg3: (ex.acabamento_frente_seg3 as string) || '',
+      }
+      break
+    }
+    case 'escada': {
+      const n = (ex.num_degraus as number) || 0
+      const lp = (ex.largura_piso as number) || 0
+      const comprimentoLateral = n * (lp / 100)
+      dimMap = { esquerda: comprimentoLateral, direita: comprimentoLateral }
+      acabs = { esquerda: item.acabamento_esquerda || '', direita: item.acabamento_direita || '' }
+      break
+    }
+    default:
+      return 0
+  }
+
+  let ml = 0
+  for (const [lat, len] of Object.entries(dimMap)) {
+    if (len > 0 && acabs[lat]) ml += len
+  }
+  return ml
+}
+
+// metros lineares de acabamento — soma, por item, o comprimento de cada
+// lateral que tem algum acabamento marcado (inclui a metragem da saia, já
+// que a saia força acabamento meia_esquadria na lateral onde foi ativada).
+// Funciona para os 9 desenhos; lê dados_extras para os desenhos cuja
+// dimensão real não fica salva em largura/altura.
+export function mlAcabamentoItens(itens: ItemAcabamentoLinear[]): number {
+  return itens.reduce((s, i) => s + mlAcabamentoItem(i) * (i.quantidade || 1), 0)
 }
 
 // Capacidade diária média: soma tudo, divide pelos DIAS DISTINTOS com
