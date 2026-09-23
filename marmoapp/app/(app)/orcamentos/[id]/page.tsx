@@ -118,6 +118,7 @@ export default function VerOrcamentoPage() {
         dados_extras: i.dados_extras ?? undefined,
         variante: i.variante ?? undefined,
         nome_variante: i.nome_variante ?? undefined,
+        ambiente: i.ambiente ?? undefined,
       })),
     }
   }, [orc, itens])
