@@ -927,6 +927,33 @@ export default function NovoOrcamentoPage() {
         if (itensErr) throw itensErr
       }
 
+      // Abre automaticamente o centro de custo (Projeto) vinculado a este
+      // orçamento, já com o Material pré-preenchido a partir dos itens
+      // salvos. Best-effort: nunca bloqueia nem falha o salvamento do
+      // orçamento se o centro de custo não puder ser criado.
+      try {
+        const resProjeto = await fetch('/api/projetos', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            titulo: form.descricao || 'Orçamento',
+            valor_venda: totalFinal,
+            cliente_id: form.cliente_id || undefined,
+            orcamento_id: orc.id,
+          }),
+        })
+        if (resProjeto.ok) {
+          const projetoCriado = await resProjeto.json()
+          await fetch(`/api/projetos/${projetoCriado.id}/custos/sincronizar-material`, {
+            method: 'POST',
+            credentials: 'include',
+          })
+        }
+      } catch (eProjeto) {
+        console.error('Erro ao abrir centro de custos automaticamente:', eProjeto)
+      }
+
       await loadOrcamentos()
       limparRascunho()
       toast('Orçamento salvo!', 'ok2')

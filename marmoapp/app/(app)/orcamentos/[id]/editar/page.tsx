@@ -661,6 +661,32 @@ export default function EditarOrcamentoPage() {
       // Atualiza os IDs originais para o próximo save
       setOriginalIds(newIds)
 
+      // Sincroniza o Material do centro de custo (Projeto) vinculado a este
+      // orçamento, se houver um, com os itens que acabaram de ser salvos.
+      // Orçamentos antigos sem centro de custo são ignorados em silêncio.
+      // Best-effort: nunca bloqueia nem falha o salvamento do orçamento.
+      try {
+        const resProjetos = await fetch(`/api/projetos?orcamento_id=${orcId}`, { credentials: 'include' })
+        if (resProjetos.ok) {
+          const projetosVinculados = await resProjetos.json()
+          const projetoVinculado = Array.isArray(projetosVinculados) ? projetosVinculados[0] : null
+          if (projetoVinculado) {
+            await fetch(`/api/projetos/${projetoVinculado.id}`, {
+              method: 'PUT',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ valor_venda: totalFinal }),
+            })
+            await fetch(`/api/projetos/${projetoVinculado.id}/custos/sincronizar-material`, {
+              method: 'POST',
+              credentials: 'include',
+            })
+          }
+        }
+      } catch (eProjeto) {
+        console.error('Erro ao sincronizar centro de custos:', eProjeto)
+      }
+
       await loadOrcamentos()
       toast('Orçamento atualizado!', 'ok2')
       router.push('/orcamentos/' + orcId)
