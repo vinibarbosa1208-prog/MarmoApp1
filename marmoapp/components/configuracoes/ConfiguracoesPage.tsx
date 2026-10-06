@@ -25,6 +25,9 @@ interface Funcionario {
   observacoes: string | null
   ativo: boolean
   usuario_id: string | null
+  // Cadastro principal da mesma pessoa fisica -- ver funcionarios.pessoa_id
+  // e lib/producao/pessoas.ts (ficha semanal de producao).
+  pessoa_id: string | null
 }
 
 // ── Fixed project statuses (read-only) ───────────────────────
@@ -318,9 +321,12 @@ function EmptyRow({ label }: { label: string }) {
 
 // ── Funcionário Modal ─────────────────────────────────────────
 function FuncionarioModal({
-  initial, onSave, onClose,
+  initial, funcionarios, onSave, onClose,
 }: {
   initial: Partial<Funcionario>
+  // Lista completa pra oferecer o vinculo "mesma pessoa que..." -- quem
+  // acaba e tambem instala tem dois cadastros e uma ficha de papel so.
+  funcionarios: Funcionario[]
   onSave: (data: Partial<Funcionario>) => Promise<void>
   onClose: () => void
 }) {
@@ -331,6 +337,7 @@ function FuncionarioModal({
     valor_metro_linear: String(initial.valor_metro_linear ?? ''),
     telefone: initial.telefone ?? '',
     observacoes: initial.observacoes ?? '',
+    pessoa_id: initial.pessoa_id ?? '',
     ativo: initial.ativo ?? true,
   })
   const [saving, setSaving] = useState(false)
@@ -363,6 +370,7 @@ function FuncionarioModal({
         valor_metro_linear: form.valor_metro_linear ? parseFloat(form.valor_metro_linear) : null,
         telefone: form.telefone.trim() || null,
         observacoes: form.observacoes.trim() || null,
+        pessoa_id: form.pessoa_id || null,
         ativo: form.ativo,
       })
 
@@ -434,6 +442,30 @@ function FuncionarioModal({
           <div className="form-group">
             <label className="form-label">OBSERVAÇÕES</label>
             <input className="form-input" placeholder="Anotações..." value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">MESMA PESSOA QUE…</label>
+            <div style={{ fontSize: 12, color: 'var(--gray)', marginTop: -4, marginBottom: 8 }}>
+              Só quando a mesma pessoa tem dois cadastros (ex: acaba e também instala, com pagamentos diferentes).
+              Marque aqui o cadastro <b>principal</b> dela e os dois passam a dividir uma única ficha semanal de produção.
+            </div>
+            <select
+              className="form-select"
+              value={form.pessoa_id}
+              onChange={e => setForm(f => ({ ...f, pessoa_id: e.target.value }))}
+            >
+              <option value="">— É uma pessoa diferente (padrão) —</option>
+              {funcionarios
+                // Não pode apontar pro próprio cadastro nem pra outro que já
+                // seja secundário (o banco recusa a cadeia) — some da lista
+                // em vez de deixar escolher e falhar ao salvar.
+                .filter(f => f.id !== initial.id && !f.pessoa_id)
+                .map(f => (
+                  <option key={f.id} value={f.id}>
+                    {f.nome} — {f.cargo}
+                  </option>
+                ))}
+            </select>
           </div>
           {initial.id && isInstalador && (
             <div className="form-group">
@@ -1091,6 +1123,7 @@ export default function ConfiguracoesPage() {
       {funcModal.open && (
         <FuncionarioModal
           initial={funcModal.item ?? {}}
+          funcionarios={funcionarios}
           onSave={saveFuncionario}
           onClose={() => setFuncModal({ open: false, item: null })}
         />

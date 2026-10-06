@@ -41,6 +41,10 @@ export async function POST(req: NextRequest) {
         valor_metro_linear: body.valor_metro_linear ? Number(body.valor_metro_linear) : null,
         telefone: body.telefone?.trim() || null,
         observacoes: body.observacoes?.trim() || null,
+        // Cadastro secundário da mesma pessoa física (ficha semanal de
+        // produção) — ver funcionarios.pessoa_id. Validado pelo trigger
+        // trg_funcionarios_pessoa_id_sem_cadeia no banco.
+        pessoa_id: body.pessoa_id || null,
         ativo: true,
       })
       .select()

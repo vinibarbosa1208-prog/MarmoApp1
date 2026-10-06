@@ -16,6 +16,9 @@ export interface Marmoraria {
   ativo: boolean
   owner_id: string
   created_at: string
+  // Ficha semanal de produção (06/10/2026)
+  fator_meia_esquadria?: number
+  portal_instalador_ativo?: boolean
 }
 
 export interface Cliente {

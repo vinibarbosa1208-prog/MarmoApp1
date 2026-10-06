@@ -23,6 +23,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         valor_metro_linear: body.valor_metro_linear ? Number(body.valor_metro_linear) : null,
         telefone: body.telefone?.trim() || null,
         observacoes: body.observacoes?.trim() || null,
+        // Vínculo "mesma pessoa que..." da ficha semanal. Não pode apontar
+        // pro próprio cadastro nem formar cadeia — o trigger
+        // trg_funcionarios_pessoa_id_sem_cadeia recusa com mensagem clara.
+        pessoa_id: body.pessoa_id || null,
         ativo: body.ativo ?? true,
       })
       .eq('id', id)
