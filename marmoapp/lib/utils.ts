@@ -123,7 +123,7 @@ export function areaCortadaItens(itens: Pick<OrcamentoItem, 'area' | 'quantidade
   return itens.reduce((s, i) => s + ((i.area || 0) * (i.quantidade || 1)), 0)
 }
 
-type ItemAcabamentoLinear = Pick<OrcamentoItem,
+export type ItemAcabamentoLinear = Pick<OrcamentoItem,
   'tipo_peca' | 'dados_extras' | 'largura' | 'altura' | 'quantidade' |
   'acabamento_esquerda' | 'acabamento_direita' | 'acabamento_frente' | 'acabamento_fundo'
 >
@@ -134,7 +134,7 @@ type ItemAcabamentoLinear = Pick<OrcamentoItem,
 // lateral). Os comprimentos de cada lateral seguem a mesma lógica usada em
 // calcArea (novo/editar orçamento), lendo de dados_extras para os desenhos
 // cuja dimensão não fica salva em largura/altura.
-function mlAcabamentoItem(item: ItemAcabamentoLinear): number {
+export function mlAcabamentoItem(item: ItemAcabamentoLinear): number {
   const ex = (item.dados_extras || {}) as Record<string, unknown>
   let dimMap: Record<string, number> = {}
   let acabs: Record<string, string> = {}

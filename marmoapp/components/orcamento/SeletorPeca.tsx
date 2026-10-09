@@ -368,23 +368,6 @@ export default function SeletorPeca(props: Props) {
                   {showErrors && !((dados_extras.largura as number) > 0) && <Err msg="Obrigatório." />}
                 </div>
               </div>
-              {(() => {
-                const comp = (dados_extras.comprimento as number) || 0
-                const larg = (dados_extras.largura as number) || 0
-                if (!comp || !larg) return null
-                const area = comp * larg
-                const d = (v: number) => v.toFixed(4).replace('.', ',').replace(/,?0+$/, '') || '0'
-                return (
-                  <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                      <span>Área</span>
-                      <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>
-                        {comp.toFixed(2).replace('.', ',')} × {larg.toFixed(2).replace('.', ',')} = <strong>{area.toFixed(4).replace('.', ',')} m²</strong>
-                      </span>
-                    </div>
-                  </div>
-                )
-              })()}
             </div>
           )}
 
@@ -422,42 +405,6 @@ export default function SeletorPeca(props: Props) {
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Tem fundo?</span>
                 </label>
               </div>
-              {(() => {
-                const l = (dados_extras.largura as number) || 0
-                const a = (dados_extras.altura as number) || 0
-                const p = (dados_extras.profundidade as number) || 0
-                if (!l || !a || !p) return null
-                const aLat = 2 * p * a
-                const aTB = 2 * l * p
-                const aFundo = (dados_extras.tem_fundo as boolean) ? l * a : 0
-                const total = aLat + aTB + aFundo
-                const d = (v: number) => v.toFixed(2).replace('.', ',')
-                return (
-                  <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ color: '#555' }}>2 Laterais</span>
-                      <span style={{ fontFamily: 'monospace' }}>2 × {d(p)} × {d(a)} = <strong>{d(aLat)} m²</strong></span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                      <span>Topo + Base</span>
-                      <span style={{ fontFamily: 'monospace' }}>2 × {d(l)} × {d(p)} = <strong>{d(aTB)} m²</strong></span>
-                    </div>
-                    {aFundo > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                        <span>Fundo</span>
-                        <span style={{ fontFamily: 'monospace' }}>{d(l)} × {d(a)} = <strong>{d(aFundo)} m²</strong></span>
-                      </div>
-                    )}
-                    <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                      <span>Total</span>
-                      <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
-                    </div>
-                    <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
-                      Saia/frontão por lateral: configure abaixo em &quot;Acabamento por lateral&quot;.
-                    </div>
-                  </div>
-                )
-              })()}
             </div>
           )}
 

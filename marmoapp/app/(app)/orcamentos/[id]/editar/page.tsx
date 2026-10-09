@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import SeletorPeca, { getLateraisDaPeca, PECA_LABELS, type SeletorPecaState } from '@/components/orcamento/SeletorPeca'
 import AcabamentosLaterais from '@/components/orcamento/AcabamentosLaterais'
 import { NumInput, IntInput } from '@/components/ui/NumInput'
+import ResumoPeca from '@/components/orcamento/ResumoPeca'
 
 interface ItemForm {
   id?: string
@@ -815,7 +816,7 @@ export default function EditarOrcamentoPage() {
                         onLateralExtrasChange={handleLateralExtrasChange}
                       />
                     )}
-                    {novoItem.tipo_peca && (
+                    {(novoItem.tipo_peca === 'bancada_simples' || novoItem.tipo_peca === 'escada') && (
                       <div style={{ marginTop: 12, padding: 14, background: '#f0f9f5', border: '1px solid #b8ddd0', borderRadius: 10 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: '#555', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dimensões da peça</div>
                         <div className="form-row form-row-2">
@@ -834,97 +835,9 @@ export default function EditarOrcamentoPage() {
                             </div>
                           )}
                         </div>
-                        {novoItem.tipo_peca === 'escada' ? (() => {
-                          const ex = novoItem.dados_extras
-                          const n = (ex.num_degraus as number) || 0
-                          const lp = (ex.largura_piso as number) || 0
-                          const ae = (ex.altura_espelho as number) || 0
-                          const w = novoItem.largura
-                          if (!w || !n || !lp || !ae) return null
-                          const d = (v: number) => v.toFixed(2).replace('.', ',')
-                          const piso = w * (lp / 100) * n
-                          const espelho = w * (ae / 100) * n
-                          const total = piso + espelho
-                          const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
-                          const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
-                          return (
-                            <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                <span style={{ color: '#555' }}>Piso</span>
-                                <span style={{ fontFamily: 'monospace' }}>{d(w)} × {d(lp / 100)} × {n} degraus = <strong>{d(piso)} m²</strong></span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                                <span>Espelho</span>
-                                <span style={{ fontFamily: 'monospace' }}>{d(w)} × {d(ae / 100)} × {n} degraus = <strong>{d(espelho)} m²</strong></span>
-                              </div>
-                              <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                                <span>Total</span>
-                                <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
-                              </div>
-                              {novoItem.custo_m2 > 0 && (
-                                <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
-                                    <span>Custo</span>
-                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--gold)' }}>
-                                    <span>Venda</span>
-                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.preco_unitario.toFixed(2)} = <strong>{fmt(totalVenda)}</strong></span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })() : novoItem.largura > 0 && novoItem.altura > 0 && (() => {
-                          const d = (n: number) => n.toFixed(2).replace('.', ',')
-                          const ex = novoItem.dados_extras
-                          const tampo = novoItem.largura * novoItem.altura
-                          const dimMap: Record<string, number> = { frente: novoItem.largura, fundo: novoItem.largura, esquerda: novoItem.altura, direita: novoItem.altura }
-                          const acabs: Record<string, string> = { frente: novoItem.acabamento_frente, fundo: novoItem.acabamento_fundo, esquerda: novoItem.acabamento_esquerda, direita: novoItem.acabamento_direita }
-                          const latLabels: Record<string, string> = { frente: 'Frente', fundo: 'Fundo', esquerda: 'Esq.', direita: 'Dir.' }
-                          const extras: { label: string; area: number }[] = []
-                          let total = tampo
-                          for (const [lat, len] of Object.entries(dimMap)) {
-                            const altSaia = (ex[`altura_saia_${lat}`] as number) || 0
-                            const altFrontao = (ex[`altura_frontao_${lat}`] as number) || 0
-                            if ((ex[`saia_${lat}`] as boolean) && altSaia > 0 && len > 0) { const area = len * altSaia; extras.push({ label: `Saia ${latLabels[lat]}`, area }); total += area }
-                            if (acabs[lat] === 'frontao' && altFrontao > 0 && len > 0) { const area = len * altFrontao; extras.push({ label: `Frontão ${latLabels[lat]}`, area }); total += area }
-                          }
-                          const totalVenda = total * novoItem.quantidade * novoItem.preco_unitario
-                          const totalCusto = total * novoItem.quantidade * novoItem.custo_m2
-                          return (
-                            <div style={{ marginTop: 8, padding: '10px 12px', background: '#fff', borderRadius: 8, border: '1px solid #cce8df', fontSize: 13 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: extras.length ? 4 : 0 }}>
-                                <span style={{ color: '#555' }}>Tampo</span>
-                                <span style={{ fontFamily: 'monospace' }}>{d(novoItem.largura)} × {d(novoItem.altura)} = <strong>{d(tampo)} m²</strong></span>
-                              </div>
-                              {extras.map(({ label, area }, i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: '#777' }}>
-                                  <span>{label}</span>
-                                  <span style={{ fontFamily: 'monospace' }}><strong>{d(area)} m²</strong></span>
-                                </div>
-                              ))}
-                              <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-                                <span>Total</span>
-                                <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
-                              </div>
-                              {novoItem.custo_m2 > 0 && (
-                                <div style={{ borderTop: '1px solid #cce8df', paddingTop: 6, marginTop: 4 }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: 12, marginBottom: 3 }}>
-                                    <span>Custo</span>
-                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--gold)' }}>
-                                    <span>Venda</span>
-                                    <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {novoItem.preco_unitario.toFixed(2)} = <strong>{fmt(totalVenda)}</strong></span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })()}
                       </div>
                     )}
+                    {novoItem.tipo_peca && <ResumoPeca item={novoItem} />}
                   </>
                 )}
 
