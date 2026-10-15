@@ -2,76 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useApp } from '@/contexts/AppContext'
-import { supabase } from '@/lib/supabase'
-import { fmt, orcTotal, areaCortadaItens, mlAcabamentoItens, mediaDiariaPCP } from '@/lib/utils'
+import { fmt, orcTotal } from '@/lib/utils'
+import CapacidadeProdutivaCard from '@/components/producao/CapacidadeProdutivaCard'
 
 export default function RelatoriosPage() {
   const { orcamentos, clientes, materiais } = useApp()
-
-  const [apontamentos, setApontamentos] = useState<{ etapa: string; quantidade: number; data: string; funcionario_id: string | null }[]>([])
-  const [instalacoes, setInstalacoes] = useState<{ metros_lineares: number; data: string; funcionario_id: string | null }[]>([])
-  const [funcionarios, setFuncionarios] = useState<{ id: string; nome: string; cargo: string }[]>([])
-  const [pendentes, setPendentes] = useState<{ corte: number; acabamento: number }>({ corte: 0, acabamento: 0 })
-  const [loadingPCP, setLoadingPCP] = useState(true)
-
-  useEffect(() => {
-    const desde = new Date()
-    desde.setDate(desde.getDate() - 30)
-    const desdeStr = desde.toISOString().split('T')[0]
-
-    async function carregarPCP() {
-      const [apRes, instRes, pendRes, funcRes] = await Promise.all([
-        supabase.from('producao_apontamentos').select('etapa, quantidade, data, funcionario_id').gte('data', desdeStr),
-        supabase.from('funcionario_instalacoes').select('metros_lineares, data, funcionario_id').gte('data', desdeStr),
-        supabase.from('orcamentos').select('id, producao_status').in('producao_status', ['corte', 'acabamento']),
-        fetch('/api/funcionarios', { credentials: 'include' }).then(r => r.ok ? r.json() : []),
-      ])
-      setApontamentos((apRes.data as any) || [])
-      setInstalacoes((instRes.data as any) || [])
-      setFuncionarios(funcRes || [])
-
-      const pendOrcs = pendRes.data || []
-      if (pendOrcs.length > 0) {
-        const { data: itensPend } = await supabase
-          .from('orcamento_itens')
-          .select('orcamento_id, area, quantidade, largura, altura, acabamento_esquerda, acabamento_direita, acabamento_frente, acabamento_fundo')
-          .in('orcamento_id', pendOrcs.map(p => p.id))
-        let corte = 0, acabamento = 0
-        for (const p of pendOrcs) {
-          const itensDoOrc = (itensPend || []).filter(i => i.orcamento_id === p.id)
-          if (p.producao_status === 'corte') corte += areaCortadaItens(itensDoOrc as any)
-          if (p.producao_status === 'acabamento') acabamento += mlAcabamentoItens(itensDoOrc as any)
-        }
-        setPendentes({ corte, acabamento })
-      }
-      setLoadingPCP(false)
-    }
-    carregarPCP()
-  }, [])
-
-  const capCorte = mediaDiariaPCP(apontamentos.filter(a => a.etapa === 'corte'))
-  const capAcabamento = mediaDiariaPCP(apontamentos.filter(a => a.etapa === 'acabamento'))
-  const capInstalacao = mediaDiariaPCP(instalacoes.map(i => ({ quantidade: i.metros_lineares, data: i.data })))
-  const diasFilaCorte = capCorte > 0 ? Math.ceil(pendentes.corte / capCorte) : null
-  const diasFilaAcabamento = capAcabamento > 0 ? Math.ceil(pendentes.acabamento / capAcabamento) : null
-  const temDadosPCP = capCorte > 0 || capAcabamento > 0 || capInstalacao > 0
-
-  // Capacidade média diária por funcionário — base pra definir metas individuais
-  const capacidadePorFuncionario = funcionarios
-    .filter(f => f.cargo === 'serrador' || f.cargo === 'acabador' || f.cargo === 'instalador')
-    .map(f => {
-      const registros = f.cargo === 'instalador'
-        ? instalacoes.filter(i => i.funcionario_id === f.id).map(i => ({ quantidade: i.metros_lineares, data: i.data }))
-        : apontamentos.filter(a => a.funcionario_id === f.id && a.etapa === f.cargo.replace('serrador', 'corte').replace('acabador', 'acabamento'))
-      return {
-        nome: f.nome,
-        cargo: f.cargo,
-        media: mediaDiariaPCP(registros),
-        unidade: f.cargo === 'serrador' ? 'm²/dia' : 'ml/dia',
-      }
-    })
-    .filter(f => f.media > 0)
-    .sort((a, b) => b.media - a.media)
 
   const [tipoPeriodo, setTipoPeriodo] = useState<'dia' | 'semana' | 'mes' | 'ano'>('mes')
   const [dataRef, setDataRef] = useState(new Date().toISOString().split('T')[0])
@@ -259,68 +194,7 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 20 }}>
-        <div className="card-header"><span className="card-title">🏭 Capacidade Produtiva (PCP)</span></div>
-        <div className="card-body">
-          {loadingPCP ? (
-            <div style={{ padding: 12, color: 'var(--gray)', fontSize: 13 }}>Carregando...</div>
-          ) : !temDadosPCP ? (
-            <div style={{ padding: 12, color: 'var(--gray)', fontSize: 13 }}>
-              Ainda sem dados suficientes. Assim que pedidos começarem a sair de Corte e Acabamento na Fila de Serviços, a capacidade diária média aparece aqui automaticamente — sem precisar preencher nada.
-            </div>
-          ) : (
-            <>
-              <div style={{ fontSize: 12, color: 'var(--gray)', marginBottom: 16 }}>Médias com base nos últimos 30 dias de produção registrada</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Corte</div>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{capCorte > 0 ? `${capCorte.toFixed(1)} m²/dia` : '—'}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Acabamento</div>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{capAcabamento > 0 ? `${capAcabamento.toFixed(1)} ml/dia` : '—'}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 4 }}>Instalação</div>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{capInstalacao > 0 ? `${capInstalacao.toFixed(1)} ml/dia` : '—'}</div>
-                </div>
-              </div>
-
-              {(diasFilaCorte !== null || diasFilaAcabamento !== null) && (
-                <div style={{ paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>Fila Atual — Prazo Estimado</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-                    {diasFilaCorte !== null && (
-                      <div>Corte: <strong>{pendentes.corte.toFixed(1)} m²</strong> pendentes → cerca de <strong>{diasFilaCorte} dia{diasFilaCorte !== 1 ? 's' : ''}</strong> pra zerar no ritmo atual</div>
-                    )}
-                    {diasFilaAcabamento !== null && (
-                      <div>Acabamento: <strong>{pendentes.acabamento.toFixed(1)} ml</strong> pendentes → cerca de <strong>{diasFilaAcabamento} dia{diasFilaAcabamento !== 1 ? 's' : ''}</strong> pra zerar no ritmo atual</div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {capacidadePorFuncionario.length > 0 && (
-                <div style={{ paddingTop: 16, marginTop: 16, borderTop: '1px solid var(--divider)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray)', textTransform: 'uppercase', marginBottom: 8 }}>Capacidade Média por Funcionário — base pra metas individuais</div>
-                  <table>
-                    <thead><tr><th>Nome</th><th>Função</th><th>Média/dia</th></tr></thead>
-                    <tbody>
-                      {capacidadePorFuncionario.map(f => (
-                        <tr key={f.nome + f.cargo}>
-                          <td style={{ fontWeight: 500 }}>{f.nome}</td>
-                          <td className="text-sm text-gray" style={{ textTransform: 'capitalize' }}>{f.cargo}</td>
-                          <td className="font-bold">{f.media.toFixed(1)} {f.unidade}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      <CapacidadeProdutivaCard />
 
       <div className="card" style={{ marginTop: 20 }}>
         <div className="card-header"><span className="card-title">🏗️ Obras — Fila de Serviços</span></div>

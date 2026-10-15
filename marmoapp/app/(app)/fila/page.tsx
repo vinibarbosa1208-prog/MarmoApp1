@@ -389,43 +389,36 @@ export default function FilaPage() {
   // Salva o apontamento das peças marcadas (com quem fez e quando) e, se
   // essas eram as últimas peças pendentes dessa etapa, avança o pedido
   // inteiro automaticamente pra próxima.
+  // Passa pela mesma rota que a ficha semanal usa (lib/producao/
+  // registrar-etapa.ts) — um apontamento POR PEÇA, com orcamento_item_id
+  // preenchido, protegido pelo índice único (orcamento_item_id, etapa).
+  // Se a peça já tinha sido lançada pela ficha, esse caminho ATUALIZA o
+  // apontamento existente em vez de duplicar a produção.
   async function onProducaoSalva(itensIds: string[], funcionarioId: string, data: string) {
-    const { orcId, etapa, itensPendentes } = registrarModal
+    const { orcId, etapa } = registrarModal
     setRegistrarModal({ open: false, orcId: '', orcLabel: '', etapa: 'corte', itensPendentes: [] })
-    if (!marmoraria) return
 
-    const itensSelecionados = itensPendentes.filter(i => itensIds.includes(i.id!))
-    const quantidade = etapa === 'corte' ? areaCortadaItens(itensSelecionados) : mlAcabamentoItens(itensSelecionados)
-    const campoData = etapa === 'corte' ? 'cortado_em' : 'acabado_em'
-    const campoPor = etapa === 'corte' ? 'cortado_por' : 'acabado_por'
-
-    await supabase.from('orcamento_itens')
-      .update({ [campoData]: new Date().toISOString(), [campoPor]: funcionarioId })
-      .in('id', itensIds)
-
-    if (quantidade > 0) {
-      await supabase.from('producao_apontamentos').insert({
-        marmoraria_id: marmoraria.id,
-        orcamento_id: orcId,
-        etapa,
-        quantidade,
-        unidade: etapa === 'corte' ? 'm2' : 'ml',
-        data,
-        origem: 'automatico',
-        funcionario_id: funcionarioId,
-      })
-    }
-
-    const restantes = itensPendentes.filter(i => !itensIds.includes(i.id!))
+    const res = await fetch('/api/producao/fila/registrar', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orcamento_id: orcId, etapa, itens_ids: itensIds, funcionario_id: funcionarioId, data }),
+    })
     await recarregarItensOrc(orcId)
 
-    if (restantes.length === 0) {
-      // Não sobrou nenhuma peça pendente — o pedido inteiro avança de etapa
-      const proxEtapaId = etapa === 'corte' ? 'acabamento' : 'aguardando_data'
-      await avancarConfirmado(orcId, proxEtapaId, etapa)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      toast('Erro: ' + (d.error || 'não foi possível registrar'), 'err')
+      return
+    }
+
+    const { avanco } = await res.json()
+    await loadOrcamentos()
+    if (avanco?.avancou) {
+      toast('Pedido avançado!', 'ok2')
     } else {
-      await loadOrcamentos()
-      toast(`Produção registrada — ${restantes.length} peça${restantes.length > 1 ? 's' : ''} ainda pendente${restantes.length > 1 ? 's' : ''}`, 'ok2')
+      const restantes = avanco?.pendentes ?? 0
+      toast(`Produção registrada — ${restantes} peça${restantes !== 1 ? 's' : ''} ainda pendente${restantes !== 1 ? 's' : ''}`, 'ok2')
     }
   }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiSupabase as supabase } from '@/lib/api-auth'
-import { getPortalMarmorariaId } from '@/lib/portal-instalador-config'
+import { getPortalMarmorariaId, portalInstaladorAtivo, MENSAGEM_PORTAL_DESATIVADO } from '@/lib/portal-instalador-config'
 
 // Registro de serviço avulso — obra que nunca vai ter orçamento no
 // MarmoApp (obra antiga, ou cliente atendido fora do sistema). Mesmo
@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
   let fotoPath: string | null = null
   try {
     const marmoraria_id = getPortalMarmorariaId()
+    if (!(await portalInstaladorAtivo(marmoraria_id))) {
+      return NextResponse.json({ error: MENSAGEM_PORTAL_DESATIVADO }, { status: 410 })
+    }
     const form = await req.formData()
 
     const funcionario_id = String(form.get('funcionario_id') ?? '')

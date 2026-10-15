@@ -10,17 +10,44 @@ interface Instalador {
 
 // Tela de identificação — fase 5b: sem senha, o instalador só toca no
 // próprio nome. Lista vem de uma rota de servidor (sem auth de propósito).
+//
+// Ficha semanal de produção (06/10/2026): a rota responde 410 quando
+// `portal_instalador_ativo` está desligado — nesse caso, mostra o aviso de
+// desativação no lugar da lista de nomes.
 export default function PortalInstaladorPage() {
   const router = useRouter()
   const [instaladores, setInstaladores] = useState<Instalador[] | null>(null)
   const [erro, setErro] = useState('')
+  const [desativado, setDesativado] = useState(false)
 
   useEffect(() => {
     fetch('/api/portal-instalador/instaladores')
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(setInstaladores)
+      .then(async r => {
+        if (r.status === 410) {
+          const d = await r.json().catch(() => ({}))
+          setDesativado(true)
+          setErro(d.error || 'Os registros de instalação agora são feitos pela ficha semanal')
+          return
+        }
+        if (!r.ok) throw r
+        setInstaladores(await r.json())
+      })
       .catch(() => setErro('Não foi possível carregar a lista. Tente recarregar a página.'))
   }, [])
+
+  if (desativado) {
+    return (
+      <div>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, marginBottom: 4 }}>Portal desativado</h1>
+        <div style={{
+          background: '#fff', border: '1px solid var(--marble2)', borderRadius: 8,
+          padding: '18px 20px', fontSize: 15, color: 'var(--dark)', boxShadow: 'var(--shadow)',
+        }}>
+          {erro}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
