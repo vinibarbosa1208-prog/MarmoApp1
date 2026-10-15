@@ -14,6 +14,7 @@ interface ItemForm {
   tipo: 'material' | 'servico' | 'frete' | 'outro'
   ambiente: string
   descricao: string
+  material_id: string
   largura: number
   altura: number
   area: number
@@ -39,7 +40,7 @@ interface ItemForm {
 }
 
 const ITEM_DEFAULTS: ItemForm = {
-  tipo: 'material', ambiente: '', descricao: '', largura: 0, altura: 0, area: 0,
+  tipo: 'material', ambiente: '', descricao: '', material_id: '', largura: 0, altura: 0, area: 0,
   quantidade: 1, preco_unitario: 0, custo_m2: 0, markup: 3,
   tipo_peca: '', acabamento_esquerda: '', acabamento_direita: '',
   acabamento_frente: '', acabamento_fundo: '',
@@ -773,6 +774,7 @@ export default function NovoOrcamentoPage() {
     const precVenda = mat.preco_venda || 0
     upItem({
       descricao: m.nome,
+      material_id: m.id,
       custo_m2: custo,
       markup: markupMat,
       preco_unitario: precVenda > 0 ? precVenda : (custo > 0 ? custo * markupMat : 0),
@@ -870,6 +872,7 @@ export default function NovoOrcamentoPage() {
           tipo: i.tipo,
           ambiente: i.ambiente || null,
           descricao: i.descricao,
+          material_id: i.material_id || null,
           largura: i.largura || null,
           altura: i.altura || null,
           area: calcArea(i) || null,
@@ -959,7 +962,7 @@ export default function NovoOrcamentoPage() {
             <select className="form-select" value={novoItem.tipo} onChange={e => {
               const tipo = e.target.value as ItemForm['tipo']
               const extras: Partial<ItemForm> = { tipo }
-              if (tipo !== 'material') Object.assign(extras, { tipo_peca: '', largura: 0, altura: 0, area: 0, tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0, acabamento_esquerda: '', acabamento_direita: '', acabamento_frente: '', acabamento_fundo: '', dados_extras: {} })
+              if (tipo !== 'material') Object.assign(extras, { tipo_peca: '', material_id: '', largura: 0, altura: 0, area: 0, tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0, acabamento_esquerda: '', acabamento_direita: '', acabamento_frente: '', acabamento_fundo: '', dados_extras: {} })
               if (tipo !== 'servico') setServicodeIdSel('')
               upItem(extras)
             }}>

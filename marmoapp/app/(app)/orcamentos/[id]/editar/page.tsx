@@ -14,6 +14,7 @@ interface ItemForm {
   id?: string
   tipo: 'material' | 'servico' | 'frete' | 'outro'
   descricao: string
+  material_id: string
   largura: number
   altura: number
   area: number
@@ -34,7 +35,7 @@ interface ItemForm {
 }
 
 const ITEM_DEFAULTS: ItemForm = {
-  tipo: 'material', descricao: '', largura: 0, altura: 0, area: 0,
+  tipo: 'material', descricao: '', material_id: '', largura: 0, altura: 0, area: 0,
   quantidade: 1, preco_unitario: 0, custo_m2: 0, markup: 3,
   tipo_peca: '', acabamento_esquerda: '', acabamento_direita: '',
   acabamento_frente: '', acabamento_fundo: '',
@@ -371,6 +372,7 @@ export default function EditarOrcamentoPage() {
           id: i.id,
           tipo: i.tipo as ItemForm['tipo'],
           descricao: i.descricao,
+          material_id: i.material_id || '',
           largura: i.largura || 0,
           altura: i.altura || 0,
           area: i.area || 0,
@@ -559,6 +561,7 @@ export default function EditarOrcamentoPage() {
     const markup = novoItem.markup || 3
     upItem({
       descricao: m.nome,
+      material_id: m.id,
       custo_m2: custo,
       preco_unitario: custo > 0 ? custo * markup : (m.preco_padrao || m.preco || 0),
     })
@@ -607,6 +610,7 @@ export default function EditarOrcamentoPage() {
             marmoraria_id: marmoraria.id,
             tipo: i.tipo,
             descricao: i.descricao,
+            material_id: i.material_id || null,
             largura: i.largura || null,
             altura: i.altura || null,
             area: calcArea(i) || null,
@@ -765,7 +769,7 @@ export default function EditarOrcamentoPage() {
                     <select className="form-select" value={novoItem.tipo} onChange={e => {
                       const tipo = e.target.value as ItemForm['tipo']
                       const extras: Partial<ItemForm> = { tipo }
-                      if (tipo !== 'material') Object.assign(extras, { tipo_peca: '', largura: 0, altura: 0, area: 0, tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0, acabamento_esquerda: '', acabamento_direita: '', acabamento_frente: '', acabamento_fundo: '', dados_extras: {} })
+                      if (tipo !== 'material') Object.assign(extras, { tipo_peca: '', material_id: '', largura: 0, altura: 0, area: 0, tem_saia: false, altura_saia: 0, tem_frontao: false, altura_frontao: 0, acabamento_esquerda: '', acabamento_direita: '', acabamento_frente: '', acabamento_fundo: '', dados_extras: {} })
                       if (tipo !== 'servico') setServicodeIdSel('')
                       upItem(extras)
                     }}>

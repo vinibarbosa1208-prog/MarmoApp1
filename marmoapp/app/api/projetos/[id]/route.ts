@@ -26,13 +26,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         new Date(a.entrada_em).getTime() - new Date(b.entrada_em).getTime()
     )
 
-    let orcamento_itens: Array<{ tipo: string; custo_item: number | null; total_item: number | null }> = []
+    let orcamento_itens: Array<{
+      tipo: string
+      custo_item: number | null
+      total_item: number | null
+      material_id: string | null
+      area: number | null
+      quantidade: number
+      materiais: { nome: string }[] | null
+    }> = []
     if (projeto.orcamento_id) {
       const { data: items } = await supabase
         .from('orcamento_itens')
-        .select('tipo, custo_item, total_item')
+        .select('tipo, custo_item, total_item, material_id, area, quantidade, materiais(nome)')
         .eq('orcamento_id', projeto.orcamento_id)
-      orcamento_itens = items || []
+      orcamento_itens = (items as typeof orcamento_itens) || []
     }
 
     return NextResponse.json({

@@ -96,6 +96,25 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
   const orcItems = projeto.orcamento_itens ?? []
   const prevMaterial = orcItems.filter(i => i.tipo === 'material').reduce((s, i) => s + (i.custo_item ?? 0), 0)
   const prevServicos = orcItems.filter(i => i.tipo !== 'material').reduce((s, i) => s + (i.total_item ?? 0), 0)
+
+  // Quantos m² de cada material são necessários pra entregar este projeto —
+  // soma area × quantidade (ou só quantidade, qdo o item não tem peça com
+  // desenho e a área já foi lançada direto no campo quantidade), agrupado
+  // pelo material do estoque vinculado ao item. Itens de material sem
+  // material_id (descrição livre, nunca vinculada ao estoque) caem no grupo
+  // "Material sem vínculo".
+  const materiaisMap = new Map<string, { chave: string; nome: string; m2: number }>()
+  for (const item of orcItems) {
+    if (item.tipo !== 'material') continue
+    const m2Item = item.area && item.area > 0 ? item.area * item.quantidade : item.quantidade
+    if (!m2Item || m2Item <= 0) continue
+    const chave = item.material_id || '__sem_vinculo__'
+    const nome = item.materiais?.[0]?.nome || 'Material sem vínculo'
+    const atual = materiaisMap.get(chave)
+    if (atual) atual.m2 += m2Item
+    else materiaisMap.set(chave, { chave, nome, m2: m2Item })
+  }
+  const materiaisBreakdown = Array.from(materiaisMap.values()).sort((a, b) => b.m2 - a.m2)
   const totalPrevisto = prevMaterial + prevServicos + instalacaoPrevista
   const margemPrevista = projeto.valor_venda > 0
     ? Math.round(((projeto.valor_venda - totalPrevisto) / projeto.valor_venda) * 10000) / 100
@@ -214,9 +233,21 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
           </div>
           <div className="card-body">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
-                <span style={{ color: 'var(--gray)' }}>Material</span>
-                <strong style={{ fontFamily: 'monospace' }}>{fmt(prevMaterial)}</strong>
+              <div style={{ padding: '10px 0', borderBottom: '1px solid var(--marble2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ color: 'var(--gray)' }}>Material</span>
+                  <strong style={{ fontFamily: 'monospace' }}>{fmt(prevMaterial)}</strong>
+                </div>
+                {materiaisBreakdown.length > 0 && (
+                  <div style={{ marginTop: 8, paddingLeft: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {materiaisBreakdown.map(mat => (
+                      <div key={mat.chave} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--gray)' }}>
+                        <span>{mat.nome}</span>
+                        <span style={{ fontFamily: 'monospace' }}>{mat.m2.toFixed(2).replace('.', ',')} m²</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
                 <span style={{ color: 'var(--gray)' }}>Serviços</span>

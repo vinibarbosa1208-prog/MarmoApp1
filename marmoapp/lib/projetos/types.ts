@@ -56,7 +56,15 @@ export interface Projeto {
   margem_percentual?: number
   custos?: ProjetoCusto[]
   etapas?: ProjetoEtapaRecord[]
-  orcamento_itens?: Array<{ tipo: string; custo_item: number | null; total_item: number | null }>
+  orcamento_itens?: Array<{
+    tipo: string
+    custo_item: number | null
+    total_item: number | null
+    material_id: string | null
+    area: number | null
+    quantidade: number
+    materiais: { nome: string }[] | null
+  }>
 }
 
 export interface CreateProjetoInput {
