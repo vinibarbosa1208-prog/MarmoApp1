@@ -109,7 +109,7 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
     const m2Item = item.area && item.area > 0 ? item.area * item.quantidade : item.quantidade
     if (!m2Item || m2Item <= 0) continue
     const chave = item.material_id || '__sem_vinculo__'
-    const nome = item.materiais?.[0]?.nome || 'Material sem vínculo'
+    const nome = item.materiais?.nome || 'Material sem vínculo'
     const atual = materiaisMap.get(chave)
     if (atual) atual.m2 += m2Item
     else materiaisMap.set(chave, { chave, nome, m2: m2Item })
@@ -176,6 +176,42 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* Material Necessário — o dado que mais importa pra produção: quantos
+          m² de cada pedra precisam ser separados/cortados pra entregar o
+          serviço. Fica em destaque, antes das etapas, porque é mais
+          acionável no dia a dia do que a margem financeira. */}
+      {materiaisBreakdown.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, border: '1px solid var(--gold)' }}>
+          <div className="card-header">
+            <span className="card-title">📐 Material necessário</span>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+              {materiaisBreakdown.map(mat => (
+                <div key={mat.chave} style={{
+                  padding: '16px 18px',
+                  borderRadius: 10,
+                  background: mat.chave === '__sem_vinculo__' ? 'var(--marble1, #f7f6f4)' : 'rgba(201,168,76,0.08)',
+                  border: mat.chave === '__sem_vinculo__' ? '1px dashed var(--marble2)' : '1px solid #E8D9B0',
+                }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'monospace', color: mat.chave === '__sem_vinculo__' ? 'var(--dark)' : 'var(--gold)', lineHeight: 1.1 }}>
+                    {mat.m2.toFixed(2).replace('.', ',')}<span style={{ fontSize: 15, fontWeight: 600, marginLeft: 4 }}>m²</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--dark)', marginTop: 6 }}>
+                    {mat.nome}
+                  </div>
+                  {mat.chave === '__sem_vinculo__' && (
+                    <div style={{ fontSize: 11, color: 'var(--gray)', marginTop: 4 }}>
+                      Itens sem material do estoque vinculado
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Timeline de Etapas */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
@@ -233,21 +269,9 @@ export default function ProjetoDetalhe({ id }: { id: string }) {
           </div>
           <div className="card-body">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              <div style={{ padding: '10px 0', borderBottom: '1px solid var(--marble2)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                  <span style={{ color: 'var(--gray)' }}>Material</span>
-                  <strong style={{ fontFamily: 'monospace' }}>{fmt(prevMaterial)}</strong>
-                </div>
-                {materiaisBreakdown.length > 0 && (
-                  <div style={{ marginTop: 8, paddingLeft: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {materiaisBreakdown.map(mat => (
-                      <div key={mat.chave} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--gray)' }}>
-                        <span>{mat.nome}</span>
-                        <span style={{ fontFamily: 'monospace' }}>{mat.m2.toFixed(2).replace('.', ',')} m²</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
+                <span style={{ color: 'var(--gray)' }}>Material</span>
+                <strong style={{ fontFamily: 'monospace' }}>{fmt(prevMaterial)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--marble2)', fontSize: 14 }}>
                 <span style={{ color: 'var(--gray)' }}>Serviços</span>

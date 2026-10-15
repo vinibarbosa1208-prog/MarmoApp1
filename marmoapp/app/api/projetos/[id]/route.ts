@@ -33,14 +33,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       material_id: string | null
       area: number | null
       quantidade: number
-      materiais: { nome: string }[] | null
+      materiais: { nome: string } | null
     }> = []
     if (projeto.orcamento_id) {
       const { data: items } = await supabase
         .from('orcamento_itens')
         .select('tipo, custo_item, total_item, material_id, area, quantidade, materiais(nome)')
         .eq('orcamento_id', projeto.orcamento_id)
-      orcamento_itens = (items as typeof orcamento_itens) || []
+      orcamento_itens = (items as unknown as typeof orcamento_itens) || []
     }
 
     return NextResponse.json({

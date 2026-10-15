@@ -63,7 +63,7 @@ export interface Projeto {
     material_id: string | null
     area: number | null
     quantidade: number
-    materiais: { nome: string }[] | null
+    materiais: { nome: string } | null
   }>
 }
 
