@@ -7,6 +7,7 @@ import { fmt, orcTotal } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { Orcamento } from '@/lib/types'
 import PrevisaoInstalacaoModal from '@/components/orcamento/PrevisaoInstalacaoModal'
+import ParcelasPedidoModal from '@/components/financeiro/ParcelasPedidoModal'
 
 const STATUS_BADGE: Record<string, [string, string]> = {
   rascunho: ['badge-draft', 'Rascunho'], enviado: ['badge-sent', 'Enviado'],
@@ -57,6 +58,8 @@ export default function OrcamentosPage() {
   const [deleting, setDeleting] = useState(false)
   const [projetoMap, setProjetoMap] = useState<Record<string, string>>({})
   const [previsaoModal, setPrevisaoModal] = useState<{ open: boolean; orcId: string; orcLabel: string; pendingUpdate: Record<string, unknown> }>({ open: false, orcId: '', orcLabel: '', pendingUpdate: {} })
+  // Depois de fechar o pedido: pergunta como o cliente vai pagar e lança em Contas a Receber.
+  const [parcelasModal, setParcelasModal] = useState<{ orcId: string; titulo: string; total: number; dataInstalacao: string | null } | null>(null)
 
   useEffect(() => {
     fetch('/api/projetos', { credentials: 'include' })
@@ -172,6 +175,12 @@ export default function OrcamentosPage() {
 
     await loadOrcamentos()
     toast('Pedido fechado — entrou na Fila de Corte', 'ok2')
+
+    const o = orcamentos.find(x => x.id === orcId)
+    const total = Number((o as { total?: number } | undefined)?.total) || (o ? orcTotal(o) : 0)
+    if (total > 0) {
+      setParcelasModal({ orcId, titulo: previsaoModal.orcLabel, total, dataInstalacao: dataPrevista || null })
+    }
   }
 
   async function excluirOrcamento() {
@@ -222,6 +231,16 @@ export default function OrcamentosPage() {
           dataInicial=""
           onCancelar={() => setPrevisaoModal({ open: false, orcId: '', orcLabel: '', pendingUpdate: {} })}
           onConfirmar={confirmarPrevisao}
+        />
+      )}
+      {parcelasModal && (
+        <ParcelasPedidoModal
+          orcamentoId={parcelasModal.orcId}
+          titulo={parcelasModal.titulo}
+          total={parcelasModal.total}
+          dataInstalacao={parcelasModal.dataInstalacao}
+          onFechar={() => setParcelasModal(null)}
+          onSalvo={() => { setParcelasModal(null); toast('Parcelas lançadas em Contas a Receber', 'ok2') }}
         />
       )}
       <div className="page-header">

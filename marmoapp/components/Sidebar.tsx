@@ -52,6 +52,10 @@ const NAV_SECTIONS = [
     label: 'FINANCEIRO',
     items: [
       {
+        label: 'Financeiro', href: '/financeiro',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/></svg>,
+      },
+      {
         label: 'Centro de Custos', href: '/projetos',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="3 20 21 20"/></svg>,
       },
