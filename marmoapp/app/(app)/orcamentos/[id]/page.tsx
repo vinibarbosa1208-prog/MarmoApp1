@@ -2,6 +2,7 @@
 
 import { Fragment, useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import FinanceiroPedido from '@/components/financeiro/FinanceiroPedido'
 import Link from 'next/link'
 import { useApp } from '@/contexts/AppContext'
 import { supabase } from '@/lib/supabase'
@@ -51,6 +52,15 @@ export default function VerOrcamentoPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Abas do pedido. ?aba=financeiro abre direto o financeiro; &definir=1 (vindo de uma
+  // aprovação) já abre o campo de formas de pagamento.
+  const [aba, setAba] = useState<'pedido' | 'financeiro'>('pedido')
+  const [abrirDefinir, setAbrirDefinir] = useState(false)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    if (sp.get('aba') === 'financeiro') setAba('financeiro')
+    if (sp.get('definir') === '1') setAbrirDefinir(true)
+  }, [])
 
   const orc = orcamentos.find(o => o.id === orcId)
   const cliente = clientes.find(c => c.id === (orc?.cliente_id || orc?.clienteId)) || null
@@ -293,7 +303,24 @@ export default function VerOrcamentoPage() {
         </div>
       </div>
 
-      <div className="orcamento-view-grid">
+      <div className="tabs" style={{ marginBottom: 20 }}>
+        <button className={`tab${aba === 'pedido' ? ' active' : ''}`} onClick={() => setAba('pedido')}>📄 Pedido</button>
+        <button className={`tab${aba === 'financeiro' ? ' active' : ''}`} onClick={() => setAba('financeiro')}>💰 Financeiro</button>
+      </div>
+
+      {aba === 'financeiro' && (
+        <FinanceiroPedido
+          orcamentoId={orcId}
+          titulo={`${orcNumStr}${cliente?.nome ? ' — ' + cliente.nome : ''}`}
+          total={Number(orc.total) || orcTotal(orc)}
+          aprovado={orc.status === 'aprovado' || orc.crm_status === 'fechado'}
+          cliente={cliente?.nome || null}
+          dataInstalacao={orc.data_prevista_instalacao || null}
+          abrirDefinir={abrirDefinir}
+        />
+      )}
+
+      {aba === 'pedido' && <div className="orcamento-view-grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="card">
             <div className="card-header"><span className="card-title">Informações</span></div>
@@ -638,7 +665,7 @@ export default function VerOrcamentoPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

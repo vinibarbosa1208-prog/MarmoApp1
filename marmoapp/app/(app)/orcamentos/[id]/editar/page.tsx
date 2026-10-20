@@ -585,12 +585,15 @@ export default function EditarOrcamentoPage() {
   async function salvar() {
     if (!marmoraria) { toast('Dados da marmoraria não carregados. Aguarde e tente novamente.', 'err'); return }
     setSaving(true)
+    const virouAprovado = form.status === 'aprovado' && orc?.status !== 'aprovado'
     try {
       // 1. Atualiza cabeçalho do orçamento
       const { error: orcErr } = await supabase.from('orcamentos').update({
         cliente_id: form.cliente_id || null,
         titulo: form.descricao || 'Orçamento',
         status: form.status,
+        // Aprovado agora (não estava antes): registra a data da venda, igual à lista de orçamentos
+        ...(virouAprovado && !(orc as { data_fechamento?: string | null } | undefined)?.data_fechamento ? { data_fechamento: new Date().toISOString().split('T')[0] } : {}),
         subtotal: subtotal,
         mao_obra: maoObra,
         desconto_rs: desconto,
@@ -694,7 +697,8 @@ export default function EditarOrcamentoPage() {
 
       await loadOrcamentos()
       toast('Orçamento atualizado!', 'ok2')
-      router.push('/orcamentos/' + orcId)
+      // Acabou de aprovar: abre o financeiro do pedido pedindo as formas de pagamento
+      router.push('/orcamentos/' + orcId + (virouAprovado ? '?aba=financeiro&definir=1' : ''))
     } catch (e: unknown) {
       toast(authErrorMessage(e, 'Erro ao salvar'), 'err')
     } finally {

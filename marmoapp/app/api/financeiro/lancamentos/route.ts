@@ -34,6 +34,8 @@ export async function GET(req: NextRequest) {
       .order('vencimento', { ascending: true })
       .order('created_at', { ascending: true })
     if (tipo === 'receber' || tipo === 'pagar') q = q.eq('tipo', tipo)
+    const orcamentoId = sp.get('orcamento_id')
+    if (orcamentoId) q = q.eq('orcamento_id', orcamentoId)
     if (de) q = q.gte('vencimento', de)
     if (ate) q = q.lte('vencimento', ate)
 
@@ -58,7 +60,8 @@ export async function POST(req: NextRequest) {
     if (!(valor > 0)) return NextResponse.json({ error: 'Valor inválido' }, { status: 400 })
     if (!b.vencimento) return NextResponse.json({ error: 'Vencimento obrigatório' }, { status: 400 })
 
-    const origem = b.origem === 'compra_programada' ? 'compra_programada' : 'manual'
+    const origem = b.origem === 'compra_programada' ? 'compra_programada'
+      : (b.origem === 'orcamento' && b.orcamento_id) ? 'orcamento' : 'manual'
     const pago = b.status === 'pago'
 
     // Parcelamento simples: repete mês a mês

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (!marmoraria_id) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const b = await req.json()
-    const parcelas: { rotulo?: string; valor: number; vencimento: string; acompanha_instalacao?: boolean }[] = b.parcelas || []
+    const parcelas: { rotulo?: string; valor: number; vencimento: string; acompanha_instalacao?: boolean; forma_pagamento?: string; recebido?: boolean }[] = b.parcelas || []
     if (!b.orcamento_id) return NextResponse.json({ error: 'Pedido obrigatório' }, { status: 400 })
 
     const { data: orc } = await supabase
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     const validas = parcelas.filter(p => Number(p.valor) > 0)
     for (const p of validas) {
-      if (!p.vencimento && !(p.acompanha_instalacao && orc.data_prevista_instalacao)) {
+      if (!p.vencimento && !(p.acompanha_instalacao && orc.data_prevista_instalacao && !p.recebido)) {
         return NextResponse.json({ error: 'Toda parcela precisa de vencimento (ou data de instalação definida)' }, { status: 400 })
       }
     }
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
 
     const cliente = (orc.clientes as unknown as { nome: string } | null)?.nome ?? null
     const prefixo = `Pedido #${orc.numero ?? ''}`.trim()
+    const hoje = new Date().toISOString().slice(0, 10)
     const rows = validas.map((p, i) => ({
       marmoraria_id,
       tipo: 'receber',
@@ -97,7 +98,10 @@ export async function POST(req: NextRequest) {
       vencimento: p.acompanha_instalacao && orc.data_prevista_instalacao && !p.vencimento ? orc.data_prevista_instalacao : p.vencimento,
       origem: 'orcamento',
       orcamento_id: orc.id,
-      acompanha_instalacao: !!p.acompanha_instalacao,
+      acompanha_instalacao: !!p.acompanha_instalacao && !p.recebido,
+      forma_pagamento: p.forma_pagamento || null,
+      status: p.recebido ? 'pago' : 'previsto',
+      data_pagamento: p.recebido ? (p.vencimento || hoje) : null,
       parcela_num: validas.length > 1 ? i + 1 : null,
       parcela_total: validas.length > 1 ? validas.length : null,
     }))
