@@ -1,19 +1,26 @@
 // Cliente mínimo da API v3 do Asaas (só o que a Pia Programada usa).
 // Variáveis de ambiente:
 //   ASAAS_API_KEY         chave da conta (sandbox ou produção)
-//   ASAAS_API_URL         padrão: sandbox. Produção: https://api.asaas.com/v3
+//   ASAAS_API_URL         opcional; sem ela, decide pelo prefixo da chave
 //   ASAAS_WEBHOOK_TOKEN   token configurado no webhook do painel do Asaas
 // Sem ASAAS_API_KEY o portal funciona em modo manual (Pix por chave +
 // baixa feita pelo gestor).
 
-const URL_PADRAO = 'https://api-sandbox.asaas.com/v3'
+// Sem ASAAS_API_URL, o ambiente sai do prefixo da chave:
+// $aact_prod_… → produção; qualquer outra (ex.: $aact_hmlg_…) → sandbox.
+function urlBase(): string {
+  if (process.env.ASAAS_API_URL) return process.env.ASAAS_API_URL
+  return (process.env.ASAAS_API_KEY || '').startsWith('$aact_prod_')
+    ? 'https://api.asaas.com/v3'
+    : 'https://api-sandbox.asaas.com/v3'
+}
 
 export function asaasConfigurado(): boolean {
   return !!process.env.ASAAS_API_KEY
 }
 
 async function asaas<T>(caminho: string, init: RequestInit = {}): Promise<T> {
-  const base = process.env.ASAAS_API_URL || URL_PADRAO
+  const base = urlBase()
   const res = await fetch(base + caminho, {
     ...init,
     headers: {
