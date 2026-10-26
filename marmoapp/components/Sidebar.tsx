@@ -46,6 +46,10 @@ const NAV_SECTIONS = [
         label: 'Funcionários', href: '/funcionarios',
         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>,
       },
+      {
+        label: 'Pia Programada', href: '/programado',
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="9" width="20" height="6" rx="1"/><rect x="13" y="10.5" width="5" height="3" rx="1"/><path d="M6 15v5M18 15v5"/></svg>,
+      },
     ],
   },
   {
