@@ -15,6 +15,7 @@ const PROTECTED_API_PREFIXES = [
   '/api/insumos',
   '/api/configuracoes',
   '/api/setup',
+  '/api/programado',
 ]
 
 export async function middleware(request: NextRequest) {
