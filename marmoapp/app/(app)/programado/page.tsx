@@ -20,7 +20,10 @@ interface Kit { id: string; codigo: string; nome: string; grupo: string; materia
 interface Config {
   ativo: boolean; prazo_entrega_dias: number; cidades_atendidas: string[]; parcelas_opcoes: number[]
   whatsapp_contato: string | null; pix_chave: string | null; pix_favorecido: string | null
+  cnpj: string | null; fundada_ano: number | null; garantia_meses: number | null; instagram: string | null; horario_atendimento: string | null
+  fotos: Foto[]
 }
+interface Foto { path: string; url: string; legenda: string | null; destaque: boolean }
 interface Espera { id: string; nome: string; whatsapp: string; cidade: string; kit_codigo: string | null; created_at: string }
 interface Dados { adesoes: Adesao[]; kits: Kit[]; config: Config; lista_espera: Espera[]; asaas: boolean }
 interface Pagamento { id: string; tipo: string; valor: number; desconto_aplicado: number; status: string; forma: string; pago_em: string | null; created_at: string; observacao: string | null }
@@ -219,6 +222,9 @@ function ConfigAba({ dados, onSalvo }: { dados: Dados; onSalvo: () => void }) {
     cidadesTxt: dados.config.cidades_atendidas.join('\n'),
     parcelasTxt: dados.config.parcelas_opcoes.join(', '),
     whatsapp_contato: dados.config.whatsapp_contato ?? '', pix_chave: dados.config.pix_chave ?? '', pix_favorecido: dados.config.pix_favorecido ?? '',
+    cnpj: dados.config.cnpj ?? '', fundada_ano: dados.config.fundada_ano ? String(dados.config.fundada_ano) : '',
+    garantia_meses: dados.config.garantia_meses ? String(dados.config.garantia_meses) : '',
+    instagram: dados.config.instagram ?? '', horario_atendimento: dados.config.horario_atendimento ?? '',
   })
   const [kits, setKits] = useState(dados.kits.map(k => ({ ...k, preco_total: Number(k.preco_total), custo_base: Number(k.custo_base) })))
   const [salvando, setSalvando] = useState(false)
@@ -231,6 +237,7 @@ function ConfigAba({ dados, onSalvo }: { dados: Dados; onSalvo: () => void }) {
           ativo: c.ativo, prazo_entrega_dias: Number(c.prazo_entrega_dias),
           cidades_atendidas: c.cidadesTxt.split('\n'), parcelas_opcoes: c.parcelasTxt.split(/[,;\s]+/).filter(Boolean).map(Number),
           whatsapp_contato: c.whatsapp_contato, pix_chave: c.pix_chave, pix_favorecido: c.pix_favorecido, kits,
+          cnpj: c.cnpj, fundada_ano: c.fundada_ano, garantia_meses: c.garantia_meses, instagram: c.instagram, horario_atendimento: c.horario_atendimento,
         }),
       })
       toast('Configurações salvas'); onSalvo()
@@ -238,6 +245,8 @@ function ConfigAba({ dados, onSalvo }: { dados: Dados; onSalvo: () => void }) {
   }
 
   return (
+    <>
+    <FotosObras inicial={dados.config.fotos} />
     <div className="form-row-2" style={{ alignItems: 'start' }}>
       <div className="card"><div className="card-body">
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, fontWeight: 600 }}>
@@ -257,6 +266,22 @@ function ConfigAba({ dados, onSalvo }: { dados: Dados; onSalvo: () => void }) {
           <div className="form-group"><label className="form-label">FAVORECIDO</label>
             <input className="form-input" value={c.pix_favorecido} onChange={e => setC({ ...c, pix_favorecido: e.target.value })} /></div>
         </div>
+        <div style={{ fontWeight: 600, margin: '18px 0 4px' }}>Confiança no site</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Aparece para o cliente antes de ele pagar. Deixe em branco o que não quiser mostrar.</div>
+        <div className="form-row-2">
+          <div className="form-group"><label className="form-label">CNPJ</label>
+            <input className="form-input" value={c.cnpj} onChange={e => setC({ ...c, cnpj: e.target.value })} /></div>
+          <div className="form-group"><label className="form-label">NO MERCADO DESDE (ANO)</label>
+            <input className="form-input" type="number" value={c.fundada_ano} onChange={e => setC({ ...c, fundada_ano: e.target.value })} /></div>
+        </div>
+        <div className="form-row-2">
+          <div className="form-group"><label className="form-label">GARANTIA DA INSTALAÇÃO (MESES)</label>
+            <input className="form-input" type="number" value={c.garantia_meses} onChange={e => setC({ ...c, garantia_meses: e.target.value })} /></div>
+          <div className="form-group"><label className="form-label">INSTAGRAM</label>
+            <input className="form-input" placeholder="@realpedras" value={c.instagram} onChange={e => setC({ ...c, instagram: e.target.value })} /></div>
+        </div>
+        <div className="form-group"><label className="form-label">HORÁRIO DE ATENDIMENTO</label>
+          <input className="form-input" placeholder="Seg. a sex., 8h às 18h; sáb., 8h às 12h" value={c.horario_atendimento} onChange={e => setC({ ...c, horario_atendimento: e.target.value })} /></div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           {dados.asaas ? 'Asaas conectado: o cliente recebe QR Code e a baixa é automática.' : 'Asaas ainda não conectado: o cliente vê a chave Pix acima e você confirma o recebimento aqui.'}
         </div>
@@ -282,6 +307,85 @@ function ConfigAba({ dados, onSalvo }: { dados: Dados; onSalvo: () => void }) {
         <button className="btn btn-primary" disabled={salvando} onClick={salvar}>{salvando ? 'Salvando…' : 'Salvar configurações'}</button>
       </div></div>
     </div>
+    </>
+  )
+}
+
+function FotosObras({ inicial }: { inicial: Foto[] }) {
+  const { toast } = useApp()
+  const [fotos, setFotos] = useState<Foto[]>(inicial)
+  const [enviando, setEnviando] = useState(false)
+
+  async function enviar(arquivos: FileList | null) {
+    if (!arquivos?.length) return
+    setEnviando(true)
+    try {
+      for (const a of Array.from(arquivos)) {
+        const fd = new FormData()
+        fd.append('arquivo', a)
+        const r = await fetch('/api/programado/fotos', { method: 'POST', credentials: 'include', body: fd })
+        const j = await r.json()
+        if (!r.ok) throw new Error(j.error)
+        setFotos(j.fotos)
+      }
+      toast('Fotos adicionadas ao site')
+    } catch (e) { toast(e instanceof Error ? e.message : 'Erro ao enviar', 'err') } finally { setEnviando(false) }
+  }
+
+  async function salvarLista(lista: Foto[]) {
+    setFotos(lista)
+    try { setFotos((await api('/api/programado/fotos', { method: 'PUT', body: JSON.stringify({ fotos: lista }) })).fotos) }
+    catch (e) { toast(e instanceof Error ? e.message : 'Erro', 'err') }
+  }
+
+  async function remover(path: string) {
+    if (!window.confirm('Remover esta foto do site?')) return
+    try { setFotos((await api('/api/programado/fotos?path=' + encodeURIComponent(path), { method: 'DELETE' })).fotos); toast('Foto removida') }
+    catch (e) { toast(e instanceof Error ? e.message : 'Erro', 'err') }
+  }
+
+  function mover(i: number, d: -1 | 1) {
+    const j = i + d
+    if (j < 0 || j >= fotos.length) return
+    const l = [...fotos]; [l[i], l[j]] = [l[j], l[i]]
+    salvarLista(l)
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}><div className="card-body">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+        <div>
+          <div style={{ fontWeight: 600 }}>Fotos de pias instaladas</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>A foto marcada como “Topo” abre a página do anúncio; as outras viram a galeria. Fotos de celular na horizontal funcionam melhor.</div>
+        </div>
+        <label className="btn btn-primary" style={{ cursor: enviando ? 'wait' : 'pointer' }}>
+          {enviando ? 'Enviando…' : 'Adicionar fotos'}
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden disabled={enviando} onChange={e => { enviar(e.target.files); e.target.value = '' }} />
+        </label>
+      </div>
+      {fotos.length === 0 ? (
+        <div className="empty-state"><p>Nenhuma foto ainda. Sem fotos, o site mostra a ilustração da pedra.</p></div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+          {fotos.map((f, i) => (
+            <div key={f.path} style={{ border: '1px solid var(--card-border)', borderRadius: 8, overflow: 'hidden', outline: f.destaque ? '2px solid var(--gold)' : undefined }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={f.url} alt={f.legenda ?? ''} style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }} />
+              <div style={{ padding: 8 }}>
+                <input className="form-input" style={{ fontSize: 12, marginBottom: 6 }} placeholder="Legenda (ex.: Preto São Gabriel, Itaquá)" defaultValue={f.legenda ?? ''}
+                  onBlur={e => { if ((e.target.value || null) !== f.legenda) salvarLista(fotos.map(x => x.path === f.path ? { ...x, legenda: e.target.value || null } : x)) }} />
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button className="btn btn-ghost btn-sm" disabled={f.destaque} onClick={() => salvarLista(fotos.map(x => ({ ...x, destaque: x.path === f.path })))}>{f.destaque ? 'Topo ✓' : 'Usar no topo'}</button>
+                  <button className="btn btn-ghost btn-sm" aria-label="Mover para a esquerda" onClick={() => mover(i, -1)}>‹</button>
+                  <button className="btn btn-ghost btn-sm" aria-label="Mover para a direita" onClick={() => mover(i, 1)}>›</button>
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={() => remover(f.path)}>Remover</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div></div>
   )
 }
 

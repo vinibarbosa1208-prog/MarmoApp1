@@ -3,11 +3,11 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Bancada, Topo, lerUtm } from '../_componentes'
+import { Bancada, Topo, WhatsFlutuante, lerUtm } from '../_componentes'
 import { cpfValido, whatsappValido, fmtCpf, fmtFone, fmtReais, mesesParaQuitar, soDigitos } from '@/lib/minha-pia/regras'
 
 interface Kit { codigo: string; nome: string; preco_total: number; parcelas: number[] }
-interface Vitrine { cidades_atendidas: string[]; kits: Kit[]; prazo_entrega_dias: number }
+interface Vitrine { cidades_atendidas: string[]; kits: Kit[]; prazo_entrega_dias: number; whatsapp_contato: string | null }
 
 const OUTRA = '__outra__'
 const DIAS = [5, 10, 15, 20, 25]
@@ -285,6 +285,9 @@ function Formulario() {
           <p style={{ marginTop: 12, textAlign: 'center' }}><button type="button" className="mp-btn-texto" onClick={() => setEtapa(2)}>Voltar</button></p>
         </section>
       )}
+      <div style={{ height: 72 }} />
+      <WhatsFlutuante numero={v?.whatsapp_contato}
+        mensagem={`Olá! Estou fazendo o cadastro da Pia Programada${kit ? ` (${kit.nome}, ${fmtReais(f.parcela)}/mês)` : ''} e tenho uma dúvida.`} />
     </main>
   )
 }

@@ -9,17 +9,19 @@ import { opcoesParcela } from '@/lib/minha-pia/regras'
 export async function GET() {
   try {
     const marmoraria_id = getProgramadoMarmorariaId()
-    const [config, { data: kits, error }, { data: marm }, { data: entregues }, { count: naFila }] = await Promise.all([
+    const [config, { data: kits, error }, { data: marm }, { data: entregues }, { count: naFila }, { count: instaladas }] = await Promise.all([
       carregarConfig(marmoraria_id),
       supabase.from('programado_kits')
         .select('codigo, nome, grupo, material_nome, tom, comprimento_m, descricao, inclui, preco_total')
         .eq('marmoraria_id', marmoraria_id).eq('ativo', true).order('ordem'),
-      supabase.from('marmorarias').select('nome, cidade').eq('id', marmoraria_id).maybeSingle(),
+      supabase.from('marmorarias').select('nome, cnpj, telefone, cep, endereco, cidade, estado').eq('id', marmoraria_id).maybeSingle(),
       supabase.from('programado_adesoes').select('quitada_em, instalada_em')
         .eq('marmoraria_id', marmoraria_id).eq('status', 'instalada').not('quitada_em', 'is', null)
         .order('instalada_em', { ascending: false }).limit(20),
       supabase.from('programado_adesoes').select('id', { count: 'exact', head: true })
         .eq('marmoraria_id', marmoraria_id).in('status', ['quitada', 'medicao_agendada', 'em_producao', 'instalacao_agendada']),
+      supabase.from('programado_adesoes').select('id', { count: 'exact', head: true })
+        .eq('marmoraria_id', marmoraria_id).eq('status', 'instalada'),
     ])
     if (error) throw error
 
@@ -40,6 +42,22 @@ export async function GET() {
       pias_na_fila: naFila ?? 0,
       cidades_atendidas: config.cidades_atendidas,
       whatsapp_contato: config.whatsapp_contato,
+      pias_instaladas: instaladas ?? 0,
+      // Dados de confiança: quem está vendendo, onde fica, garantia.
+      loja: {
+        nome: marm?.nome ?? '',
+        cnpj: config.cnpj || marm?.cnpj || null,
+        endereco: marm?.endereco ?? null,
+        cidade: marm?.cidade ?? null,
+        estado: marm?.estado ?? null,
+        cep: marm?.cep ?? null,
+        telefone: marm?.telefone ?? null,
+        instagram: config.instagram,
+        fundada_ano: config.fundada_ano,
+        garantia_meses: config.garantia_meses,
+        horario_atendimento: config.horario_atendimento,
+      },
+      fotos: config.fotos.map(f => ({ url: f.url, legenda: f.legenda, destaque: !!f.destaque })),
       kits: (kits ?? []).map(k => ({
         ...k,
         preco_total: Number(k.preco_total),

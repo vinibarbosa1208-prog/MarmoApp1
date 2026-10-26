@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Topo } from '../_componentes'
+import { Topo, WhatsFlutuante } from '../_componentes'
 import { fmtCpf, soDigitos } from '@/lib/minha-pia/regras'
 
 export default function EntrarPage() {
@@ -12,6 +12,11 @@ export default function EntrarPage() {
   const [pin, setPin] = useState('')
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [whats, setWhats] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/minha-pia/vitrine').then(r => r.json()).then(d => setWhats(d.whatsapp_contato ?? null)).catch(() => {})
+  }, [])
 
   async function entrar(e: React.FormEvent) {
     e.preventDefault()
@@ -55,6 +60,7 @@ export default function EntrarPage() {
           </p>
         </section>
       </main>
+      <WhatsFlutuante numero={whats} mensagem="Olá! Tenho um plano da Pia Programada e preciso de ajuda para entrar (esqueci o PIN)." />
     </>
   )
 }

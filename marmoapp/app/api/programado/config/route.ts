@@ -25,6 +25,11 @@ export async function PUT(req: NextRequest) {
       whatsapp_contato: soDigitos(b.whatsapp_contato) || null,
       pix_chave: typeof b.pix_chave === 'string' ? b.pix_chave.trim().slice(0, 140) || null : null,
       pix_favorecido: typeof b.pix_favorecido === 'string' ? b.pix_favorecido.trim().slice(0, 120) || null : null,
+      cnpj: soDigitos(b.cnpj).length === 14 ? soDigitos(b.cnpj) : null,
+      fundada_ano: Number(b.fundada_ano) >= 1900 && Number(b.fundada_ano) <= new Date().getFullYear() ? Number(b.fundada_ano) : null,
+      garantia_meses: Number(b.garantia_meses) >= 1 && Number(b.garantia_meses) <= 120 ? Number(b.garantia_meses) : null,
+      instagram: typeof b.instagram === 'string' ? b.instagram.trim().replace(/^@/, '').slice(0, 60) || null : null,
+      horario_atendimento: typeof b.horario_atendimento === 'string' ? b.horario_atendimento.trim().slice(0, 120) || null : null,
     })
     if (error) throw error
 

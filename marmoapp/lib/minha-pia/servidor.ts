@@ -89,12 +89,20 @@ export interface ConfigProgramado {
   whatsapp_contato: string | null
   pix_chave: string | null
   pix_favorecido: string | null
+  cnpj: string | null
+  fundada_ano: number | null
+  garantia_meses: number | null
+  instagram: string | null
+  horario_atendimento: string | null
+  fotos: FotoObra[]
 }
+
+export interface FotoObra { path: string; url: string; legenda: string | null; destaque: boolean }
 
 export async function carregarConfig(marmoraria_id: string): Promise<ConfigProgramado> {
   const { data } = await supabase
     .from('programado_config')
-    .select('ativo, nome_programa, prazo_entrega_dias, cidades_atendidas, parcelas_opcoes, whatsapp_contato, pix_chave, pix_favorecido')
+    .select('ativo, nome_programa, prazo_entrega_dias, cidades_atendidas, parcelas_opcoes, whatsapp_contato, pix_chave, pix_favorecido, cnpj, fundada_ano, garantia_meses, instagram, horario_atendimento, fotos')
     .eq('marmoraria_id', marmoraria_id)
     .maybeSingle()
   return {
@@ -106,6 +114,12 @@ export async function carregarConfig(marmoraria_id: string): Promise<ConfigProgr
     whatsapp_contato: data?.whatsapp_contato ?? null,
     pix_chave: data?.pix_chave ?? null,
     pix_favorecido: data?.pix_favorecido ?? null,
+    cnpj: data?.cnpj ?? null,
+    fundada_ano: data?.fundada_ano ?? null,
+    garantia_meses: data?.garantia_meses ?? null,
+    instagram: data?.instagram ?? null,
+    horario_atendimento: data?.horario_atendimento ?? null,
+    fotos: Array.isArray(data?.fotos) ? (data!.fotos as FotoObra[]) : [],
   }
 }
 

@@ -2,7 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Bancada, Topo, linkWhatsapp } from '../_componentes'
+import Link from 'next/link'
+import { Bancada, Topo, WhatsFlutuante, linkWhatsapp } from '../_componentes'
 import {
   fmtReais, fmtData, fmtMesAno, STATUS_PAGANDO, ETAPAS_OBRA, ANTECIPACAO_MINIMA,
   type StatusAdesao, type ResumoAdesao,
@@ -85,6 +86,7 @@ function Conteudo() {
   const [adiantar, setAdiantar] = useState('')
   const [mostrarAdiantar, setMostrarAdiantar] = useState(false)
   const [pediuAntecipar, setPediuAntecipar] = useState(false)
+  const [indicado, setIndicado] = useState(false)
   const inicioPoll = useRef(0)
 
   const carregar = useCallback(async () => {
@@ -130,6 +132,17 @@ function Conteudo() {
   async function pedirAntecipacao() {
     const r = await fetch('/api/minha-pia/antecipar', { method: 'POST' })
     if (r.ok) { setPediuAntecipar(true); carregar() }
+  }
+
+  async function indicar() {
+    if (!p) return
+    const url = `${window.location.origin}/minha-pia?ref=${p.adesao.numero}`
+    const texto = `Estou fazendo minha pia de granito pagando por mês, sem cartão. Dá uma olhada:`
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Pia Programada', text: texto, url }); return }
+      await navigator.clipboard.writeText(`${texto} ${url}`)
+      setIndicado(true)
+    } catch { /* cancelou o compartilhamento */ }
   }
 
   async function sair() {
@@ -299,6 +312,7 @@ function Conteudo() {
                 <span className="num" style={{ fontWeight: 650, textAlign: 'right' }}>
                   {fmtReais(pg.valor, true)}
                   {pg.desconto_aplicado > 0 && <><br /><span className="mp-mini">+ {fmtReais(pg.desconto_aplicado, true)} de desconto</span></>}
+                  <br /><Link href={`/minha-pia/recibo/${pg.id}`} className="mp-mini" style={{ fontWeight: 600 }}>Recibo</Link>
                 </span>
               </li>
             ))}
@@ -314,11 +328,31 @@ function Conteudo() {
         </section>
       )}
 
-      {whats && (
+      {a.status !== 'cancelada' && (
         <section className="mp-secao">
-          <a className="mp-btn mp-btn-sec mp-btn-cheio" href={whats} target="_blank" rel="noopener noreferrer">Falar com a {p.marmoraria || 'marmoraria'} no WhatsApp</a>
+          <h2 className="mp-h3" style={{ marginBottom: 12 }}>Atalhos</h2>
+          <div className="mp-ferramentas">
+            {pagando && r.proximaParcelaVencimento && (
+              <a className="mp-ferramenta" href="/api/minha-pia/lembrete" download>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v3"/></svg>
+                <div><strong>Lembrete no celular</strong><span>Coloca o dia {a.dia_vencimento} de todo mês na sua agenda, com aviso na véspera.</span></div>
+              </a>
+            )}
+            <button type="button" className="mp-ferramenta" onClick={indicar}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+              <div><strong>{indicado ? 'Link copiado' : 'Indicar para alguém'}</strong><span>Mande para um vizinho ou parente que também quer pia nova.</span></div>
+            </button>
+            {whats && (
+              <a className="mp-ferramenta" href={whats} target="_blank" rel="noopener noreferrer">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <div><strong>Falar com a {p.marmoraria || 'marmoraria'}</strong><span>Dúvidas, pausa no plano ou mudança de endereço.</span></div>
+              </a>
+            )}
+          </div>
         </section>
       )}
+      <div style={{ height: 64 }} />
+      <WhatsFlutuante numero={p.config.whatsapp_contato} mensagem={`Olá! Sou ${a.primeiro_nome}, plano #${a.numero} da Pia Programada.`} />
     </main>
   )
 }
