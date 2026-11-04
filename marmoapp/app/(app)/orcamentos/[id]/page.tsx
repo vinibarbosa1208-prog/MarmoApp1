@@ -379,7 +379,8 @@ export default function VerOrcamentoPage() {
                       const temDesenho = !!item.tipo_peca
                       const podeExpandir = temBreakdown || temDesenho
                       const expandido = itensExpandidos.has(idx)
-                      const custoMaterialItem = temBreakdown ? (item.area || 0) * (item.custo_m2 || 0) : 0
+                      const qtdItem = item.tipo_peca && item.quantidade > 1 ? item.quantidade : 1
+                      const custoMaterialItem = temBreakdown ? (item.area || 0) * qtdItem * (item.custo_m2 || 0) : 0
                       return (
                         <Fragment key={idx}>
                           <tr>
@@ -426,7 +427,7 @@ export default function VerOrcamentoPage() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, maxWidth: 420 }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--gray)' }}>Área</span>
-                                    <span style={{ fontFamily: 'monospace' }}>{(item.area || 0).toFixed(2)} m²</span>
+                                    <span style={{ fontFamily: 'monospace' }}>{qtdItem > 1 ? `${(item.area || 0).toFixed(3)} m² × ${qtdItem} = ${((item.area || 0) * qtdItem).toFixed(2)} m²` : `${(item.area || 0).toFixed(2)} m²`}</span>
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--gray)' }}>Custo de compra (R$/m²)</span>

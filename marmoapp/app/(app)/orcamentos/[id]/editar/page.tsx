@@ -256,8 +256,8 @@ function calcTotal(item: ItemForm): number {
   const cubaExtra = temCubaExtra && (item.dados_extras.cuba_pedra as boolean)
     ? ((item.dados_extras.valor_cuba_pedra as number) || 350)
     : 0
-  if (area > 0) return area * item.quantidade * item.preco_unitario + cubaExtra
-  return item.quantidade * item.preco_unitario + cubaExtra
+  if (area > 0) return area * item.quantidade * item.preco_unitario + cubaExtra * (item.quantidade || 1)
+  return item.quantidade * item.preco_unitario + cubaExtra * (item.quantidade || 1)
 }
 
 function calcCusto(item: ItemForm): number {
@@ -344,6 +344,9 @@ export default function EditarOrcamentoPage() {
   // Lote de peças do mesmo desenho (ex: 3 soleiras de tamanhos diferentes):
   // cada peça vira um item independente, com medida/acabamento/preço próprios.
   const [pecaAtual, setPecaAtual] = useState(1)
+  // Peças iguais (ex: 39 pisadas de escada): uma medida modelo × quantidade,
+  // salvas como um único item. Desmarcado = cada peça com sua própria medida.
+  const [pecasIguais, setPecasIguais] = useState(true)
   // Alteração em lote
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set())
   const [lote, setLote] = useState({ novoMaterial: '', custo_m2: '', markup: '', preco_unitario: '' })
@@ -441,7 +444,7 @@ export default function EditarOrcamentoPage() {
     // independente, com sua própria medida/acabamento/preço.
     const pecasTotal = isMaterialComPeca ? Math.max(1, Math.round(novoItem.quantidade || 1)) : 1
 
-    if (pecasTotal > 1) {
+    if (pecasTotal > 1 && !pecasIguais) {
       const descBase = novoItem.descricao.replace(/\s*\(\d+\/\d+\)$/, '')
       const itemPeca: ItemForm = { ...novoItem, descricao: `${descBase} (${pecaAtual}/${pecasTotal})`, quantidade: 1 }
       setItens(prev => [...prev, itemPeca])
@@ -468,6 +471,7 @@ export default function EditarOrcamentoPage() {
       return
     }
 
+    if (pecasTotal > 1) toast(`${pecasTotal} peças iguais adicionadas (medida modelo × ${pecasTotal})`, 'ok2')
     setItens(prev => [...prev, { ...novoItem }])
     setNovoItem({ ...ITEM_DEFAULTS })
     setServicodeIdSel('')
@@ -875,13 +879,41 @@ export default function EditarOrcamentoPage() {
                       <label className="form-label">QUANTIDADE DE PEÇAS</label>
                       <IntInput className="form-input" min="1" step="1" value={novoItem.quantidade}
                         onChange={v => upItem({ quantidade: v || 1 })} />
-                      {novoItem.quantidade > 1 && (
-                        <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, marginTop: 6 }}>
-                          Peça {pecaAtual} de {Math.max(1, Math.round(novoItem.quantidade))} — preencha a medida
-                          desta peça e clique em &quot;Salvar peça e continuar&quot;. Cada peça pode ter medida,
-                          acabamento e preço diferentes; as já salvas aparecem na lista abaixo.
-                        </div>
-                      )}
+                      {novoItem.quantidade > 1 && (() => {
+                        const qtdPecas = Math.max(1, Math.round(novoItem.quantidade))
+                        const areaModelo = calcArea(novoItem)
+                        const podeEscolher = editandoIdx === null && pecaAtual === 1
+                        const iguais = editandoIdx !== null || pecasIguais
+                        return (
+                          <div style={{ marginTop: 8 }}>
+                            {podeEscolher && (
+                              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                                <button type="button" className={`btn btn-sm ${iguais ? 'btn-gold' : 'btn-ghost'}`}
+                                  onClick={() => setPecasIguais(true)}>Todas iguais</button>
+                                <button type="button" className={`btn btn-sm ${!iguais ? 'btn-gold' : 'btn-ghost'}`}
+                                  onClick={() => setPecasIguais(false)}>Medidas diferentes</button>
+                              </div>
+                            )}
+                            <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700 }}>
+                              {iguais ? (
+                                <>
+                                  Preencha a medida de UMA peça (modelo). O sistema multiplica material, acabamentos e
+                                  valor por {qtdPecas} e salva tudo como um único item.
+                                  {areaModelo > 0 && (
+                                    <> Área: {areaModelo.toFixed(3).replace('.', ',')} m² × {qtdPecas} = {(areaModelo * qtdPecas).toFixed(2).replace('.', ',')} m².</>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  Peça {pecaAtual} de {qtdPecas} — preencha a medida desta peça e clique em
+                                  &quot;Salvar peça e continuar&quot;. Cada peça pode ter medida, acabamento e preço
+                                  diferentes; as já salvas aparecem na lista abaixo.
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 10 }}>
                       <div className="form-group">
@@ -943,7 +975,8 @@ export default function EditarOrcamentoPage() {
                       {(() => {
                         if (editandoIdx !== null) return '💾 Salvar Alterações'
                         const pecasTotal = isMaterialComPeca ? Math.max(1, Math.round(novoItem.quantidade || 1)) : 1
-                        if (pecasTotal > 1) {
+                        if (pecasTotal > 1 && pecasIguais) return `+ Adicionar ${pecasTotal} peças iguais`
+                        if (pecasTotal > 1 && !pecasIguais) {
                           return pecaAtual < pecasTotal
                             ? `💾 Salvar peça ${pecaAtual}/${pecasTotal} e continuar`
                             : `+ Salvar última peça (${pecasTotal}/${pecasTotal})`

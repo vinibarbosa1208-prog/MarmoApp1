@@ -152,7 +152,9 @@ function especificacoesCard(i: ItemPDF): string {
     if (ex.comprimento) parts.push(`Medidas: ${ex.comprimento}×${ex.largura || '?'}cm`)
   }
 
-  if (i.area) parts.push(`${fmtNum(i.area)} m²`)
+  const qtdPecas = i.tipo_peca && i.quantidade && i.quantidade > 1 ? i.quantidade : 1
+  if (i.area && qtdPecas > 1) parts.push(`${fmtNum(qtdPecas, 0)} peças de ${fmtNum(i.area)} m² = ${fmtNum(i.area * qtdPecas)} m²`)
+  else if (i.area) parts.push(`${fmtNum(i.area)} m²`)
   else if (i.largura && i.altura) parts.push(`${fmtNum(i.largura)} × ${fmtNum(i.altura)} m`)
   else if (i.quantidade && i.quantidade !== 1) parts.push(`${fmtNum(i.quantidade, 0)} unid.`)
 

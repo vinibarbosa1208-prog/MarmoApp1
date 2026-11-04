@@ -225,6 +225,9 @@ export default function ResumoPeca({ item }: { item: ResumoPecaItem }) {
   const ml = mlAcabamentoItem(item)
   const totalVenda = total * item.quantidade * item.preco_unitario
   const totalCusto = total * item.quantidade * item.custo_m2
+  const qtd = item.quantidade > 1 ? Math.round(item.quantidade) : 1
+  const totalArea = total * qtd
+  const areaTxt = qtd > 1 ? `${d(total)} m² × ${qtd} = ${d(totalArea)} m²` : `${d(total)} m²`
 
   return (
     <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--card-bg, #fff)', borderRadius: 8, border: '1px solid rgba(25,135,84,0.2)', fontSize: 13 }}>
@@ -241,24 +244,24 @@ export default function ResumoPeca({ item }: { item: ResumoPecaItem }) {
         </div>
       ))}
       <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
-        <span>Total</span>
-        <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{d(total)} m²</span>
+        <span>{qtd > 1 ? `Total (${qtd} peças)` : 'Total'}</span>
+        <span style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>{areaTxt}</span>
       </div>
       {ml > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: 'var(--gold)', background: 'rgba(201,168,76,0.06)', border: '1px solid #E8D9B0', borderRadius: 6, padding: '5px 10px' }}>
           <span>Acabamento necessário</span>
-          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{d(ml)} ml (meia esquadria)</span>
+          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{qtd > 1 ? `${d(ml)} × ${qtd} = ${d(ml * qtd)}` : d(ml)} ml (meia esquadria)</span>
         </div>
       )}
       {item.custo_m2 > 0 && (
         <div style={{ borderTop: '1px solid rgba(25,135,84,0.2)', paddingTop: 6, marginTop: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted, #888)', fontSize: 12, marginBottom: 3 }}>
             <span>Custo</span>
-            <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {item.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
+            <span style={{ fontFamily: 'monospace' }}>{d(totalArea)} m² × R$ {item.custo_m2.toFixed(2)} = <strong>{fmt(totalCusto)}</strong></span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: 'var(--gold)' }}>
             <span>Venda</span>
-            <span style={{ fontFamily: 'monospace' }}>{d(total)} m² × R$ {item.preco_unitario.toFixed(2)} = <strong>{fmt(totalVenda)}</strong></span>
+            <span style={{ fontFamily: 'monospace' }}>{d(totalArea)} m² × R$ {item.preco_unitario.toFixed(2)} = <strong>{fmt(totalVenda)}</strong></span>
           </div>
         </div>
       )}
