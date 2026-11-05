@@ -69,6 +69,25 @@ function getClient(): Anthropic {
   return _client
 }
 
+/**
+ * Executa o Antônio do WhatsApp (vendas ou atendimento) com instruções próprias.
+ * As instruções vão com cache para não pagar o catálogo inteiro a cada mensagem.
+ */
+export async function runAntonio(system: string, messages: AgentMessage[]) {
+  const client = getClient()
+  const response = await client.messages.create({
+    model: process.env.ANTONIO_MODEL || 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+    messages,
+  })
+  const texto = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map(b => b.text)
+    .join('\n')
+  return { texto, tokens: response.usage.input_tokens + response.usage.output_tokens }
+}
+
 export async function runAgent(
   messages: AgentMessage[],
   catalogo: Catalogo,
