@@ -132,6 +132,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
         <label>Resultado da call<select data-k="resultado"><option value="em_aberto">Em aberto</option><option value="fechou">Fechou</option><option value="vai_pensar">Vai pensar</option><option value="perdido">Perdido</option></select></label>
         <label>Observações da call<textarea data-k="obs" rows="3" placeholder="Objeções, combinados, próximo contato"></textarea></label>
         <button class="btn gold" id="copy">Copiar resumo para o WhatsApp</button>
+        <button class="btn" id="gerarContrato" style="display:none">Gerar contrato deste cliente</button>
       </fieldset>
       <fieldset>
         <legend>Roteiro deste slide</legend>
@@ -256,6 +257,7 @@ var RES={em_aberto:'',fechou:' · fechou',vai_pensar:' · vai pensar',perdido:' 
 function refreshSaved(sel){store.list().then(function(L){var s=document.getElementById('saved');s.innerHTML='<option value="">— novo cliente —</option>'+L.map(function(x){return '<option value="'+esc(x.id)+'"'+(String(x.id)===String(sel)?' selected':'')+'>'+esc(x.empresa||'(sem nome)')+(RES[x.resultado]||'')+(x.formulario?' · formulário'+(x.score!=null?' '+x.score:''):'')+'</option>'}).join('')}).catch(function(e){info('Não consegui carregar os clientes: '+e.message)})}
 document.getElementById('savedLegend').textContent=API?'Clientes no banco do MarmoApp':'Clientes salvos neste navegador';
 if(!store.del)document.getElementById('del').style.display='none';
+if(API){var gc=document.getElementById('gerarContrato');gc.style.display='';gc.onclick=function(){if(!S.id){toast('Salve o cliente antes de gerar o contrato');return}if(dirty){doSave()}window.open('/contratos/novo?diagnostico='+encodeURIComponent(S.id),'_blank')}}
 function doSave(){if(!S.empresa){toast('Preencha o nome da marmoraria');return}info('Salvando…');store.save(S).then(function(r){if(r.id)S.id=r.id;if(r.lead_id)S.lead_id=r.lead_id;dirty=false;toast(API?'Salvo no banco do MarmoApp':'Cliente salvo neste navegador');info('Salvo às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));refreshSaved(S.id)}).catch(function(e){toast('Não salvou: '+e.message);info('Erro ao salvar: '+e.message)})}
 document.getElementById('save').onclick=doSave;
 document.getElementById('new').onclick=function(){S=blankState();dirty=false;fillForm();refreshSaved('');info('');go(0)};

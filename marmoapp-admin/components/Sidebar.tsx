@@ -7,6 +7,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '⬛' },
   { href: '/clientes', label: 'Clientes', icon: '🏢' },
   { href: '/assinaturas', label: 'Assinaturas', icon: '💳' },
+  { href: '/contratos', label: 'Contratos', icon: '📝' },
   { href: '/marketing', label: 'Marketing', icon: '📣' },
   { href: '/erros', label: 'Erros', icon: '🔴' },
   { href: '/configuracoes', label: 'Configurações', icon: '⚙️' },
