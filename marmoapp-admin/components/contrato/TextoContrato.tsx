@@ -1,7 +1,7 @@
 // Mostra o texto do contrato (formato de lib/contrato/modelo.ts: "# ", "## ", "N. ").
 export default function TextoContrato({ texto, claro = true }: { texto: string; claro?: boolean }) {
-  const cor = claro ? 'text-[#2C2922]' : 'text-slate-200'
-  const sub = claro ? 'text-[#6F6355]' : 'text-slate-400'
+  const cor = claro ? 'text-[#2C2922]' : 'text-gray-800'
+  const sub = claro ? 'text-[#6F6355]' : 'text-gray-600'
   return (
     <div className={`space-y-3 text-[15px] leading-relaxed ${cor}`}>
       {texto.split('\n').map((linha, i) => {

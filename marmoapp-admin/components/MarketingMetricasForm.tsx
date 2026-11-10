@@ -77,7 +77,7 @@ export default function MarketingMetricasForm({ defaultValues }: Props) {
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors"
+        className="rounded-lg bg-gold px-4 py-2 text-xs font-semibold text-[#0D0D0D] hover:bg-gold2 transition-colors"
       >
         {open ? 'Fechar formulário' : 'Inserir métricas da semana'}
       </button>
@@ -85,16 +85,16 @@ export default function MarketingMetricasForm({ defaultValues }: Props) {
       {open && (
         <form
           onSubmit={handleSubmit}
-          className="mt-4 rounded-xl bg-slate-800 border border-slate-700 p-5"
+          className="mt-4 rounded-xl bg-white border border-gray-200 p-5"
         >
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">
             Métricas da semana — Instagram orgânico
           </p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {fields.map((f) => (
               <div key={f.name}>
-                <label className="block text-xs text-slate-400 mb-1" htmlFor={f.name}>
+                <label className="block text-xs text-gray-600 mb-1" htmlFor={f.name}>
                   {f.label}
                 </label>
                 <input
@@ -107,20 +107,20 @@ export default function MarketingMetricasForm({ defaultValues }: Props) {
                   value={form[f.name]}
                   onChange={handleChange}
                   placeholder={f.placeholder}
-                  className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gold focus:outline-none"
                 />
               </div>
             ))}
           </div>
 
           {error && (
-            <p className="mt-3 rounded-lg bg-red-900/40 border border-red-800 px-3 py-2 text-xs text-red-400">
+            <p className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
               {error}
             </p>
           )}
 
           {success && (
-            <p className="mt-3 rounded-lg bg-green-900/40 border border-green-800 px-3 py-2 text-xs text-green-400">
+            <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
               Métricas salvas com sucesso! Dashboard atualizado.
             </p>
           )}
@@ -129,14 +129,14 @@ export default function MarketingMetricasForm({ defaultValues }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-gold px-5 py-2 text-sm font-semibold text-[#0D0D0D] hover:bg-gold2 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Salvando...' : 'Salvar métricas'}
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
             >
               Cancelar
             </button>

@@ -1,18 +1,19 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { DM_Sans, Playfair_Display } from 'next/font/google'
 import './globals.css'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' })
+const playfair = Playfair_Display({ subsets: ['latin'], weight: ['600', '700'], variable: '--font-playfair' })
 
 export const metadata: Metadata = {
-  title: 'MarmoApp Admin',
-  description: 'Painel administrativo interno do MarmoApp',
+  title: { default: 'MarmoApp · Painel central', template: '%s · MarmoApp' },
+  description: 'Painel central do time interno MarmoApp',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${geist.variable} h-full`}>
-      <body className="h-full bg-slate-950 text-white antialiased">{children}</body>
+    <html lang="pt-BR" className={`${dmSans.variable} ${playfair.variable} h-full`}>
+      <body className="h-full bg-page text-gray-900 antialiased">{children}</body>
     </html>
   )
 }

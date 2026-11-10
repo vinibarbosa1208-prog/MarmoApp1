@@ -37,19 +37,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-page px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold">
-            <span className="text-indigo-400">Marmo</span>
-            <span className="text-white">App</span>
+        <div className="mb-8 flex flex-col items-center text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-marmoapp.jpg" alt="MarmoApp" className="mb-4 h-16 w-16 rounded-2xl object-cover shadow-sm" />
+          <h1 className="font-serif text-3xl font-bold text-gray-900">
+            Marmo<span className="text-gold">App</span>
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Painel Administrativo</p>
+          <p className="mt-1 text-sm text-gray-500">Painel central · time interno</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-slate-800 border border-slate-700 p-6">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div>
-            <label className="block text-sm text-slate-400 mb-1" htmlFor="email">
+            <label className="block text-sm text-gray-600 mb-1" htmlFor="email">
               Email
             </label>
             <input
@@ -58,13 +59,13 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gold focus:outline-none"
               placeholder="admin@marmoapp.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-slate-400 mb-1" htmlFor="password">
+            <label className="block text-sm text-gray-600 mb-1" htmlFor="password">
               Senha
             </label>
             <input
@@ -73,13 +74,13 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gold focus:outline-none"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="rounded-lg bg-red-900/40 border border-red-800 px-3 py-2 text-sm text-red-400">
+            <p className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
               {error}
             </p>
           )}
@@ -87,7 +88,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+            className="w-full rounded-lg bg-gold py-2.5 text-sm font-medium text-[#0D0D0D] hover:bg-gold2 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>

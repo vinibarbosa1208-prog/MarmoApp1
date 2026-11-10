@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
+/* Identidade MarmoApp — mesmas cores do sistema (marmoapp/app/globals.css) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gold: #C9A84C;
+  --gold2: #E8C96A;
+  --gold-dk: #8A6D1F;
+  --dark: #0D0D0D;
+  --page-bg: #F3F4F6;
+  --card-bg: #FFFFFF;
+  --card-border: #E5E7EB;
+  --text: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6B7280;
+  --text-faint: #9CA3AF;
+  --sidebar-bg: #1E1E2E;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-text: rgba(255, 255, 255, 0.55);
+  --sidebar-text-hover: rgba(255, 255, 255, 0.85);
+  --sidebar-active-bg: rgba(201, 168, 76, 0.15);
+  --sidebar-active-text: #C9A84C;
+  --sidebar-w: 240px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
+  --font-serif: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  --color-gold: #C9A84C;
+  --color-gold2: #E8C96A;
+  --color-gold-dk: #8A6D1F;
+  --color-sidebar: #1E1E2E;
+  --color-page: #F3F4F6;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: var(--font-dm-sans), 'DM Sans', system-ui, sans-serif;
 }
+
+.font-serif { font-family: var(--font-playfair), 'Playfair Display', Georgia, serif; }
+
+/* Botões no padrão do sistema */
+.btn-gold {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 8px;
+  background: var(--gold); color: var(--dark); font-weight: 600; font-size: 13px;
+  padding: 7px 14px; transition: all .12s; white-space: nowrap;
+}
+.btn-gold:hover { background: var(--gold2); transform: translateY(-1px); }
+.btn-gold:disabled { opacity: .5; transform: none; }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 8px;
+  background: #fff; color: var(--text-secondary); border: 1.5px solid var(--card-border);
+  font-weight: 500; font-size: 13px; padding: 6px 13px; transition: all .12s; white-space: nowrap;
+}
+.btn-outline:hover { border-color: var(--gold); color: var(--gold-dk); background: rgba(201,168,76,.06); }
+.btn-outline:disabled { opacity: .5; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+.card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; }
+.campo {
+  width: 100%; border-radius: 8px; border: 1.5px solid var(--card-border); background: #fff;
+  padding: 7px 10px; font-size: 13px; color: var(--text); outline: none;
+}
+.campo:focus { border-color: var(--gold); }
+.rotulo { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
