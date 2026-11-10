@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('diagnosticos')
-    .select('id, resultado, updated_at, leads(nome_marmoraria)')
+    .select('id, resultado, updated_at, formulario:estado->origem_formulario, score:estado->score, leads(nome_marmoraria)')
     .order('updated_at', { ascending: false })
     .limit(300)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
       empresa: (lead as { nome_marmoraria?: string } | null)?.nome_marmoraria ?? '',
       resultado: d.resultado,
       updated_at: d.updated_at,
+      formulario: d.formulario === true,
+      score: typeof d.score === 'number' ? d.score : null,
     }
   })
   return NextResponse.json({ diagnosticos })

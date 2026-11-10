@@ -2,7 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAdminEmail } from './lib/types'
 
-const PUBLIC_PATHS = ['/login']
+// /api/publico: formulário de pré-diagnóstico do site (sem login, com validação na rota).
+const PUBLIC_PATHS = ['/login', '/api/publico/']
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })

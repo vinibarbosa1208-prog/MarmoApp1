@@ -102,6 +102,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
         <div class="two"><label>Responsável<input data-k="contato" placeholder="Nome do dono"></label><label>Cidade<input data-k="cidade" placeholder="Ex.: Guarulhos"></label></div>
         <div class="two"><label>WhatsApp<input data-k="whatsapp" placeholder="(11) 9...."></label><label>E-mail<input data-k="email" type="email"></label></div>
         <div class="two"><label>Pessoas na equipe<input data-k="equipe" type="number" min="0"></label><label>Data da call<input data-k="data" type="date"></label></div>
+        <div class="two"><label>Faturamento médio/mês<select data-k="faturamento"><option value="">—</option><option value="ate_15">até R$ 15 mil</option><option value="15_40">R$ 15 a 40 mil</option><option value="40_80">R$ 40 a 80 mil</option><option value="80_150">R$ 80 a 150 mil</option><option value="150_300">R$ 150 a 300 mil</option><option value="300_mais">acima de R$ 300 mil</option></select></label><label>Quer resolver<select data-k="prazo"><option value="">—</option><option value="agora">agora, este mês</option><option value="tres_meses">em até 3 meses</option><option value="pesquisando">só pesquisando</option></select></label></div>
         <label>Dor principal (guia a apresentação)<select data-k="dor"><option value="">— escolher no slide 4 —</option><option value="1">O orçamento some</option><option value="2">O prazo é no olho</option><option value="3">A cobrança fica no caderno</option><option value="4">A chapa falta na hora</option></select></label>
       </fieldset>
       <fieldset>
@@ -166,7 +167,7 @@ var DOR={
 };
 var KEY='marmoraria-ia-clientes',cur=0,S;
 function today(){return new Date().toISOString().slice(0,10)}
-function blankState(){return {id:null,lead_id:null,empresa:'',contato:'',cidade:'',whatsapp:'',email:'',equipe:'',data:today(),dor:'',orc:'',fech:'',medio:'',fila:'',atr:'',sabe:'',falta:'',cf:'',receber:'',venc:'',semcob:'',plano:'',vagas:5,ativacao:'15/01/2027',resultado:'em_aberto',obs:''}}
+function blankState(){return {id:null,lead_id:null,empresa:'',contato:'',cidade:'',whatsapp:'',email:'',equipe:'',data:today(),dor:'',orc:'',fech:'',medio:'',fila:'',atr:'',sabe:'',falta:'',cf:'',receber:'',venc:'',semcob:'',plano:'',vagas:5,ativacao:'15/01/2027',resultado:'em_aberto',obs:'',faturamento:'',prazo:''}}
 S=blankState();
 var fmt=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 function n(v){var x=parseFloat(v);return isNaN(x)?null:x}
@@ -230,7 +231,7 @@ var SLIDES=[
 var stage=document.getElementById('stage');
 function fit(){var vp=document.getElementById('viewport');var s=Math.min(vp.clientWidth/1920,vp.clientHeight/1080)*0.96;stage.style.transform='translate(-50%,-50%) scale('+s+')'}
 function render(){stage.innerHTML=SLIDES[cur].r();document.getElementById('count').textContent=(cur+1)+' / '+SLIDES.length+' · '+SLIDES[cur].t;document.getElementById('notes').textContent=SLIDES[cur].n;renderCalc()}
-function renderCalc(){var c=calc();var h='<b>Em cima da mesa</b>'+(c.D?' ('+c.D.area+')':'')+': <b>'+(c.mesa!=null?brl(c.mesa):'—')+'</b>';if(c.outros.length)h+='<br>Outras áreas: '+c.outros.map(function(o){return o[0]+' '+brl(o[1])}).join(' · ');if(c.taxa!=null)h+='<br>Fechamento de orçamentos: <b>'+c.taxa+'%</b>';h+='<br>Plano recomendado: <b>'+c.P.nome+'</b>'+(c.pct!=null?' ('+c.pct+'% do que está na mesa em 3 meses)':'');document.getElementById('calc').innerHTML=h}
+function renderCalc(){var c=calc();var h='<b>Em cima da mesa</b>'+(c.D?' ('+c.D.area+')':'')+': <b>'+(c.mesa!=null?brl(c.mesa):'—')+'</b>';if(c.outros.length)h+='<br>Outras áreas: '+c.outros.map(function(o){return o[0]+' '+brl(o[1])}).join(' · ');if(c.taxa!=null)h+='<br>Fechamento de orçamentos: <b>'+c.taxa+'%</b>';var FX={ate_15:'até R$ 15 mil','15_40':'R$ 15–40 mil','40_80':'R$ 40–80 mil','80_150':'R$ 80–150 mil','150_300':'R$ 150–300 mil','300_mais':'+ R$ 300 mil'};if(S.faturamento||S.score!=null)h+='<br>Perfil: '+(S.faturamento?'faturamento <b>'+FX[S.faturamento]+'</b>':'')+(S.encaixe?' · '+({agencia:'encaixa na agência',gestao:'perfil Gestão com IA',cedo:'ainda cedo'}[S.encaixe]||''):'')+(S.score!=null?' · nota <b>'+S.score+'/100</b>':'');if(S.origem_formulario)h+='<br><span style="color:#8F8372">Veio do formulário do site</span>';h+='<br>Plano recomendado: <b>'+c.P.nome+'</b>'+(c.pct!=null?' ('+c.pct+'% do que está na mesa em 3 meses)':'');document.getElementById('calc').innerHTML=h}
 function go(i){cur=Math.max(0,Math.min(SLIDES.length-1,i));render();try{history.replaceState(null,'','#slide-'+(cur+1))}catch(e){}}
 var fields=document.querySelectorAll('[data-k]');
 function fillForm(){fields.forEach(function(el){el.value=S[el.dataset.k]==null?'':S[el.dataset.k]})}
@@ -252,7 +253,7 @@ var store=API?{
   del:function(id){var o=this.all();delete o[id];try{localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}return Promise.resolve()}
 };
 var RES={em_aberto:'',fechou:' · fechou',vai_pensar:' · vai pensar',perdido:' · perdido'};
-function refreshSaved(sel){store.list().then(function(L){var s=document.getElementById('saved');s.innerHTML='<option value="">— novo cliente —</option>'+L.map(function(x){return '<option value="'+esc(x.id)+'"'+(String(x.id)===String(sel)?' selected':'')+'>'+esc(x.empresa||'(sem nome)')+(RES[x.resultado]||'')+'</option>'}).join('')}).catch(function(e){info('Não consegui carregar os clientes: '+e.message)})}
+function refreshSaved(sel){store.list().then(function(L){var s=document.getElementById('saved');s.innerHTML='<option value="">— novo cliente —</option>'+L.map(function(x){return '<option value="'+esc(x.id)+'"'+(String(x.id)===String(sel)?' selected':'')+'>'+esc(x.empresa||'(sem nome)')+(RES[x.resultado]||'')+(x.formulario?' · formulário'+(x.score!=null?' '+x.score:''):'')+'</option>'}).join('')}).catch(function(e){info('Não consegui carregar os clientes: '+e.message)})}
 document.getElementById('savedLegend').textContent=API?'Clientes no banco do MarmoApp':'Clientes salvos neste navegador';
 if(!store.del)document.getElementById('del').style.display='none';
 function doSave(){if(!S.empresa){toast('Preencha o nome da marmoraria');return}info('Salvando…');store.save(S).then(function(r){if(r.id)S.id=r.id;if(r.lead_id)S.lead_id=r.lead_id;dirty=false;toast(API?'Salvo no banco do MarmoApp':'Cliente salvo neste navegador');info('Salvo às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));refreshSaved(S.id)}).catch(function(e){toast('Não salvou: '+e.message);info('Erro ao salvar: '+e.message)})}
