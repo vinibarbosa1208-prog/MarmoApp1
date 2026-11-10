@@ -91,6 +91,9 @@ export async function GET(request: NextRequest) {
   const { data: leadsD1 } = await supabaseAdmin
     .from('leads')
     .select('id, nome_contato, email')
+    // Só leads do teste grátis do MarmoApp; os da MarmorarIA seguem pelo WhatsApp.
+    .eq('origem', 'landing_page')
+    .not('email', 'is', null)
     .gte('created_at', d1Start)
     .lt('created_at', d1End)
     .eq('status', 'novo')
@@ -125,6 +128,9 @@ export async function GET(request: NextRequest) {
   const { data: leadsD3 } = await supabaseAdmin
     .from('leads')
     .select('id, nome_contato, email')
+    // Só leads do teste grátis do MarmoApp; os da MarmorarIA seguem pelo WhatsApp.
+    .eq('origem', 'landing_page')
+    .not('email', 'is', null)
     .gte('created_at', d3Start)
     .lt('created_at', d3End)
 
@@ -226,6 +232,9 @@ export async function GET(request: NextRequest) {
   const { data: leadsD14 } = await supabaseAdmin
     .from('leads')
     .select('id, nome_contato, email')
+    // Só leads do teste grátis do MarmoApp; os da MarmorarIA seguem pelo WhatsApp.
+    .eq('origem', 'landing_page')
+    .not('email', 'is', null)
     .gte('created_at', d14Start)
     .lt('created_at', d14End)
     .eq('status', 'novo')
