@@ -19,20 +19,20 @@ export default function OrcamentosChart({ data }: OrcamentosChartProps) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
         <XAxis
           dataKey="data"
-          tick={{ fill: '#64748b', fontSize: 11 }}
+          tick={{ fill: '#6B7280', fontSize: 11 }}
           tickFormatter={(v: string) => v.slice(5)}
           interval="preserveStartEnd"
         />
-        <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
+        <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} allowDecimals={false} />
         <Tooltip
-          contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
-          labelStyle={{ color: '#94a3b8' }}
-          itemStyle={{ color: '#818cf8' }}
+          contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #E5E7EB', borderRadius: 8 }}
+          labelStyle={{ color: '#6B7280' }}
+          itemStyle={{ color: '#8A6D1F' }}
         />
-        <Bar dataKey="total" name="Orçamentos" fill="#6366f1" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="total" name="Orçamentos" fill="#C9A84C" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

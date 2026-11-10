@@ -4,6 +4,9 @@ import Header from '@/components/Header'
 import MetricCard from '@/components/MetricCard'
 import MarketingMetricasForm from '@/components/MarketingMetricasForm'
 import { subDays, startOfDay, getISOWeek, format } from 'date-fns'
+import Link from 'next/link'
+import { carregarInvestimentosComRetorno, carregarLancamentos } from '@/lib/financeiro-servidor'
+import { brl } from '@/lib/financeiro'
 
 export default async function MarketingPage() {
   await requireAdminAuth()
@@ -19,37 +22,29 @@ export default async function MarketingPage() {
     4: 'PRODUTO — "O que é o Agente Antônio e como funciona"',
   }
 
-  const [leadsRes, trialsRes, pagantesRes, totalRes, ultimaMetricaRes] = await Promise.all([
-    supabaseAdmin
-      .from('marmorarias')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', semanaInicio),
-    supabaseAdmin
-      .from('marmorarias')
-      .select('id', { count: 'exact', head: true })
-      .eq('plano', 'trial'),
-    supabaseAdmin
-      .from('marmorarias')
-      .select('id', { count: 'exact', head: true })
-      .not('plano', 'is', null)
-      .neq('plano', 'trial'),
-    supabaseAdmin
-      .from('marmorarias')
-      .select('id', { count: 'exact', head: true }),
+  const [leadsSemanaRes, leadsRes, diagRes, enviadosRes, assinadosRes, ultimaMetricaRes, lancamentos] = await Promise.all([
+    supabaseAdmin.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', semanaInicio),
+    supabaseAdmin.from('leads').select('id', { count: 'exact', head: true }),
+    supabaseAdmin.from('diagnosticos').select('id', { count: 'exact', head: true }),
+    supabaseAdmin.from('contratos').select('id', { count: 'exact', head: true }).in('status', ['enviado', 'assinado']),
+    supabaseAdmin.from('contratos').select('id', { count: 'exact', head: true }).eq('status', 'assinado'),
     supabaseAdmin
       .from('marketing_metricas')
       .select('*')
       .order('semana_ref', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    carregarLancamentos().catch(() => []),
   ])
+  const investimentos = await carregarInvestimentosComRetorno(lancamentos).catch(() => [])
 
-  const leadsNaSemana = leadsRes.count ?? 0
-  const trialsAtivos = trialsRes.count ?? 0
-  const pagantes = pagantesRes.count ?? 0
-  const total = totalRes.count ?? 0
-  const visitantesEstimado = Math.round(leadsNaSemana * 18)
-  const taxaConversao = total > 0 ? ((pagantes / total) * 100).toFixed(1) : '0'
+  const leadsNaSemana = leadsSemanaRes.count ?? 0
+  const funil = [
+    { label: 'Leads', value: leadsRes.count ?? 0, note: 'formulário, landing e calls' },
+    { label: 'Diagnósticos', value: diagRes.count ?? 0, note: 'calls registradas' },
+    { label: 'Propostas', value: enviadosRes.count ?? 0, note: 'contratos enviados' },
+    { label: 'Fechados', value: assinadosRes.count ?? 0, note: 'contratos assinados' },
+  ]
 
   const metrica = ultimaMetricaRes.data
   const temDadosReais = !!metrica
@@ -75,11 +70,11 @@ export default async function MarketingPage() {
         <section>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 Métricas da semana
               </h2>
               {temDadosReais && (
-                <span className="text-xs text-slate-600">
+                <span className="text-xs text-gray-400">
                   semana de {format(new Date(metrica.semana_ref + 'T12:00:00'), 'dd/MM/yyyy')}
                 </span>
               )}
@@ -133,8 +128,8 @@ export default async function MarketingPage() {
           </div>
 
           {!temDadosReais && (
-            <p className="mt-2 text-xs text-slate-600">
-              Clique em "Inserir métricas da semana" para adicionar dados do Instagram Insights.
+            <p className="mt-2 text-xs text-gray-400">
+              Clique em &quot;Inserir métricas da semana&quot; para adicionar dados do Instagram Insights.
             </p>
           )}
         </section>
@@ -142,40 +137,40 @@ export default async function MarketingPage() {
         {/* Seção 2 — Calendário editorial */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Calendário editorial — semana {ciclo}
             </h2>
             <a
               href="https://claude.ai/code"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-600 transition-colors"
+              className="rounded-lg bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200 transition-colors"
             >
               Gerar conteúdo da semana →
             </a>
           </div>
-          <div className="rounded-xl bg-slate-800 border border-slate-700 overflow-hidden">
+          <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-700">
+                <tr className="border-b border-gray-200">
                   {['Dia', 'Formato', 'Tema', 'Status'].map((h) => (
                     <th
                       key={h}
-                      className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                      className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/50">
+              <tbody className="divide-y divide-gray-100">
                 {diasDaSemana.map((dia, i) => (
-                  <tr key={dia} className="hover:bg-slate-700/20">
-                    <td className="px-4 py-3 font-semibold text-slate-300">{dia}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">Carrossel</td>
-                    <td className="px-4 py-3 text-slate-300 text-xs max-w-xs">{temasSemana[i]}</td>
+                  <tr key={dia} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-semibold text-gray-700">{dia}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">Carrossel</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs max-w-xs">{temasSemana[i]}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-full bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-400">
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
                         Pendente
                       </span>
                     </td>
@@ -184,99 +179,80 @@ export default async function MarketingPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-slate-600">
-            No Claude Code: <span className="font-mono text-slate-500">"Aja como marketing-editorial. Estamos na semana {ciclo} do ciclo."</span>
+          <p className="mt-2 text-xs text-gray-400">
+            No Claude Code: <span className="font-mono text-gray-500">&quot;Aja como marketing-editorial. Estamos na semana {ciclo} do ciclo.&quot;</span>
           </p>
         </section>
 
-        {/* Seção 3 — Campanhas Meta Ads */}
+        {/* Seção 3 — Investimentos e retorno */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Campanhas Meta Ads
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Investimentos em marketing e retorno
             </h2>
-            <a
-              href="https://business.facebook.com/adsmanager"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-            >
-              Ver no Ads Manager →
-            </a>
+            <Link href="/financeiro?aba=marketing" className="btn-outline btn-sm">
+              Gerenciar no Financeiro →
+            </Link>
           </div>
-          <div className="rounded-xl bg-slate-800 border border-slate-700 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  {['Campanha', 'Objetivo', 'Orçamento/dia', 'CPL meta', 'Status'].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700/50">
-                {[
-                  { nome: 'Awareness SP/MG/PR/RJ', objetivo: 'Alcance', orcamento: 'R$15', cpl: '—', status: 'Configurar' },
-                  { nome: 'Conversão — Leads', objetivo: 'Tráfego', orcamento: 'R$25', cpl: '<R$15', status: 'Configurar' },
-                  { nome: 'Remarketing 30d', objetivo: 'Conversão', orcamento: 'R$10', cpl: '<R$20', status: 'Configurar' },
-                ].map((c) => (
-                  <tr key={c.nome} className="hover:bg-slate-700/20">
-                    <td className="px-4 py-3 text-slate-300 font-medium text-xs">{c.nome}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{c.objetivo}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{c.orcamento}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs font-mono">{c.cpl}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-full bg-amber-900/40 border border-amber-800 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-                        {c.status}
-                      </span>
-                    </td>
+          <div className="card overflow-x-auto">
+            {investimentos.length === 0 ? (
+              <p className="p-6 text-sm text-gray-500">
+                Nenhum investimento cadastrado. Cadastre a campanha no Financeiro, com a mesma utm_campaign do anúncio,
+                para ver aqui quanto foi gasto, quantos leads vieram e o retorno.
+              </p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    {['Investimento', 'Investido', 'Leads', 'Custo/lead', 'Fechados', 'ROI'].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="px-4 py-3 border-t border-slate-700 text-xs text-slate-600">
-              No Claude Code: <span className="font-mono text-slate-500">"Aja como marketing-ads. Quero criar uma campanha de leads."</span>
-            </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {investimentos.map((c) => (
+                    <tr key={c.id}>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {c.nome}
+                        {c.utm_campaign && <span className="ml-2 font-mono text-[11px] text-gray-400">{c.utm_campaign}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{brl(c.investido)}</td>
+                      <td className="px-4 py-3 text-gray-700">{c.leads}</td>
+                      <td className="px-4 py-3 text-gray-700">{c.custo_por_lead != null ? brl(c.custo_por_lead) : '—'}</td>
+                      <td className="px-4 py-3 text-gray-700">{c.contratos}</td>
+                      <td className={`px-4 py-3 font-semibold ${c.roi == null ? 'text-gray-400' : c.roi >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {c.roi != null ? `${Math.round(c.roi * 100)}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </section>
 
-        {/* Seção 4 — Pipeline de leads */}
+        {/* Seção 4 — Funil comercial (dados reais) */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
-            Pipeline de leads
-          </h2>
-          <div className="rounded-xl bg-slate-800 border border-slate-700 p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Funil comercial</h2>
+          <div className="card p-6">
             <div className="flex items-center gap-0">
-              {[
-                { label: 'Visitantes', value: visitantesEstimado, color: 'bg-slate-600', note: 'estimado' },
-                { label: 'Leads', value: total, color: 'bg-blue-700', note: 'cadastros total' },
-                { label: 'Trials', value: trialsAtivos, color: 'bg-indigo-600', note: 'ativos agora' },
-                { label: 'Pagantes', value: pagantes, color: 'bg-green-700', note: 'clientes ativos' },
-              ].map((step, i, arr) => (
+              {funil.map((step, i, arr) => (
                 <div key={step.label} className="flex items-center flex-1">
                   <div className="flex-1">
-                    <div className={`${step.color} rounded-xl p-4 text-center`}>
-                      <div className="text-2xl font-bold text-white">{step.value}</div>
-                      <div className="text-xs font-semibold text-white/80 mt-1">{step.label}</div>
-                      <div className="text-xs text-white/50 mt-0.5">{step.note}</div>
+                    <div className={`rounded-xl p-4 text-center ${i === arr.length - 1 ? 'bg-gold' : 'bg-page'}`}>
+                      <div className="font-serif text-2xl font-bold text-gray-900">{step.value}</div>
+                      <div className="text-xs font-semibold text-gray-800 mt-1">{step.label}</div>
+                      <div className="text-xs text-gray-600 mt-0.5">{step.note}</div>
                     </div>
                     {i < arr.length - 1 && (
-                      <div className="text-center mt-1 text-xs text-slate-600">
-                        {i === 0
-                          ? `${total > 0 && visitantesEstimado > 0 ? ((total / visitantesEstimado) * 100).toFixed(1) : '?'}%`
-                          : i === 1
-                          ? `${total > 0 ? ((trialsAtivos / total) * 100).toFixed(1) : '0'}%`
-                          : `${trialsAtivos > 0 ? ((pagantes / (trialsAtivos + pagantes)) * 100).toFixed(1) : '0'}%`}
+                      <div className="text-center mt-1 text-xs text-gray-400">
+                        {step.value > 0 ? `${((arr[i + 1].value / step.value) * 100).toFixed(0)}% seguem` : '—'}
                       </div>
                     )}
                   </div>
-                  {i < arr.length - 1 && (
-                    <div className="text-slate-600 text-lg px-2 flex-shrink-0">→</div>
-                  )}
+                  {i < arr.length - 1 && <div className="text-gray-400 text-lg px-2 flex-shrink-0">→</div>}
                 </div>
               ))}
             </div>

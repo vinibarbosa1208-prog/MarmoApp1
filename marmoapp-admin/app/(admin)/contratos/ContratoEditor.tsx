@@ -42,8 +42,8 @@ const VAZIO: Contratante = {
   whatsapp: '',
 }
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const campo = 'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-indigo-500'
-const rotulo = 'mb-1 block text-xs text-slate-400'
+const campo = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gold'
+const rotulo = 'mb-1 block text-xs text-gray-600'
 
 export default function ContratoEditor({ id, inicial }: { id?: string; inicial?: Inicial }) {
   const router = useRouter()
@@ -152,13 +152,13 @@ export default function ContratoEditor({ id, inicial }: { id?: string; inicial?:
     <div className="grid gap-6 xl:grid-cols-[440px_1fr]">
       <div className="space-y-5">
         {numero && (
-          <p className="text-sm text-slate-400">
-            Contrato <b className="text-white">{numero}</b> · status <b className="text-white">{status}</b>
+          <p className="text-sm text-gray-600">
+            Contrato <b className="text-gray-900">{numero}</b> · status <b className="text-gray-900">{status}</b>
           </p>
         )}
 
-        <fieldset disabled={!editavel} className="space-y-3 rounded-xl border border-slate-800 p-4">
-          <legend className="px-1 text-xs font-bold uppercase text-indigo-300">Marmoraria (contratante)</legend>
+        <fieldset disabled={!editavel} className="space-y-3 rounded-xl border border-gray-200 p-4">
+          <legend className="px-1 text-xs font-bold uppercase text-gold-dk">Marmoraria (contratante)</legend>
           <label className="block"><span className={rotulo}>Razão social</span><input className={campo} value={ct.razao_social} onChange={set('razao_social')} /></label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className={rotulo}>CNPJ ou CPF</span><input className={campo} value={ct.documento} onChange={set('documento')} /></label>
@@ -175,8 +175,8 @@ export default function ContratoEditor({ id, inicial }: { id?: string; inicial?:
           </div>
         </fieldset>
 
-        <fieldset disabled={!editavel} className="space-y-3 rounded-xl border border-slate-800 p-4">
-          <legend className="px-1 text-xs font-bold uppercase text-indigo-300">Plano</legend>
+        <fieldset disabled={!editavel} className="space-y-3 rounded-xl border border-gray-200 p-4">
+          <legend className="px-1 text-xs font-bold uppercase text-gold-dk">Plano</legend>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className={rotulo}>Plano</span>
@@ -201,33 +201,33 @@ export default function ContratoEditor({ id, inicial }: { id?: string; inicial?:
             )}
           </div>
           {P.temAntonioWhatsapp && (
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" checked={antonioAtivo} onChange={(e) => setAntonioAtivo(e.target.checked)} />
               O Antônio no WhatsApp já está funcionando para este cliente
             </label>
           )}
-          <div className="rounded-lg bg-slate-900 p-3 text-sm leading-6 text-slate-300">
-            Mensalidade <b className="text-white">{brl(v.mensalidade)}</b>
+          <div className="rounded-lg bg-white p-3 text-sm leading-6 text-gray-700">
+            Mensalidade <b className="text-gray-900">{brl(v.mensalidade)}</b>
             {v.mensalidade_ate_ativacao != null && <> ({brl(v.mensalidade_ate_ativacao)} até ativar o Antônio)</>}
             {v.valor_por_medicao ? <> + {brl(v.valor_por_medicao)} por medição</> : null}
             <br />
-            Implantação <b className="text-white">{brl(v.implantacao)}</b>
+            Implantação <b className="text-gray-900">{brl(v.implantacao)}</b>
             {v.implantacao === 0 && <> (tabela {brl(v.implantacao_tabela)})</>} · Fidelidade {v.fidelidade_meses ? `${v.fidelidade_meses} meses` : 'nenhuma'}
             <br />
-            1ª cobrança no Asaas: <b className="text-amber-300">{brl(v.primeira_cobranca)}</b>
+            1ª cobrança no Asaas: <b className="text-amber-700">{brl(v.primeira_cobranca)}</b>
           </div>
         </fieldset>
 
         {editavel && (
           <div className="flex flex-wrap gap-2">
-            <button onClick={salvar} disabled={ocupado} className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium hover:bg-slate-600 disabled:opacity-50">
+            <button onClick={salvar} disabled={ocupado} className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium hover:bg-gray-200 disabled:opacity-50">
               {id ? 'Salvar e atualizar a prévia' : 'Criar rascunho'}
             </button>
             {id && (
               <button
                 onClick={() => acao('enviar')}
                 disabled={ocupado || pendencias.length > 0 || !!contratadaPendente}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-40"
+                className="rounded-lg bg-gold px-4 py-2 text-sm font-medium hover:bg-gold2 disabled:opacity-40"
               >
                 Enviar para assinatura
               </button>
@@ -235,47 +235,47 @@ export default function ContratoEditor({ id, inicial }: { id?: string; inicial?:
           </div>
         )}
         {editavel && id && (pendencias.length > 0 || contratadaPendente) && (
-          <div className="rounded-lg border border-amber-700/50 bg-amber-950/40 p-3 text-sm text-amber-200">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             Para enviar, falta:
             <ul className="ml-5 list-disc">
               {contratadaPendente && <li>{contratadaPendente}</li>}
               {pendencias.map((p) => <li key={p}>{p}</li>)}
             </ul>
-            <span className="text-xs text-amber-300/80">Salve depois de preencher para atualizar esta lista.</span>
+            <span className="text-xs text-amber-700/80">Salve depois de preencher para atualizar esta lista.</span>
           </div>
         )}
 
         {link && status !== 'cancelado' && (
-          <div className="space-y-2 rounded-xl border border-slate-800 p-4 text-sm">
-            <p className="text-xs font-bold uppercase text-indigo-300">Link de assinatura</p>
-            <p className="break-all text-slate-300">{link}</p>
+          <div className="space-y-2 rounded-xl border border-gray-200 p-4 text-sm">
+            <p className="text-xs font-bold uppercase text-gold-dk">Link de assinatura</p>
+            <p className="break-all text-gray-700">{link}</p>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => navigator.clipboard?.writeText(link).then(() => setMsg('Link copiado.'))} className="rounded-lg bg-slate-700 px-3 py-1.5 hover:bg-slate-600">Copiar link</button>
+              <button onClick={() => navigator.clipboard?.writeText(link).then(() => setMsg('Link copiado.'))} className="rounded-lg bg-gray-100 px-3 py-1.5 hover:bg-gray-200">Copiar link</button>
               {zap && <a href={zap} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-emerald-700 px-3 py-1.5 hover:bg-emerald-600">Mandar no WhatsApp</a>}
-              <a href={`${link}/documento`} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-slate-700 px-3 py-1.5 hover:bg-slate-600">Ver documento</a>
+              <a href={`${link}/documento`} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-gray-100 px-3 py-1.5 hover:bg-gray-200">Ver documento</a>
             </div>
           </div>
         )}
 
         {registro && (
-          <div className="rounded-xl border border-emerald-800 bg-emerald-950/30 p-4 text-sm text-emerald-100">
-            <p className="text-xs font-bold uppercase text-emerald-300">Assinado</p>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-100">
+            <p className="text-xs font-bold uppercase text-emerald-700">Assinado</p>
             <p>{registro.nome} · CPF {registro.cpf} · {registro.email}</p>
             <p>{new Date(registro.assinado_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · IP {registro.ip}</p>
             {linkPagamento ? (
               <a href={linkPagamento} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block underline">Cobrança no Asaas</a>
             ) : (
-              <p className="mt-2 text-amber-300">Cobrança não criada no Asaas (confira ASAAS_API_KEY no painel e gere a cobrança manualmente).</p>
+              <p className="mt-2 text-amber-700">Cobrança não criada no Asaas (confira ASAAS_API_KEY no painel e gere a cobrança manualmente).</p>
             )}
           </div>
         )}
 
         {(status === 'rascunho' || status === 'enviado') && id && (
-          <button onClick={() => acao('cancelar')} disabled={ocupado} className="text-sm text-red-400 underline">
+          <button onClick={() => acao('cancelar')} disabled={ocupado} className="text-sm text-red-700 underline">
             Cancelar contrato
           </button>
         )}
-        {msg && <p className="text-sm text-amber-300">{msg}</p>}
+        {msg && <p className="text-sm text-amber-700">{msg}</p>}
       </div>
 
       <div className="rounded-xl bg-[#FBF9F4] p-6">

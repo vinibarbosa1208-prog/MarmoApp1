@@ -6,7 +6,7 @@ import type { OrcamentosPorDia } from '@/lib/types'
 const OrcamentosChart = dynamic(() => import('./OrcamentosChart'), {
   ssr: false,
   loading: () => (
-    <div className="h-60 flex items-center justify-center text-slate-500 text-sm">
+    <div className="h-60 flex items-center justify-center text-gray-500 text-sm">
       Carregando gráfico...
     </div>
   ),

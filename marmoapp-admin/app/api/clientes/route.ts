@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAdminUserForApi } from '@/lib/auth-admin'
 import type { Marmoraria, Orcamento, Usuario } from '@/lib/types'
+import { carregarClassificacoes, carregarLancamentos } from '@/lib/financeiro-servidor'
+import { recorrenciasAtivas, valorMensal } from '@/lib/financeiro'
 
 export async function GET(request: NextRequest) {
   const user = await getAdminUserForApi()
@@ -22,14 +24,23 @@ export async function GET(request: NextRequest) {
   const ids = (marmorarias ?? []).map((m: Marmoraria) => m.id)
   if (ids.length === 0) return NextResponse.json({ clientes: [] })
 
-  const [usuariosRes, orcamentosRes] = await Promise.all([
+  const [usuariosRes, orcamentosRes, classificacoes, lancamentos] = await Promise.all([
     supabaseAdmin.from('usuarios').select('marmoraria_id').in('marmoraria_id', ids),
     supabaseAdmin
       .from('orcamentos')
       .select('marmoraria_id, created_at')
       .in('marmoraria_id', ids)
       .order('created_at', { ascending: false }),
+    carregarClassificacoes().catch(() => ({}) as Record<string, string>),
+    carregarLancamentos().catch(() => []),
   ])
+
+  const receitaPorMarmoraria: Record<string, number> = {}
+  for (const l of recorrenciasAtivas(lancamentos)) {
+    if (!l.marmoraria_id) continue
+    receitaPorMarmoraria[l.marmoraria_id] =
+      (receitaPorMarmoraria[l.marmoraria_id] ?? 0) + valorMensal(Number(l.valor), l.recorrencia)
+  }
 
   const usuariosByMarmoraria: Record<string, number> = {}
   for (const u of (usuariosRes.data ?? []) as Usuario[]) {
@@ -49,6 +60,8 @@ export async function GET(request: NextRequest) {
     usuarios_count: usuariosByMarmoraria[m.id] ?? 0,
     orcamentos_count: orcamentosByMarmoraria[m.id]?.count ?? 0,
     ultimo_orcamento: orcamentosByMarmoraria[m.id]?.ultimo ?? null,
+    tipo: (classificacoes as Record<string, string>)[m.id] ?? 'cadastro',
+    receita_mensal: receitaPorMarmoraria[m.id] ?? 0,
   }))
 
   return NextResponse.json({ clientes })

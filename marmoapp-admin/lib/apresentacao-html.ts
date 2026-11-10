@@ -6,6 +6,7 @@ export const APRESENTACAO_HTML = String.raw`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MarmorarIA — Apresentação interativa de diagnóstico</title>
+<link rel="icon" href="/icon.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,900&family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -273,7 +274,10 @@ document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&(e.ke
 stage.addEventListener('click',function(e){var r=stage.getBoundingClientRect();if(e.clientX>r.left+r.width/2)go(cur+1);else go(cur-1)});
 window.addEventListener('resize',fit);document.addEventListener('fullscreenchange',function(){setTimeout(fit,100)});
 window.addEventListener('beforeunload',function(e){if(dirty&&S.empresa){e.preventDefault();e.returnValue=''}});
-fillForm();refreshSaved('');var h=(location.hash.match(/slide-(\d+)/)||[])[1];fit();go(h?parseInt(h,10)-1:0);
+var qp=new URLSearchParams(location.search);var qd=qp.get('diagnostico');
+if(qd&&API){store.get(qd).then(function(d){if(d){S=Object.assign(blankState(),d);fillForm();render();refreshSaved(S.id)}}).catch(function(e){toast('Não abriu o diagnóstico: '+e.message)})}
+else{['empresa','contato','cidade','whatsapp','email','equipe'].forEach(function(k){var v=qp.get(k);if(v)S[k]=v.slice(0,120)})}
+fillForm();refreshSaved(qd||'');var h=(location.hash.match(/slide-(\d+)/)||[])[1];fit();go(h?parseInt(h,10)-1:0);
 })();
 </script>
 </body>

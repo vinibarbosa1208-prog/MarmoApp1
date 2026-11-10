@@ -4,9 +4,9 @@ import Header from '@/components/Header'
 import ContratoEditor, { type Inicial } from '../ContratoEditor'
 
 // Novo contrato. Com ?diagnostico=<id>, já vem preenchido com a marmoraria da call.
-export default async function NovoContratoPage({ searchParams }: { searchParams: Promise<{ diagnostico?: string }> }) {
+export default async function NovoContratoPage({ searchParams }: { searchParams: Promise<{ diagnostico?: string; marmoraria?: string }> }) {
   await requireAdminAuth()
-  const { diagnostico } = await searchParams
+  const { diagnostico, marmoraria } = await searchParams
 
   const inicial: Inicial = {}
   if (diagnostico && /^[0-9a-f-]{36}$/i.test(diagnostico)) {
@@ -27,6 +27,25 @@ export default async function NovoContratoPage({ searchParams }: { searchParams:
         whatsapp: lead?.whatsapp ?? e.whatsapp ?? '',
         email: lead?.email ?? e.email ?? '',
         cidade: lead?.cidade ?? e.cidade ?? '',
+      }
+    }
+  }
+
+  // Com ?marmoraria=<id>, vem preenchido com o cadastro da marmoraria no sistema.
+  if (!inicial.contratante && marmoraria && /^[0-9a-f-]{36}$/i.test(marmoraria)) {
+    const { data: m } = await supabaseAdmin
+      .from('marmorarias')
+      .select('nome, cnpj, email, telefone, endereco, cidade, estado')
+      .eq('id', marmoraria)
+      .maybeSingle()
+    if (m) {
+      inicial.contratante = {
+        razao_social: m.nome ?? '',
+        documento: m.cnpj ?? '',
+        email: m.email ?? '',
+        whatsapp: m.telefone ?? '',
+        endereco: m.endereco ?? '',
+        cidade: [m.cidade, m.estado].filter(Boolean).join('-'),
       }
     }
   }
