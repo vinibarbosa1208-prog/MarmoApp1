@@ -43,6 +43,15 @@ export default function Sidebar() {
             </Link>
           )
         })}
+        <a
+          href="/apresentacao"
+          target="_blank"
+          rel="noopener"
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-amber-300 transition-colors hover:bg-slate-800 hover:text-amber-200"
+        >
+          <span className="text-base">🎯</span>
+          Apresentação de diagnóstico
+        </a>
       </nav>
 
       <div className="p-3 border-t border-slate-800">
