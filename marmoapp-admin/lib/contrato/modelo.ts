@@ -49,9 +49,6 @@ export const PLANOS: Record<
   },
 }
 
-// Enquanto o Antônio não está no WhatsApp, os planos Operação têm a mensalidade reduzida
-// no valor que ele representa no Operação com IA (R$ 790 − R$ 297 = R$ 493).
-export const DESCONTO_ATE_ATIVACAO = 493
 
 export interface Parte {
   razao_social: string
@@ -92,8 +89,9 @@ export function condicaoPadrao(): Condicao {
 export function calcularValores(plano: PlanoKey, condicao: Condicao, antonioAtivo: boolean) {
   const P = PLANOS[plano]
   const base = condicao === 'fundador' ? P.fundador : P.tabela
-  const mensalidadeAteAtivacao =
-    P.temAntonioWhatsapp && !antonioAtivo ? Math.max(base.mensalidade - DESCONTO_ATE_ATIVACAO, 0) : null
+  // A mensalidade é a do plano desde o 1º mês, com ou sem o Antônio ativo (decisão de 11/11/2026).
+  void antonioAtivo
+  const mensalidadeAteAtivacao: number | null = null
   // Fundador: 1ª mensalidade na assinatura. Tabela: implantação na assinatura e mensalidade a partir do 30º dia.
   const primeira =
     condicao === 'fundador' ? mensalidadeAteAtivacao ?? base.mensalidade : base.implantacao
@@ -229,7 +227,7 @@ export function gerarTexto(c: DadosContrato): string {
   )
   if (op) {
     cl(
-      `Antônio no WhatsApp. O assistente será ativado no WhatsApp da CONTRATANTE até ${c.data_ativacao_antonio ? dataBR(c.data_ativacao_antonio) : '[data]'}. Até a ativação, a mensalidade cobrada é a indicada em "Plano contratado"; o valor integral passa a valer no mês seguinte à ativação. Se a data não for cumprida, a CONTRATANTE pode cancelar sem multa. O Antônio sempre se apresenta como assistente virtual, informa preços apenas em faixa e passa a conversa para a CONTRATANTE em negociação ou reclamação.`
+      `Antônio no WhatsApp. O assistente será ativado no WhatsApp da CONTRATANTE até ${c.data_ativacao_antonio ? dataBR(c.data_ativacao_antonio) : '[data]'}. A mensalidade do plano vale desde o primeiro mês. Se a data não for cumprida, a CONTRATANTE pode cancelar sem multa. O Antônio sempre se apresenta como assistente virtual, informa preços apenas em faixa e passa a conversa para a CONTRATANTE em negociação ou reclamação.`
     )
   }
   cl(
