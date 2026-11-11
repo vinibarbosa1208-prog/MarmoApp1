@@ -34,7 +34,7 @@ export const PLANOS: Record<
   operacao: {
     nome: 'MarmoApp Plus',
     tabela: { mensalidade: 950, implantacao: 2400 },
-    fundador: { mensalidade: 790, implantacao: 0 },
+    fundador: { mensalidade: 790, implantacao: 1200 },
     fidelidade: 3,
     temAntonioWhatsapp: true,
     porMedicao: null,
@@ -92,9 +92,9 @@ export function calcularValores(plano: PlanoKey, condicao: Condicao, antonioAtiv
   // A mensalidade é a do plano desde o 1º mês, com ou sem o Antônio ativo (decisão de 11/11/2026).
   void antonioAtivo
   const mensalidadeAteAtivacao: number | null = null
-  // Fundador: 1ª mensalidade na assinatura. Tabela: implantação na assinatura e mensalidade a partir do 30º dia.
-  const primeira =
-    condicao === 'fundador' ? mensalidadeAteAtivacao ?? base.mensalidade : base.implantacao
+  // Com implantação: ela é cobrada na assinatura e a mensalidade a partir do 30º dia.
+  // Sem implantação (fundador do MarmoApp): 1ª mensalidade na assinatura.
+  const primeira = base.implantacao > 0 ? base.implantacao : (mensalidadeAteAtivacao ?? base.mensalidade)
   return {
     mensalidade: base.mensalidade,
     implantacao: base.implantacao,
@@ -199,7 +199,7 @@ export function gerarTexto(c: DadosContrato): string {
   )
   L.push(
     `Implantação: ${brl(c.implantacao)}` +
-      (c.implantacao === 0 ? ` (sem custo na condição de fundador; valor de tabela ${brl(PLANOS[c.plano].tabela.implantacao)})` : '') +
+      (c.condicao === 'fundador' && c.implantacao < PLANOS[c.plano].tabela.implantacao ? ` (condição de fundador; valor de tabela ${brl(PLANOS[c.plano].tabela.implantacao)})` : '') +
       '.'
   )
   if (op && c.data_ativacao_antonio) {
@@ -209,7 +209,7 @@ export function gerarTexto(c: DadosContrato): string {
     )
   }
   L.push(
-    `Fidelidade: ${c.fidelidade_meses > 0 ? `${c.fidelidade_meses} meses` : 'sem fidelidade'}. Vencimento: todo dia ${c.dia_vencimento}. Primeira cobrança: ${brl(c.primeira_cobranca)}, com vencimento em até 3 dias após a assinatura.`
+    `Fidelidade: ${c.fidelidade_meses > 0 ? `${c.fidelidade_meses} meses` : 'sem fidelidade'}. Vencimento: todo dia ${c.dia_vencimento}. Primeira cobrança: ${brl(c.primeira_cobranca)}${c.implantacao > 0 ? ' (implantação)' : ''}, com vencimento em até 3 dias após a assinatura.${c.implantacao > 0 ? ' A primeira mensalidade vence 30 dias após a assinatura.' : ''}`
   )
 
   L.push('## Cláusulas')
