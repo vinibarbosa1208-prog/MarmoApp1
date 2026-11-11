@@ -129,7 +129,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
       <fieldset>
         <legend>Proposta e resultado</legend>
         <label>Plano<select data-k="plano"><option value="">Automático (pela dor e equipe)</option><option value="gestao">MarmoApp (ferramenta)</option><option value="operacao">MarmoApp Plus (ferramenta + IA)</option><option value="crescimento">Plus + Crescimento</option></select></label>
-        <div class="two"><label>Vagas restantes em dezembro<input data-k="vagas" type="number" min="0"></label><label>Ativação do Antônio<input data-k="ativacao" placeholder="15/01/2027"></label></div>
+        <div class="two"><label>Vagas restantes em dezembro<input data-k="vagas" type="number" min="0"></label><label>Ativação do Antônio<input data-k="ativacao" placeholder="dd/mm/aaaa"></label></div>
         <label>Resultado da call<select data-k="resultado"><option value="em_aberto">Em aberto</option><option value="fechou">Fechou</option><option value="vai_pensar">Vai pensar</option><option value="perdido">Perdido</option></select></label>
         <label>Observações da call<textarea data-k="obs" rows="3" placeholder="Objeções, combinados, próximo contato"></textarea></label>
         <button class="btn gold" id="copy">Copiar resumo para o WhatsApp</button>
@@ -169,7 +169,8 @@ var DOR={
 };
 var KEY='marmoraria-ia-clientes',cur=0,S;
 function today(){return new Date().toISOString().slice(0,10)}
-function blankState(){return {id:null,lead_id:null,empresa:'',contato:'',cidade:'',whatsapp:'',email:'',equipe:'',data:today(),dor:'',orc:'',fech:'',medio:'',fila:'',atr:'',sabe:'',falta:'',cf:'',receber:'',venc:'',semcob:'',plano:'',vagas:5,ativacao:'15/01/2027',resultado:'em_aberto',obs:'',faturamento:'',prazo:''}}
+function emDias(d){var x=new Date();x.setDate(x.getDate()+d);return ('0'+x.getDate()).slice(-2)+'/'+('0'+(x.getMonth()+1)).slice(-2)+'/'+x.getFullYear()}
+function blankState(){return {id:null,lead_id:null,empresa:'',contato:'',cidade:'',whatsapp:'',email:'',equipe:'',data:today(),dor:'',orc:'',fech:'',medio:'',fila:'',atr:'',sabe:'',falta:'',cf:'',receber:'',venc:'',semcob:'',plano:'',vagas:5,ativacao:emDias(14),resultado:'em_aberto',obs:'',faturamento:'',prazo:''}}
 S=blankState();
 var fmt=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 function n(v){var x=parseFloat(v);return isNaN(x)?null:x}

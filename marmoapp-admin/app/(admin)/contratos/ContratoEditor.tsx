@@ -1,5 +1,7 @@
 'use client'
 
+import { hojeBR, somarDias } from '@/lib/financeiro'
+
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import TextoContrato from '@/components/contrato/TextoContrato'
@@ -52,7 +54,8 @@ export default function ContratoEditor({ id, inicial }: { id?: string; inicial?:
   const [condicao, setCondicao] = useState<Condicao>(condicaoPadrao())
   const [dia, setDia] = useState(10)
   const [antonioAtivo, setAntonioAtivo] = useState(false)
-  const [dataAtivacao, setDataAtivacao] = useState('2027-01-15')
+  // Ativação do Antônio no WhatsApp: padrão de 14 dias depois de hoje (horário de Brasília).
+  const [dataAtivacao, setDataAtivacao] = useState(() => somarDias(hojeBR(), 14))
   const [status, setStatus] = useState('rascunho')
   const [numero, setNumero] = useState('')
   const [previa, setPrevia] = useState('')
