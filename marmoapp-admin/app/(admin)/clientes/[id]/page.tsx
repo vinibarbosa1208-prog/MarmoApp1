@@ -4,6 +4,7 @@ import Header from '@/components/Header'
 import StatusBadge from '@/components/StatusBadge'
 import MetricCard from '@/components/MetricCard'
 import ClassificacaoCliente from '@/components/clientes/ClassificacaoCliente'
+import AcessoCliente from '@/components/clientes/AcessoCliente'
 import TabelaOcorrencias from '@/components/financeiro/TabelaOcorrencias'
 import FormLancamento from '@/components/financeiro/FormLancamento'
 import Link from 'next/link'
@@ -91,9 +92,12 @@ export default async function ClienteDetailPage({ params }: { params: Promise<{ 
 
       <main className="space-y-6 p-6">
         <div className="card flex flex-wrap items-center justify-between gap-4 p-5">
-          <div>
-            <p className="rotulo">Situação no MarmoApp</p>
-            <ClassificacaoCliente id={id} tipo={tipo} />
+          <div className="flex flex-wrap gap-8">
+            <div>
+              <p className="rotulo">Situação no MarmoApp</p>
+              <ClassificacaoCliente id={id} tipo={tipo} />
+            </div>
+            <AcessoCliente id={id} acessoAte={(m.acesso_ate as string | null) ?? null} />
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={`/contratos/novo?marmoraria=${id}`} className="btn-gold">
