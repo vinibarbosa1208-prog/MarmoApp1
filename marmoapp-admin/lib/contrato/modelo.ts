@@ -24,7 +24,7 @@ export const PLANOS: Record<
   }
 > = {
   gestao: {
-    nome: 'Gestão com IA',
+    nome: 'MarmoApp',
     tabela: { mensalidade: 297, implantacao: 1200 },
     fundador: { mensalidade: 297, implantacao: 0 },
     fidelidade: 0,
@@ -32,7 +32,7 @@ export const PLANOS: Record<
     porMedicao: null,
   },
   operacao: {
-    nome: 'Operação com IA',
+    nome: 'MarmoApp Plus',
     tabela: { mensalidade: 950, implantacao: 2400 },
     fundador: { mensalidade: 790, implantacao: 0 },
     fidelidade: 3,
@@ -40,7 +40,7 @@ export const PLANOS: Record<
     porMedicao: null,
   },
   crescimento: {
-    nome: 'Operação + Crescimento',
+    nome: 'MarmoApp Plus + Crescimento',
     tabela: { mensalidade: 1850, implantacao: 3300 },
     fundador: { mensalidade: 1490, implantacao: 0 },
     fidelidade: 3,
