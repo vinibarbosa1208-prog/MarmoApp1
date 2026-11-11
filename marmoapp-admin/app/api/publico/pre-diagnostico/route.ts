@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
   if (process.env.RESEND_API_KEY) {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY)
-      const rotulo = { agencia: 'ENCAIXA na agência', gestao: 'Gestão com IA', cedo: 'ainda cedo' }[encaixe]
+      const rotulo = { agencia: 'ENCAIXA no MarmoApp Plus', gestao: 'MarmoApp', cedo: 'ainda cedo' }[encaixe]
       await resend.emails.send({
         from: 'MarmorarIA <onboarding@marmoapp.com>',
         to: ALLOWED_ADMIN_EMAILS[0],
