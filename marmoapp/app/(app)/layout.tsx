@@ -83,6 +83,12 @@ function PaymentGate() {
     // marmorariaId existe mas marmoraria ainda carregando do banco → aguardar
     if (!marmoraria) return
 
+    // Teste com data marcada pelo time MarmoApp: passou da data, o acesso encerra.
+    if (marmoraria.acesso_ate && new Date(marmoraria.acesso_ate).getTime() < Date.now()) {
+      router.replace('/acesso-encerrado')
+      return
+    }
+
     // Se trial_expira é null → nunca concluiu o pagamento
     if (marmoraria.trial_expira === null) {
       router.replace('/checkout')

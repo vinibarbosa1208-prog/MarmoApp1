@@ -13,6 +13,8 @@ export interface Marmoraria {
   logo_url?: string | null
   plano: Plan
   trial_expira?: string | null
+  /** Corte de acesso definido pelo time MarmoApp (teste com data marcada). Passou a data, o sistema mostra /acesso-encerrado. */
+  acesso_ate?: string | null
   ativo: boolean
   owner_id: string
   created_at: string
