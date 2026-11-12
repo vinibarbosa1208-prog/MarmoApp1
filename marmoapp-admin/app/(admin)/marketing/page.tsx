@@ -7,6 +7,7 @@ import { subDays, startOfDay, getISOWeek, format } from 'date-fns'
 import Link from 'next/link'
 import { carregarInvestimentosComRetorno, carregarLancamentos } from '@/lib/financeiro-servidor'
 import { brl } from '@/lib/financeiro'
+import MetaAdsPainel from '@/components/meta/MetaAdsPainel'
 
 export default async function MarketingPage() {
   await requireAdminAuth()
@@ -65,6 +66,8 @@ export default async function MarketingPage() {
       />
 
       <main className="p-6 space-y-6">
+
+        <MetaAdsPainel />
 
         {/* Seção 1 — Métricas da semana */}
         <section>
