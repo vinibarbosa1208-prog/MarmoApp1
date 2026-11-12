@@ -6,10 +6,28 @@ import { hojeBR, somarDias } from '@/lib/financeiro'
 
 const VERSAO = process.env.META_API_VERSION || 'v26.0'
 
+// Limpa o que costuma vir junto ao colar o token: espaços, quebras de linha,
+// aspas, "Bearer " ou "access_token=" na frente.
+function limparToken(bruto: string | undefined) {
+  if (!bruto) return undefined
+  let t = bruto.replace(/\s+/g, '')
+  t = t.replace(/^["'`]+|["'`]+$/g, '')
+  t = t.replace(/^Bearer/i, '').replace(/^access_token=/i, '')
+  return t || undefined
+}
+
 export function configMeta() {
-  const token = process.env.META_ADS_TOKEN?.trim()
+  const token = limparToken(process.env.META_ADS_TOKEN)
   const conta = process.env.META_AD_ACCOUNT_ID?.trim().replace(/^act_/, '')
   return { token, conta, pronto: !!token && !!conta && /^\d+$/.test(conta) }
+}
+
+/** Diz, sem expor o token, por que ele não parece um token válido da Meta. */
+export function diagnosticoToken(token: string) {
+  if (!token.startsWith('EAA'))
+    return `o valor salvo não parece um token da Meta (um token começa com "EAA" e tem mais de 100 caracteres; o salvo tem ${token.length})`
+  if (token.length < 100) return `o token parece cortado (tem ${token.length} caracteres; um token completo tem mais de 100)`
+  return null
 }
 
 type Acao = { action_type: string; value: string }
@@ -57,6 +75,8 @@ export async function sincronizarMeta(origem: 'manual' | 'cron', dias = 30) {
     throw new Error('Meta Ads não configurado: faltam META_ADS_TOKEN e/ou META_AD_ACCOUNT_ID na Vercel.')
   }
   try {
+    const problema = diagnosticoToken(token)
+    if (problema) throw new Error(`Token do Meta inválido: ${problema}. Gere de novo e cole só o token em META_ADS_TOKEN.`)
     const hoje = hojeBR()
     const desde = somarDias(hoje, -(dias - 1))
 
