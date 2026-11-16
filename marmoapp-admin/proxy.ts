@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isAdminEmail } from './lib/types'
 
 // /api/publico e /assinar: formulário do site e assinatura de contratos (sem login, com validação na rota).
-const PUBLIC_PATHS = ['/login', '/api/publico/', '/assinar/']
+// /api/cron/: cada rotina confere a própria chave (CRON_SECRET ou IG_CRON_KEY).
+const PUBLIC_PATHS = ['/login', '/api/publico/', '/assinar/', '/api/cron/']
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
