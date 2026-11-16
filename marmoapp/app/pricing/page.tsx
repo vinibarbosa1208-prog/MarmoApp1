@@ -42,15 +42,7 @@ export default function PricingPage() {
         return
       }
 
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plano: planoId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão')
-      window.location.href = data.url
+      router.push('/checkout')
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao iniciar checkout')
       setLoadingPlano(null)
@@ -165,7 +157,7 @@ export default function PricingPage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: '#9B8A7A' }}>
-          Pagamento seguro no cartão via Stripe · Cancele quando quiser, sem multa · Suporte incluso<br />Quer o Antônio atendendo seus clientes no WhatsApp? <a href="https://www.marmoapp.com/marmoraria-ia/" style={{ color: '#C9A84C' }}>Conheça o MarmoApp Plus</a>
+          Pix, boleto ou cartão · Cancele quando quiser, sem multa · Suporte incluso<br />Quer o Antônio atendendo seus clientes no WhatsApp? <a href="https://www.marmoapp.com/marmoraria-ia/" style={{ color: '#C9A84C' }}>Conheça o MarmoApp Plus</a>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', justifyContent: 'center', gap: 20 }}>
