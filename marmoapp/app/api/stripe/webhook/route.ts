@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
           { onConflict: 'marmoraria_id' }
         )
 
-        // Define trial_expira → sinaliza que pagamento foi concluído
+        // Define trial_expira → sinaliza que o pagamento foi concluído (o nome é antigo; não há mais teste grátis)
         const trialFim = new Date()
         trialFim.setDate(trialFim.getDate() + 7)
 
@@ -162,7 +162,8 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
 
         if (row?.marmoraria_id) {
-          await supabase.from('marmorarias').update({ plano: 'trial' }).eq('id', row.marmoraria_id)
+          // Assinatura cancelada: o acesso volta para a tela de pagamento.
+          await supabase.from('marmorarias').update({ plano: 'trial', trial_expira: null }).eq('id', row.marmoraria_id)
         }
         break
       }

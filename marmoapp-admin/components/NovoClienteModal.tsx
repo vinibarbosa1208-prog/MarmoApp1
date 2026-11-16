@@ -15,7 +15,7 @@ export default function NovoClienteModal({ onClose }: NovoClienteModalProps) {
   const [form, setForm] = useState({
     nome: '',
     email: '',
-    plano: 'trial',
+    plano: 'pro',
   })
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,10 +88,8 @@ export default function NovoClienteModal({ onClose }: NovoClienteModalProps) {
                 onChange={(e) => setForm({ ...form, plano: e.target.value })}
                 className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gold focus:outline-none"
               >
-                <option value="trial">Trial (14 dias)</option>
-                <option value="basic">Basic — R$147/mês</option>
-                <option value="pro">Pro — R$297/mês</option>
-                <option value="enterprise">Enterprise — R$497/mês</option>
+                <option value="pro">MarmoApp — R$297/mês</option>
+                <option value="enterprise">MarmoApp Plus — R$790/mês</option>
               </select>
             </div>
 

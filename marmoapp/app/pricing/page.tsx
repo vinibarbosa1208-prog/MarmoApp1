@@ -5,48 +5,23 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-const PLANOS = [
+// Plano vendido pelo site. Internamente segue 'pro' (preço do Stripe de R$ 297).
+// O MarmoApp Plus (com o Antônio no WhatsApp) é vendido por contrato.
+const PLANOS: { id: 'basic' | 'pro' | 'enterprise'; nome: string; preco: number; destaque?: boolean; descricao: string; recursos: string[] }[] = [
   {
-    id: 'basic' as const,
-    nome: 'Basic',
-    preco: 147,
-    descricao: 'Para marmorarias que querem organizar e crescer',
-    recursos: [
-      'Orçamentos ilimitados',
-      'Geração de PDF',
-      'Markup automático',
-      'Controle de estoque',
-      'Relatórios de desempenho',
-      '1 usuário',
-    ],
-  },
-  {
-    id: 'pro' as const,
-    nome: 'Pro',
+    id: 'pro',
+    nome: 'MarmoApp',
     preco: 297,
     destaque: true,
-    descricao: 'Para equipes que querem automatizar atendimento',
+    descricao: 'O sistema completo para organizar a sua marmoraria',
     recursos: [
-      'Tudo do Basic',
-      'Agente WhatsApp',
+      'Orçamentos ilimitados',
+      'Orçamento em PDF com a sua marca',
+      'Markup automático',
+      'Controle de estoque e materiais',
+      'Fila de serviços e produção',
+      'Relatórios de desempenho',
       'Até 3 usuários',
-      'Relatórios avançados',
-      'Fila de serviços',
-      'Projetos ilimitados',
-    ],
-  },
-  {
-    id: 'enterprise' as const,
-    nome: 'Enterprise',
-    preco: 497,
-    descricao: 'Para grandes operações com IA completa',
-    recursos: [
-      'Tudo do Pro',
-      'Agente Antonio (IA)',
-      'Usuários ilimitados',
-      'IA avançada de orçamento',
-      'Suporte prioritário',
-      'Personalização completa',
     ],
   },
 ]
@@ -94,7 +69,7 @@ export default function PricingPage() {
             Planos e Preços
           </h1>
           <p style={{ color: '#9B8A7A', fontSize: 15, margin: 0 }}>
-            Escolha o plano ideal para sua marmoraria · 7 dias grátis para começar
+            Um plano, tudo incluso · cancele quando quiser, sem multa
           </p>
         </div>
 
@@ -110,7 +85,8 @@ export default function PricingPage() {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gridTemplateColumns: 'minmax(280px, 420px)',
+          justifyContent: 'center',
           gap: 20,
         }}>
           {PLANOS.map(p => {
@@ -135,19 +111,12 @@ export default function PricingPage() {
                     background: '#C9A84C', color: '#2C2922',
                     padding: '3px 14px', borderRadius: 12, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
                   }}>
-                    ⭐ MAIS POPULAR
+                    SEM FIDELIDADE
                   </div>
                 )}
 
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: '#E8F5E9', color: '#27AE60',
-                  padding: '2px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                }}>
-                  7 dias grátis
-                </div>
 
-                <div style={{ marginBottom: 16, paddingRight: 80 }}>
+                <div style={{ marginBottom: 16, }}>
                   <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Playfair Display', serif", color: '#2C2922' }}>
                     {p.nome}
                   </div>
@@ -196,7 +165,7 @@ export default function PricingPage() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: '#9B8A7A' }}>
-          Pagamento seguro via Stripe · Cancele a qualquer momento · Suporte incluso
+          Pagamento seguro no cartão via Stripe · Cancele quando quiser, sem multa · Suporte incluso<br />Quer o Antônio atendendo seus clientes no WhatsApp? <a href="https://www.marmoapp.com/marmoraria-ia/" style={{ color: '#C9A84C' }}>Conheça o MarmoApp Plus</a>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', justifyContent: 'center', gap: 20 }}>
@@ -204,7 +173,7 @@ export default function PricingPage() {
             Já tenho conta →
           </Link>
           <Link href="/register" style={{ fontSize: 13, color: '#9B8A7A', textDecoration: 'none' }}>
-            Criar conta grátis
+            Criar conta
           </Link>
         </div>
       </div>

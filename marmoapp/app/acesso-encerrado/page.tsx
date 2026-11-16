@@ -23,7 +23,7 @@ export default function AcessoEncerradoPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-marmoapp.jpg" alt="MarmoApp" style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover', margin: '0 auto 16px' }} />
         <h1 style={{ fontFamily: 'Playfair Display, Georgia, serif', fontSize: 26, color: '#111827', margin: '0 0 8px' }}>
-          Seu período de teste terminou
+          Seu acesso terminou
         </h1>
         <p style={{ color: '#6B7280', fontSize: 15, lineHeight: 1.5, margin: '0 0 24px' }}>
           {nome ? `Os dados da ${nome} ` : 'Seus dados '}continuam guardados: orçamentos, clientes e a tabela de pedras.
