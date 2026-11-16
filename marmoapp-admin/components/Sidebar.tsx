@@ -25,6 +25,7 @@ const SECOES: { label: string; itens: { href: string; label: string; icon: React
     itens: [
       { href: '/apresentacao', label: 'Apresentação de diagnóstico', externo: true, icon: i(<><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>) },
       { href: '/contratos', label: 'Contratos', icon: i(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M9 15l2 2 4-4" /></>) },
+      { href: '/instagram', label: 'Instagram', icon: i(<><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" /></>) },
       { href: '/marketing', label: 'Marketing', icon: i(<><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>) },
     ],
   },
