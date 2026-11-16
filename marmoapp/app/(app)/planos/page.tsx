@@ -42,23 +42,17 @@ export default function PlanosPage() {
       return
     }
     setLoadingPlano(planoId)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plano: planoId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao criar sessão')
-      window.location.href = data.url
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Erro ao iniciar checkout', 'err')
-      setLoadingPlano(null)
-    }
+    // Pagamento pelo Asaas (Pix, boleto ou cartão) na tela de checkout
+    router.push('/checkout')
   }
 
   async function gerenciarAssinatura() {
+    // Assinaturas pelo Asaas: alteração e cancelamento pelo nosso WhatsApp
+    if (marmoraria?.asaas_subscription_id) {
+      const msg = encodeURIComponent(`Olá! Sou da ${marmoraria.nome} e quero falar sobre a minha assinatura do MarmoApp.`)
+      window.open(`https://wa.me/5511947340955?text=${msg}`, '_blank')
+      return
+    }
     setLoadingPortal(true)
     try {
       const res = await fetch('/api/stripe/portal', {
@@ -204,7 +198,7 @@ export default function PlanosPage() {
       </div>
 
       <div style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: 'var(--gray)' }}>
-        Pagamento seguro no cartão via Stripe · Cancele quando quiser, sem multa · Suporte incluso
+        Pix, boleto ou cartão · Cancele quando quiser, sem multa · Suporte incluso
       </div>
     </div>
   )

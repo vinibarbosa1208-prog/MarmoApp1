@@ -49,12 +49,15 @@ function CadastroForm() {
   }
 
   function maskCNPJ(v: string) {
+    // CPF (11 dígitos) ou CNPJ (14 dígitos)
     const d = v.replace(/\D/g, '').slice(0, 14)
-    if (d.length > 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`
-    if (d.length > 8)  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`
-    if (d.length > 5)  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`
-    if (d.length > 2)  return `${d.slice(0,2)}.${d.slice(2)}`
-    return d
+    if (d.length <= 11) {
+      if (d.length > 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`
+      if (d.length > 6) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`
+      if (d.length > 3) return `${d.slice(0,3)}.${d.slice(3)}`
+      return d
+    }
+    return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`
   }
 
   function up(field: keyof typeof form, value: string) {
@@ -72,6 +75,7 @@ function CadastroForm() {
     if (!email.includes('@'))  return setError('Informe um e-mail válido.')
     if (!telefone.trim())      return setError('Informe seu WhatsApp.')
     if (!cidade.trim())        return setError('Informe sua cidade.')
+    if (![11, 14].includes(cnpj.replace(/\D/g, '').length)) return setError('Informe o CPF ou CNPJ (sai na cobrança).')
     if (senha.length < 6)      return setError('Senha deve ter pelo menos 6 caracteres.')
 
     setLoading(true)
@@ -128,9 +132,9 @@ function CadastroForm() {
 
       window.fbq?.('track', 'CompleteRegistration')
 
-      // 4. Cria marmoraria + Checkout Stripe num único passo server-side
-      //    O route.ts usa apiSupabase (service role) para criar a marmoraria — sem problemas de RLS
-      const checkoutRes = await fetch('/api/stripe/checkout', {
+      // 4. Cria marmoraria + assinatura no Asaas num único passo server-side
+      //    (service role cria a marmoraria; o Asaas devolve a fatura: Pix, boleto ou cartão)
+      const checkoutRes = await fetch('/api/asaas/assinar', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ plano, nome: marmoraria, cnpj, telefone, cidade, email }),
@@ -139,7 +143,7 @@ function CadastroForm() {
       const checkoutData = await checkoutRes.json()
 
       if (!checkoutRes.ok) {
-        console.error('[cadastro] stripe checkout error:', checkoutData)
+        console.error('[cadastro] asaas error:', checkoutData)
         setLoading(false)
         return setError(checkoutData?.error || 'Erro ao iniciar pagamento. Tente novamente.')
       }
@@ -148,7 +152,7 @@ function CadastroForm() {
 
       if (url) {
         setSuccess(true)
-        // Redireciona para o Stripe Checkout (após confirmação → /dashboard?checkout=success)
+        // Vai para a fatura do Asaas; o webhook libera o acesso quando o pagamento cair
         window.location.href = url
       } else {
         router.push('/dashboard')
@@ -302,10 +306,10 @@ function CadastroForm() {
 
                 <div style={{ display: 'flex', gap: 14 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                    <label style={labelStyle}>CNPJ (opcional)</label>
+                    <label style={labelStyle}>CPF ou CNPJ</label>
                     <input
                       type="text"
-                      placeholder="00.000.000/0001-00"
+                      placeholder="CPF ou CNPJ"
                       value={form.cnpj}
                       onChange={e => up('cnpj', maskCNPJ(e.target.value))}
                       maxLength={18}
@@ -424,7 +428,7 @@ function CadastroForm() {
                     <circle cx="8" cy="8" r="6.5" stroke="#22c55e" strokeWidth="1.4"/>
                     <path d="M5 8l2 2 4-4" stroke="#22c55e" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  <span>Pagamento seguro no cartão · cancele quando quiser, sem multa</span>
+                  <span>Pague por Pix, boleto ou cartão · cancele quando quiser, sem multa</span>
                 </div>
 
                 <div style={{ textAlign: 'center', fontSize: 12, color: '#9B8A7A', lineHeight: 1.5 }}>
