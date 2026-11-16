@@ -69,9 +69,28 @@ export async function contaInstagram() {
   if (cacheConta) return cacheConta
   let id = igUser
   if (!id) {
-    const p = await chamar('GET', pagina, { fields: 'instagram_business_account' }, token)
-    id = (p.instagram_business_account as { id?: string } | undefined)?.id ?? null
-    if (!id) throw new Error('A Página do Facebook do MarmoApp não está ligada a uma conta profissional do Instagram.')
+    // 1) O token funciona? (se falhar aqui, o bloqueio é do app/token, não da Página)
+    try {
+      await chamar('GET', 'me', { fields: 'id,name' }, token)
+    } catch (e) {
+      throw new Error(`O Meta recusou o token logo na identificação (/me): ${(e as Error).message}`)
+    }
+    // 2) Páginas que o usuário do sistema enxerga; usa a que tem Instagram ligado.
+    let paginas: { id: string; name?: string; instagram_business_account?: { id: string } }[] = []
+    try {
+      const r = await chamar('GET', 'me/accounts', { fields: 'id,name,instagram_business_account', limit: '50' }, token)
+      paginas = (r.data as typeof paginas) ?? []
+    } catch (e) {
+      throw new Error(`Não consegui listar as Páginas do token (/me/accounts): ${(e as Error).message}`)
+    }
+    const escolhida =
+      paginas.find((p) => p.id === pagina && p.instagram_business_account) ??
+      paginas.find((p) => p.instagram_business_account)
+    id = escolhida?.instagram_business_account?.id ?? null
+    if (!id) {
+      const nomes = paginas.map((p) => p.name ?? p.id).join(', ') || 'nenhuma'
+      throw new Error(`Nenhuma Página com Instagram ligado neste token. Páginas visíveis: ${nomes}. Atribua a Página MarmoApp e o @marmoapp.oficial ao usuário do sistema.`)
+    }
   }
   const c = await chamar('GET', id, { fields: 'username' }, token)
   cacheConta = { id, username: String(c.username ?? '') }
