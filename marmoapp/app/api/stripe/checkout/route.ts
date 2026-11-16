@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
       metadata: { marmoraria_id, plano },
       subscription_data: {
         metadata: { marmoraria_id, plano },
+        // Ignora qualquer período de teste configurado no próprio preço do Stripe.
+        trial_from_plan: false,
       },
     })
 
