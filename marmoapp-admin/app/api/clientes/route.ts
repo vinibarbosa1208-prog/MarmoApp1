@@ -78,10 +78,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'nome e plano são obrigatórios' }, { status: 400 })
   }
 
-  const trialExpira =
-    plano === 'trial'
-      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-      : null
+  // Cliente criado pelo time (contrato): já entra liberado. O campo trial_expira
+  // preenchido é o que o sistema usa como "pagamento ok" (não há mais teste grátis).
+  const trialExpira = new Date().toISOString()
 
   const { data, error } = await supabaseAdmin
     .from('marmorarias')

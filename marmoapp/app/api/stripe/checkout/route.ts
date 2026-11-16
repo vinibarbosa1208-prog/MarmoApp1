@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { plano, nome, cnpj, telefone, cidade, email: emailForm } = body
 
+    // Sem teste grátis: a primeira mensalidade é cobrada na hora.
     const priceId = PLANO_PRICE_MAP[plano]
     if (!priceId) return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
           cidade:          cidade || null,
           email:           emailForm || user.email,
           plano,
-          trial_expira:    null,   // Stripe controla o trial
+          trial_expira:    null,   // preenchido pelo webhook quando o pagamento é confirmado
           setup_concluido: true,
         })
         .select('id, email, trial_expira')
@@ -85,9 +86,6 @@ export async function POST(req: NextRequest) {
       customerId = customer.id
     }
 
-    // Trial só oferecido se trial_expira ainda não foi definido (nunca usou)
-    const trialUsado = !!marmoraria.trial_expira
-
     // Deriva a URL base do próprio request (funciona em localhost e em produção)
     const origin = req.headers.get('origin')
       || req.headers.get('referer')?.replace(/\/$/, '').split('/').slice(0, 3).join('/')
@@ -103,7 +101,6 @@ export async function POST(req: NextRequest) {
       metadata: { marmoraria_id, plano },
       subscription_data: {
         metadata: { marmoraria_id, plano },
-        ...(!trialUsado ? { trial_period_days: 7 } : {}),
       },
     })
 

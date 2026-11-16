@@ -41,10 +41,10 @@ function WelcomeBanner() {
         <span style={{ fontSize: 24 }}>🎉</span>
         <div>
           <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>
-            Bem-vindo ao MarmoApp! Seu trial de 7 dias começou.
+            Bem-vindo ao MarmoApp! Sua assinatura está ativa.
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            Seu cartão só será cobrado após os 7 dias gratuitos. Explore à vontade!
+            Comece cadastrando seus materiais e faça o primeiro orçamento. Qualquer dúvida, fale com a gente no WhatsApp.
           </div>
         </div>
       </div>

@@ -50,7 +50,7 @@ export async function sendWelcomeEmail(to: string, nome: string) {
     <p>Oi <strong>${nome}</strong>,</p>
     <p>Que bom ter você aqui! 🎉</p>
     <p>Você acabou de dar o primeiro passo para nunca mais perder margem em um orçamento de mármore ou granito.</p>
-    <p>Nos próximos <strong>7 dias</strong>, você tem acesso completo ao MarmoApp. Veja o que fazer agora:</p>
+    <p>Sua assinatura está ativa. Veja o que fazer agora:</p>
     <div style="text-align:center;margin:24px 0">
       <a href="${APP_URL}/dashboard" class="btn">Acessar meu painel →</a>
     </div>
@@ -70,7 +70,7 @@ export async function sendWelcomeEmail(to: string, nome: string) {
   return getResend().emails.send({
     from: FROM,
     to,
-    subject: `Bem-vindo ao MarmoApp, ${nome}! Seu trial começa agora 🎉`,
+    subject: `Bem-vindo ao MarmoApp, ${nome}! sua conta está pronta 🎉`,
     html,
   })
 }

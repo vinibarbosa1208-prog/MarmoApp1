@@ -77,7 +77,7 @@ export default function OnboardingPage() {
     setError('')
 
     try {
-      const plano = localStorage.getItem('marmoapp_plano') ?? 'basic'
+      const plano = localStorage.getItem('marmoapp_plano') ?? 'pro'
 
       const { data: existing } = await supabase
         .from('marmorarias')
@@ -102,7 +102,6 @@ export default function OnboardingPage() {
           .eq('id', existing.id)
         if (updateErr) throw updateErr
       } else {
-        const trialExpira = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         const { error: insertErr } = await supabase
           .from('marmorarias')
           .insert({
@@ -116,7 +115,8 @@ export default function OnboardingPage() {
             endereco: form.endereco || null,
             plano,
             email: userEmail,
-            trial_expira: trialExpira,
+            // trial_expira fica nulo até o Stripe confirmar o pagamento (webhook)
+            trial_expira: null,
             setup_concluido: true,
           })
         if (insertErr) throw insertErr

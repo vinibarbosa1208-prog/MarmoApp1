@@ -35,7 +35,7 @@ export const PLANOS: Record<
     nome: 'MarmoApp Plus',
     tabela: { mensalidade: 950, implantacao: 2400 },
     fundador: { mensalidade: 790, implantacao: 1200 },
-    fidelidade: 3,
+    fidelidade: 0,
     temAntonioWhatsapp: true,
     porMedicao: null,
   },
@@ -43,7 +43,7 @@ export const PLANOS: Record<
     nome: 'MarmoApp Plus + Crescimento',
     tabela: { mensalidade: 1850, implantacao: 3300 },
     fundador: { mensalidade: 1490, implantacao: 0 },
-    fidelidade: 3,
+    fidelidade: 0,
     temAntonioWhatsapp: true,
     porMedicao: 60,
   },
@@ -231,18 +231,8 @@ export function gerarTexto(c: DadosContrato): string {
     )
   }
   cl(
-    op
-      ? `Vigência e fidelidade. O contrato vale por prazo indeterminado, com fidelidade de ${c.fidelidade_meses} meses a partir da assinatura. Depois dela, qualquer parte pode cancelar com aviso de 30 dias.`
-      : 'Vigência. O contrato vale por prazo indeterminado e pode ser cancelado por qualquer parte, a qualquer momento, com aviso de 30 dias.'
+    'Vigência e cancelamento. O contrato vale por prazo indeterminado, sem fidelidade e sem multa. A CONTRATANTE pode cancelar quando quiser, por WhatsApp ou e-mail; o acesso continua até o fim do mês já pago e não há novas cobranças. Valores já pagos, incluindo a implantação, não são devolvidos. A CONTRATADA pode encerrar o contrato com aviso de 30 dias.'
   )
-  cl(
-    'Garantia de 30 dias. Nos primeiros 30 dias após a assinatura, a CONTRATANTE pode cancelar sem multa, pagando apenas as cobranças já vencidas.'
-  )
-  if (op) {
-    cl(
-      'Saída antecipada. Fora da garantia, o cancelamento pela CONTRATANTE dentro da fidelidade gera multa igual às mensalidades que faltam para completar a fidelidade.'
-    )
-  }
   cl(
     `Pagamento. As cobranças são emitidas pela plataforma Asaas, por PIX, boleto ou cartão, com vencimento todo dia ${c.dia_vencimento}. Atraso superior a 15 dias permite à CONTRATADA suspender o acesso ao sistema até a regularização, sem prejuízo da cobrança. ` +
       (c.condicao === 'fundador'

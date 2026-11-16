@@ -8,29 +8,14 @@ declare global {
   interface Window { fbq?: (...args: unknown[]) => void }
 }
 
+// Cadastro pelo site: só o plano MarmoApp (internamente 'pro'). O Plus é vendido por contrato.
 const PLANOS = [
   {
-    id: 'basic',
-    label: 'Basic',
-    preco: 'R$ 147',
-    periodo: '/mês',
-    descricao: 'Até 2 usuários',
-    popular: false,
-  },
-  {
     id: 'pro',
-    label: 'Pro',
+    label: 'MarmoApp',
     preco: 'R$ 297',
     periodo: '/mês',
-    descricao: 'Até 5 usuários · Antonio AI',
-    popular: true,
-  },
-  {
-    id: 'enterprise',
-    label: 'Enterprise',
-    preco: 'R$ 497',
-    periodo: '/mês',
-    descricao: 'Usuários ilimitados · Suporte dedicado',
+    descricao: 'Sistema completo · cancele quando quiser',
     popular: false,
   },
 ]
@@ -46,7 +31,7 @@ function CadastroForm() {
     cidade:     '',
     cnpj:       '',
     senha:      '',
-    plano:      (searchParams.get('plano') ?? 'pro') as 'basic' | 'pro' | 'enterprise',
+    plano:      'pro' as 'basic' | 'pro' | 'enterprise',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -231,7 +216,7 @@ function CadastroForm() {
             <span style={{ color: '#ffffff' }}>Marmo</span><span style={{ color: '#C9A84C' }}>App</span>
           </div>
           <div style={{ color: '#8a8a8a', fontSize: 13 }}>
-            7 dias grátis · sem cobrança imediata
+            R$ 297/mês · sem fidelidade
           </div>
         </div>
 
@@ -342,7 +327,7 @@ function CadastroForm() {
 
                 {/* Seleção de plano */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                  <label style={labelStyle}>Escolha seu plano</label>
+                  <label style={labelStyle}>Seu plano</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {PLANOS.map(p => {
                       const selected = form.plano === p.id
@@ -425,7 +410,7 @@ function CadastroForm() {
                   {loading ? 'Criando sua conta...' : 'Continuar para pagamento →'}
                 </button>
 
-                {/* Trial badge */}
+                {/* Condições */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -439,7 +424,7 @@ function CadastroForm() {
                     <circle cx="8" cy="8" r="6.5" stroke="#22c55e" strokeWidth="1.4"/>
                     <path d="M5 8l2 2 4-4" stroke="#22c55e" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  <span>7 dias grátis · seu cartão <strong>não</strong> será cobrado agora</span>
+                  <span>Pagamento seguro no cartão · cancele quando quiser, sem multa</span>
                 </div>
 
                 <div style={{ textAlign: 'center', fontSize: 12, color: '#9B8A7A', lineHeight: 1.5 }}>

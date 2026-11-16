@@ -5,48 +5,23 @@ import { useRouter } from 'next/navigation'
 import { useApp } from '@/contexts/AppContext'
 import { usePlano } from '@/hooks/usePlano'
 
-const PLANOS = [
+// Plano vendido pelo site. Internamente segue 'pro' (preço do Stripe de R$ 297).
+// O MarmoApp Plus (com o Antônio no WhatsApp) é vendido por contrato.
+const PLANOS: { id: 'basic' | 'pro' | 'enterprise'; nome: string; preco: number; destaque?: boolean; descricao: string; recursos: string[] }[] = [
   {
-    id: 'basic' as const,
-    nome: 'Basic',
-    preco: 147,
-    descricao: 'Para marmorarias que querem organizar e crescer',
-    recursos: [
-      'Orçamentos ilimitados',
-      'Geração de PDF',
-      'Markup automático',
-      'Controle de estoque',
-      'Relatórios de desempenho',
-      '1 usuário',
-    ],
-  },
-  {
-    id: 'pro' as const,
-    nome: 'Pro',
+    id: 'pro',
+    nome: 'MarmoApp',
     preco: 297,
     destaque: true,
-    descricao: 'Para equipes que querem automatizar atendimento',
+    descricao: 'O sistema completo para organizar a sua marmoraria',
     recursos: [
-      'Tudo do Basic',
-      'Agente WhatsApp',
+      'Orçamentos ilimitados',
+      'Orçamento em PDF com a sua marca',
+      'Markup automático',
+      'Controle de estoque e materiais',
+      'Fila de serviços e produção',
+      'Relatórios de desempenho',
       'Até 3 usuários',
-      'Relatórios avançados',
-      'Fila de serviços',
-      'Projetos ilimitados',
-    ],
-  },
-  {
-    id: 'enterprise' as const,
-    nome: 'Enterprise',
-    preco: 497,
-    descricao: 'Para grandes operações com IA completa',
-    recursos: [
-      'Tudo do Pro',
-      'Agente Antonio (IA)',
-      'Usuários ilimitados',
-      'IA avançada de orçamento',
-      'Suporte prioritário',
-      'Personalização completa',
     ],
   },
 ]
@@ -108,7 +83,7 @@ export default function PlanosPage() {
 
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <p style={{ color: 'var(--gray)', fontSize: 15, margin: 0 }}>
-          Escolha o plano ideal para sua marmoraria
+          Um plano, tudo incluso · cancele quando quiser, sem multa
         </p>
         {trialAindaAtivo && (
           <div style={{
@@ -116,7 +91,7 @@ export default function PlanosPage() {
             background: '#FDF8F0', border: '1px solid var(--gold)',
             borderRadius: 8, padding: '6px 16px', fontSize: 13, color: '#7A6A4A',
           }}>
-            Você está no período trial · {diasParaExpirar} dia{diasParaExpirar !== 1 ? 's' : ''} restante{diasParaExpirar !== 1 ? 's' : ''}
+            Seu acesso atual termina em {diasParaExpirar} dia{diasParaExpirar !== 1 ? 's' : ''} · assine para continuar
           </div>
         )}
         {temAssinatura && (
@@ -136,7 +111,8 @@ export default function PlanosPage() {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gridTemplateColumns: 'minmax(280px, 420px)',
+          justifyContent: 'center',
         gap: 20,
         maxWidth: 980,
         margin: '0 auto',
@@ -166,7 +142,7 @@ export default function PlanosPage() {
                   background: 'var(--gold)', color: '#2C2922',
                   padding: '3px 14px', borderRadius: 12, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
                 }}>
-                  ⭐ MAIS POPULAR
+                  SEM FIDELIDADE
                 </div>
               )}
               {isAtual && (
@@ -176,15 +152,6 @@ export default function PlanosPage() {
                   padding: '3px 12px', borderRadius: 12, fontSize: 11, fontWeight: 700,
                 }}>
                   SEU PLANO
-                </div>
-              )}
-              {!trialAindaAtivo && !temAssinatura && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: '#E8F5E9', color: '#27AE60',
-                  padding: '2px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                }}>
-                  7 dias grátis
                 </div>
               )}
 
@@ -237,7 +204,7 @@ export default function PlanosPage() {
       </div>
 
       <div style={{ textAlign: 'center', marginTop: 32, fontSize: 12, color: 'var(--gray)' }}>
-        Pagamento seguro via Stripe · Cancele a qualquer momento · Suporte incluso
+        Pagamento seguro no cartão via Stripe · Cancele quando quiser, sem multa · Suporte incluso
       </div>
     </div>
   )

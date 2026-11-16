@@ -12,7 +12,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!marmoraria) return
 
-    // Já tem trial/assinatura → vai pro dashboard
+    // Pagamento já confirmado (ou cliente liberado pelo time) → vai pro dashboard
     if (marmoraria.trial_expira) {
       router.replace('/dashboard')
       return
@@ -22,7 +22,8 @@ export default function CheckoutPage() {
     fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plano: marmoraria.plano || 'pro' }),
+      // Cadastro pelo site: sempre o plano MarmoApp (R$ 297)
+      body: JSON.stringify({ plano: 'pro' }),
     })
       .then(r => r.json())
       .then(data => {
