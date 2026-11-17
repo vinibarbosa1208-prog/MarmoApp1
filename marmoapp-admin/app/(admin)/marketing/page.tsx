@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { carregarInvestimentosComRetorno, carregarLancamentos } from '@/lib/financeiro-servidor'
 import { brl } from '@/lib/financeiro'
 import MetaAdsPainel from '@/components/meta/MetaAdsPainel'
+import { carregarMetricasIG } from '@/lib/instagram-metricas'
 
 export default async function MarketingPage() {
   await requireAdminAuth()
@@ -38,6 +39,7 @@ export default async function MarketingPage() {
     carregarLancamentos().catch(() => []),
   ])
   const investimentos = await carregarInvestimentosComRetorno(lancamentos).catch(() => [])
+  const ig = await carregarMetricasIG(7).catch(() => null)
 
   const leadsNaSemana = leadsSemanaRes.count ?? 0
   const funil = [
@@ -106,9 +108,9 @@ export default async function MarketingPage() {
             />
             <MetricCard
               title="Novos seguidores"
-              value={temDadosReais ? `+${metrica.novos_seguidores}` : '—'}
+              value={ig?.novos7 != null ? `${ig.novos7 > 0 ? '+' : ''}${ig.novos7}` : temDadosReais ? `+${metrica.novos_seguidores}` : '—'}
               accent="green"
-              subtitle={temDadosReais ? 'na semana' : 'sem dados ainda'}
+              subtitle={ig?.novos7 != null ? `últimos 7 dias · ${ig.atual ?? '—'} no total (automático)` : temDadosReais ? 'na semana' : 'sem dados ainda'}
             />
             <MetricCard
               title="Engajamento médio"

@@ -3,13 +3,18 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import Header from '@/components/Header'
 import { configInstagram, contaInstagram, janelaFila, type PostIG } from '@/lib/instagram'
 import FilaInstagram from '@/components/instagram/FilaInstagram'
+import NumerosInstagram from '@/components/instagram/NumerosInstagram'
+import { carregarMetricasIG } from '@/lib/instagram-metricas'
 
 export const metadata = { title: 'Instagram' }
 
 export default async function InstagramPage() {
   await requireAdminAuth()
   const { desde, agora } = janelaFila()
-  const { data } = await supabaseAdmin.from('admin_ig_posts').select('*').gte('publicar_em', desde).order('publicar_em')
+  const [{ data }, metricas] = await Promise.all([
+    supabaseAdmin.from('admin_ig_posts').select('*').gte('publicar_em', desde).order('publicar_em'),
+    carregarMetricasIG(14),
+  ])
 
   let conta: string | null = null
   let problema: string | null = null
@@ -38,6 +43,7 @@ export default async function InstagramPage() {
           </p>
           <p className="text-xs text-gray-500">Reels e Stories simples. Figurinhas (enquete, quiz, mencionar) só pelo app.</p>
         </div>
+        <NumerosInstagram dados={metricas} />
         <FilaInstagram posts={(data ?? []) as PostIG[]} agora={agora} />
       </main>
     </div>
