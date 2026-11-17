@@ -42,7 +42,7 @@ export type PostIG = {
   tentativas: number
 }
 
-async function chamar(metodo: 'GET' | 'POST', caminho: string, params: Record<string, string>, token: string) {
+export async function chamar(metodo: 'GET' | 'POST', caminho: string, params: Record<string, string>, token: string) {
   const url = `https://graph.facebook.com/${VERSAO}/${caminho}`
   const corpo = new URLSearchParams(params)
   // O token vai no cabeçalho, nunca na URL (não aparece em logs).
