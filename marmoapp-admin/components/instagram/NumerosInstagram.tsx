@@ -11,6 +11,8 @@ const diaCurto = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`
 export default function NumerosInstagram({ dados }: { dados: Dados }) {
   const { atual, novos7, visitas7, alcance7, porDia, ultimaBusca } = dados
   const semInsights = !!ultimaBusca?.mensagem?.includes('avisos:')
+  const detalhe = ultimaBusca?.mensagem?.split('avisos:')[1]?.trim() ?? ''
+  const semPermissao = /código 10\)|does not have permission/i.test(detalhe)
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -26,9 +28,19 @@ export default function NumerosInstagram({ dados }: { dados: Dados }) {
 
       {ultimaBusca && !ultimaBusca.ok && <p className="card border-red-200 p-3 text-sm text-red-700">⚠️ {ultimaBusca.mensagem}</p>}
       {semInsights && (
-        <p className="card border-yellow-200 p-3 text-xs text-yellow-800">
-          Parte dos números do Insights não veio: {ultimaBusca?.mensagem?.split('avisos:')[1]}. Os novos seguidores são calculados pela diferença de um dia para o outro.
-        </p>
+        <details className="card border-yellow-200 p-3 text-xs text-yellow-800">
+          <summary className="cursor-pointer">
+            {semPermissao
+              ? 'Visitas ao perfil e alcance aguardam a liberação das estatísticas no Meta. Por enquanto, novos seguidores = diferença de um dia para o outro.'
+              : 'Parte das estatísticas do Instagram não veio nesta busca. Por enquanto, novos seguidores = diferença de um dia para o outro.'}
+          </summary>
+          <p className="mt-2 text-yellow-700/80">
+            {semPermissao
+              ? 'Falta a permissão instagram_manage_insights no token do painel (IG_PUBLISH_TOKEN). Libere no app MarmoApp Painel, gere o token de novo e troque na Vercel. '
+              : ''}
+            Resposta do Instagram: {detalhe}
+          </p>
+        </details>
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
