@@ -51,6 +51,93 @@ async function get(caminho: string, params: Record<string, string>, token: strin
   return dados
 }
 
+// Para endpoints que devolvem um objeto só (ex.: a própria conta), não uma lista.
+async function getObjeto(caminho: string, params: Record<string, string>, token: string) {
+  const r = await fetch(`https://graph.facebook.com/${VERSAO}/${caminho}?${new URLSearchParams(params)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!r.ok || j.error) {
+    const e = j.error ?? {}
+    throw new Error(`Meta ${r.status}: ${e.message ?? 'erro desconhecido'}${e.code ? ` (código ${e.code})` : ''}`)
+  }
+  return j as Record<string, unknown>
+}
+
+// O Meta devolve valores de dinheiro da conta em centavos, como texto.
+const centavos = (v: unknown) => (v == null || v === '' ? null : Number(v) / 100)
+
+/**
+ * Situação da conta, total já gasto, saldo a pagar, forma de pagamento e
+ * cobranças recentes. Cada parte é opcional: se o token não tiver permissão
+ * para algum campo, o resto continua.
+ */
+async function sincronizarConta(conta: string, token: string) {
+  const base = 'name,account_status,disable_reason,currency,amount_spent,balance,spend_cap'
+  let c: Record<string, unknown>
+  try {
+    c = await getObjeto(`act_${conta}`, { fields: `${base},funding_source_details` }, token)
+  } catch {
+    c = await getObjeto(`act_${conta}`, { fields: base }, token)
+  }
+  const fonte = c.funding_source_details as { display_string?: string; type?: number } | undefined
+
+  let cobrancas: { data: string; tipo: string; valor: number | null }[] | null = null
+  try {
+    const atividades = await get(
+      `act_${conta}/activities`,
+      { fields: 'event_type,event_time,translated_event_type,extra_data', since: somarDias(hojeBR(), -90), limit: '200' },
+      token,
+    )
+    cobrancas = atividades
+      .filter((a) => String(a.event_type ?? '').includes('billing') || String(a.event_type ?? '').includes('funding'))
+      .slice(0, 30)
+      .map((a) => {
+        let valor: number | null = null
+        try {
+          const extra = typeof a.extra_data === 'string' ? JSON.parse(a.extra_data) : a.extra_data
+          const bruto = extra?.new_value ?? extra?.amount ?? extra?.charge_amount
+          if (bruto != null && !Number.isNaN(Number(bruto))) valor = Number(bruto) / 100
+        } catch {
+          /* sem valor legível */
+        }
+        return { data: String(a.event_time ?? ''), tipo: String(a.translated_event_type ?? a.event_type ?? ''), valor }
+      })
+  } catch {
+    cobrancas = null
+  }
+
+  // Outras contas que o token enxerga (ex.: turbinado feito pela conta pessoal).
+  let outras: { id: string; nome: string; gasto_total: number | null; moeda: string }[] | null = null
+  try {
+    const lista = await get('me/adaccounts', { fields: 'account_id,name,amount_spent,currency', limit: '50' }, token)
+    outras = lista
+      .filter((a) => String(a.account_id) !== conta)
+      .map((a) => ({ id: String(a.account_id), nome: String(a.name ?? ''), gasto_total: centavos(a.amount_spent), moeda: String(a.currency ?? '') }))
+  } catch {
+    outras = null
+  }
+
+  const linha = {
+    account_id: conta,
+    nome: c.name ? String(c.name) : null,
+    status: c.account_status != null ? Number(c.account_status) : null,
+    motivo_bloqueio: c.disable_reason != null ? Number(c.disable_reason) : null,
+    moeda: c.currency ? String(c.currency) : null,
+    gasto_total: centavos(c.amount_spent),
+    saldo: centavos(c.balance),
+    limite_gasto: c.spend_cap && c.spend_cap !== '0' ? centavos(c.spend_cap) : null,
+    forma_pagamento: fonte?.display_string ?? null,
+    cobrancas,
+    outras_contas: outras,
+    atualizado_em: new Date().toISOString(),
+  }
+  const { error } = await supabaseAdmin.from('admin_meta_conta').upsert(linha, { onConflict: 'account_id' })
+  if (error) throw new Error(error.message)
+  return linha
+}
+
 function somaAcoes(acoes: Acao[] | undefined, tipos: string[]) {
   if (!acoes) return 0
   // Cada tipo de lead pode vir repetido em agrupamentos diferentes: usa o maior deles.
@@ -143,9 +230,52 @@ export async function sincronizarMeta(origem: 'manual' | 'cron', dias = 30) {
       if (error) throw new Error(error.message)
     }
 
+    // Totais desde o início de cada campanha (não depende da janela de 30 dias).
+    const totais = await get(
+      `act_${conta}/insights`,
+      {
+        level: 'campaign',
+        date_preset: 'maximum',
+        fields: 'campaign_id,campaign_name,spend,impressions,inline_link_clicks,actions,date_start,date_stop',
+        limit: '500',
+      },
+      token,
+    )
+    for (const t of totais) {
+      const acoes = t.actions as Acao[] | undefined
+      const id = String(t.campaign_id)
+      const numeros = {
+        gasto_total: Number(t.spend ?? 0),
+        impressoes_total: Number(t.impressions ?? 0),
+        cliques_link_total: Number(t.inline_link_clicks ?? 0),
+        leads_total: somaAcoes(acoes, TIPOS_LEAD),
+        conversas_total: somaAcoes(acoes, TIPOS_CONVERSA),
+        inicio: t.date_start ? String(t.date_start) : null,
+        fim: t.date_stop ? String(t.date_stop) : null,
+      }
+      const { error } = conhecidas.has(id)
+        ? await supabaseAdmin.from('admin_meta_campanhas').update(numeros).eq('campaign_id', id)
+        : await supabaseAdmin
+            .from('admin_meta_campanhas')
+            .upsert({ campaign_id: id, nome: String(t.campaign_name ?? ''), status: 'DELETED', ...numeros }, { onConflict: 'campaign_id' })
+      if (error) throw new Error(error.message)
+    }
+
+    const contaInfo = await sincronizarConta(conta, token).catch((e: Error) => {
+      console.error('Meta: resumo da conta falhou', e.message)
+      return null
+    })
+
     await atualizarGastoNoFinanceiro()
-    await supabaseAdmin.from('admin_meta_sync').insert({ origem, ok: true, linhas: linhas.length, mensagem: `${campanhas.length} campanha(s)` })
-    return { campanhas: campanhas.length, linhas: linhas.length }
+    const gastoTotal = totais.reduce((s, t) => s + Number(t.spend ?? 0), 0)
+    const mensagem = [
+      `${campanhas.length} campanha(s)`,
+      `${linhas.length} dia(s) com números em ${dias} dias`,
+      `gasto desde o início R$ ${gastoTotal.toFixed(2)}`,
+      contaInfo ? `situação da conta ${contaInfo.status ?? '?'}` : 'resumo da conta indisponível',
+    ].join(' · ')
+    await supabaseAdmin.from('admin_meta_sync').insert({ origem, ok: true, linhas: linhas.length, mensagem })
+    return { campanhas: campanhas.length, linhas: linhas.length, gasto_total: gastoTotal }
   } catch (e) {
     await supabaseAdmin.from('admin_meta_sync').insert({ origem, ok: false, mensagem: (e as Error).message.slice(0, 500) })
     throw e
