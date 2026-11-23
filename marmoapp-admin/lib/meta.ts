@@ -108,16 +108,6 @@ async function sincronizarConta(conta: string, token: string) {
     cobrancas = null
   }
 
-  // Outras contas que o token enxerga (ex.: turbinado feito pela conta pessoal).
-  let outras: { id: string; nome: string; gasto_total: number | null; moeda: string }[] | null = null
-  try {
-    const lista = await get('me/adaccounts', { fields: 'account_id,name,amount_spent,currency', limit: '50' }, token)
-    outras = lista
-      .filter((a) => String(a.account_id) !== conta)
-      .map((a) => ({ id: String(a.account_id), nome: String(a.name ?? ''), gasto_total: centavos(a.amount_spent), moeda: String(a.currency ?? '') }))
-  } catch {
-    outras = null
-  }
 
   const linha = {
     account_id: conta,
@@ -130,7 +120,7 @@ async function sincronizarConta(conta: string, token: string) {
     limite_gasto: c.spend_cap && c.spend_cap !== '0' ? centavos(c.spend_cap) : null,
     forma_pagamento: fonte?.display_string ?? null,
     cobrancas,
-    outras_contas: outras,
+    outras_contas: null,
     atualizado_em: new Date().toISOString(),
   }
   const { error } = await supabaseAdmin.from('admin_meta_conta').upsert(linha, { onConflict: 'account_id' })
@@ -152,8 +142,130 @@ function somaAcoes(acoes: Acao[] | undefined, tipos: string[]) {
 const TIPOS_LEAD = ['lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead', 'onsite_web_lead']
 const TIPOS_CONVERSA = ['onsite_conversion.messaging_conversation_started_7d']
 
+/** Contas de anúncios que o token enxerga (a principal sempre primeiro). */
+async function listarContas(principal: string, token: string) {
+  const contas = [principal]
+  try {
+    const lista = await get('me/adaccounts', { fields: 'account_id', limit: '50' }, token)
+    for (const a of lista) {
+      const id = String(a.account_id ?? '').replace(/^act_/, '')
+      if (id && !contas.includes(id)) contas.push(id)
+    }
+  } catch (e) {
+    console.error('Meta: não deu para listar as contas', (e as Error).message)
+  }
+  return contas
+}
+
+const dataDe = (v: unknown) => (v ? String(v).slice(0, 10) : null)
+
+/** Campanhas, números por dia e totais desde o início de UMA conta de anúncios. */
+async function sincronizarUmaConta(conta: string, token: string, desde: string, hoje: string) {
+  const campanhas = await get(
+    `act_${conta}/campaigns`,
+    { fields: 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time', limit: '200' },
+    token,
+  )
+  if (campanhas.length) {
+    const { error } = await supabaseAdmin.from('admin_meta_campanhas').upsert(
+      campanhas.map((c) => ({
+        campaign_id: String(c.id),
+        account_id: conta,
+        nome: String(c.name ?? ''),
+        status: String(c.effective_status ?? c.status ?? ''),
+        objetivo: c.objective ? String(c.objective) : null,
+        // o Meta devolve o orçamento em centavos da moeda da conta
+        orcamento_diario: c.daily_budget != null ? Number(c.daily_budget) / 100 : null,
+        orcamento_total: c.lifetime_budget != null && c.lifetime_budget !== '0' ? Number(c.lifetime_budget) / 100 : null,
+        inicio: dataDe(c.start_time),
+        fim: dataDe(c.stop_time),
+        atualizado_em: new Date().toISOString(),
+      })),
+      { onConflict: 'campaign_id', ignoreDuplicates: false },
+    )
+    if (error) throw new Error(error.message)
+  }
+
+  const insights = await get(
+    `act_${conta}/insights`,
+    {
+      level: 'campaign',
+      time_increment: '1',
+      time_range: JSON.stringify({ since: desde, until: hoje }),
+      fields: 'campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions',
+      limit: '500',
+    },
+    token,
+  )
+
+  // Totais desde o início de cada campanha (não depende da janela de dias).
+  const totais = await get(
+    `act_${conta}/insights`,
+    { level: 'campaign', date_preset: 'maximum', fields: 'campaign_id,campaign_name,spend,impressions,inline_link_clicks,actions', limit: '500' },
+    token,
+  )
+
+  // Campanha que aparece só nos números (ex.: excluída) ainda precisa existir na tabela.
+  const conhecidas = new Set(campanhas.map((c) => String(c.id)))
+  const faltam = [...insights, ...totais].filter((i) => !conhecidas.has(String(i.campaign_id)))
+  if (faltam.length) {
+    await supabaseAdmin.from('admin_meta_campanhas').upsert(
+      [...new Map(faltam.map((i) => [String(i.campaign_id), { campaign_id: String(i.campaign_id), account_id: conta, nome: String(i.campaign_name ?? ''), status: 'DELETED' }])).values()],
+      { onConflict: 'campaign_id', ignoreDuplicates: true },
+    )
+  }
+
+  const linhas = insights.map((i) => {
+    const acoes = i.actions as Acao[] | undefined
+    return {
+      data: String(i.date_start),
+      campaign_id: String(i.campaign_id),
+      gasto: Number(i.spend ?? 0),
+      impressoes: Number(i.impressions ?? 0),
+      cliques: Number(i.clicks ?? 0),
+      cliques_link: Number(i.inline_link_clicks ?? 0),
+      leads_meta: somaAcoes(acoes, TIPOS_LEAD),
+      conversas: somaAcoes(acoes, TIPOS_CONVERSA),
+      bruto: i,
+      atualizado_em: new Date().toISOString(),
+    }
+  })
+  for (let k = 0; k < linhas.length; k += 500) {
+    const { error } = await supabaseAdmin.from('admin_meta_insights').upsert(linhas.slice(k, k + 500), { onConflict: 'data,campaign_id' })
+    if (error) throw new Error(error.message)
+  }
+
+  for (const t of totais) {
+    const acoes = t.actions as Acao[] | undefined
+    const { error } = await supabaseAdmin
+      .from('admin_meta_campanhas')
+      .update({
+        gasto_total: Number(t.spend ?? 0),
+        impressoes_total: Number(t.impressions ?? 0),
+        cliques_link_total: Number(t.inline_link_clicks ?? 0),
+        leads_total: somaAcoes(acoes, TIPOS_LEAD),
+        conversas_total: somaAcoes(acoes, TIPOS_CONVERSA),
+      })
+      .eq('campaign_id', String(t.campaign_id))
+    if (error) throw new Error(error.message)
+  }
+
+  const info = await sincronizarConta(conta, token).catch((e: Error) => {
+    console.error(`Meta: resumo da conta ${conta} falhou`, e.message)
+    return null
+  })
+
+  return {
+    campanhas: campanhas.length,
+    linhas: linhas.length,
+    gasto: totais.reduce((s, t) => s + Number(t.spend ?? 0), 0),
+    nome: info?.nome ?? conta,
+  }
+}
+
 /**
- * Busca campanhas e números por dia dos últimos `dias` e grava no banco.
+ * Busca, em todas as contas de anúncios que o token enxerga, campanhas, números por dia
+ * dos últimos `dias` e totais desde o início, e grava no banco.
  * Depois atualiza no Financeiro o gasto do mês de cada campanha ligada a um investimento.
  */
 export async function sincronizarMeta(origem: 'manual' | 'cron', dias = 30) {
@@ -167,115 +279,21 @@ export async function sincronizarMeta(origem: 'manual' | 'cron', dias = 30) {
     const hoje = hojeBR()
     const desde = somarDias(hoje, -(dias - 1))
 
-    const campanhas = await get(
-      `act_${conta}/campaigns`,
-      { fields: 'id,name,status,effective_status,objective,daily_budget', limit: '200' },
-      token,
-    )
-    if (campanhas.length) {
-      const { error } = await supabaseAdmin.from('admin_meta_campanhas').upsert(
-        campanhas.map((c) => ({
-          campaign_id: String(c.id),
-          nome: String(c.name ?? ''),
-          status: String(c.effective_status ?? c.status ?? ''),
-          objetivo: c.objective ? String(c.objective) : null,
-          // o Meta devolve o orçamento em centavos da moeda da conta
-          orcamento_diario: c.daily_budget != null ? Number(c.daily_budget) / 100 : null,
-          atualizado_em: new Date().toISOString(),
-        })),
-        { onConflict: 'campaign_id', ignoreDuplicates: false },
-      )
-      if (error) throw new Error(error.message)
-    }
-
-    const insights = await get(
-      `act_${conta}/insights`,
-      {
-        level: 'campaign',
-        time_increment: '1',
-        time_range: JSON.stringify({ since: desde, until: hoje }),
-        fields: 'campaign_id,campaign_name,spend,impressions,clicks,inline_link_clicks,actions',
-        limit: '500',
-      },
-      token,
-    )
-
-    // Campanha que aparece só nos números (ex.: excluída) ainda precisa existir na tabela.
-    const conhecidas = new Set(campanhas.map((c) => String(c.id)))
-    const faltam = insights.filter((i) => !conhecidas.has(String(i.campaign_id)))
-    if (faltam.length) {
-      await supabaseAdmin.from('admin_meta_campanhas').upsert(
-        [...new Map(faltam.map((i) => [String(i.campaign_id), { campaign_id: String(i.campaign_id), nome: String(i.campaign_name ?? ''), status: 'DELETED' }])).values()],
-        { onConflict: 'campaign_id', ignoreDuplicates: true },
-      )
-    }
-
-    const linhas = insights.map((i) => {
-      const acoes = i.actions as Acao[] | undefined
-      return {
-        data: String(i.date_start),
-        campaign_id: String(i.campaign_id),
-        gasto: Number(i.spend ?? 0),
-        impressoes: Number(i.impressions ?? 0),
-        cliques: Number(i.clicks ?? 0),
-        cliques_link: Number(i.inline_link_clicks ?? 0),
-        leads_meta: somaAcoes(acoes, TIPOS_LEAD),
-        conversas: somaAcoes(acoes, TIPOS_CONVERSA),
-        bruto: i,
-        atualizado_em: new Date().toISOString(),
-      }
-    })
-    for (let k = 0; k < linhas.length; k += 500) {
-      const { error } = await supabaseAdmin.from('admin_meta_insights').upsert(linhas.slice(k, k + 500), { onConflict: 'data,campaign_id' })
-      if (error) throw new Error(error.message)
-    }
-
-    // Totais desde o início de cada campanha (não depende da janela de 30 dias).
-    const totais = await get(
-      `act_${conta}/insights`,
-      {
-        level: 'campaign',
-        date_preset: 'maximum',
-        fields: 'campaign_id,campaign_name,spend,impressions,inline_link_clicks,actions,date_start,date_stop',
-        limit: '500',
-      },
-      token,
-    )
-    for (const t of totais) {
-      const acoes = t.actions as Acao[] | undefined
-      const id = String(t.campaign_id)
-      const numeros = {
-        gasto_total: Number(t.spend ?? 0),
-        impressoes_total: Number(t.impressions ?? 0),
-        cliques_link_total: Number(t.inline_link_clicks ?? 0),
-        leads_total: somaAcoes(acoes, TIPOS_LEAD),
-        conversas_total: somaAcoes(acoes, TIPOS_CONVERSA),
-        inicio: t.date_start ? String(t.date_start) : null,
-        fim: t.date_stop ? String(t.date_stop) : null,
-      }
-      const { error } = conhecidas.has(id)
-        ? await supabaseAdmin.from('admin_meta_campanhas').update(numeros).eq('campaign_id', id)
-        : await supabaseAdmin
-            .from('admin_meta_campanhas')
-            .upsert({ campaign_id: id, nome: String(t.campaign_name ?? ''), status: 'DELETED', ...numeros }, { onConflict: 'campaign_id' })
-      if (error) throw new Error(error.message)
-    }
-
-    const contaInfo = await sincronizarConta(conta, token).catch((e: Error) => {
-      console.error('Meta: resumo da conta falhou', e.message)
-      return null
-    })
+    const contas = await listarContas(conta, token)
+    const resultados = []
+    for (const c of contas) resultados.push(await sincronizarUmaConta(c, token, desde, hoje))
 
     await atualizarGastoNoFinanceiro()
-    const gastoTotal = totais.reduce((s, t) => s + Number(t.spend ?? 0), 0)
+    const linhas = resultados.reduce((s, r) => s + r.linhas, 0)
+    const campanhas = resultados.reduce((s, r) => s + r.campanhas, 0)
+    const gastoTotal = resultados.reduce((s, r) => s + r.gasto, 0)
     const mensagem = [
-      `${campanhas.length} campanha(s)`,
-      `${linhas.length} dia(s) com números em ${dias} dias`,
-      `gasto desde o início R$ ${gastoTotal.toFixed(2)}`,
-      contaInfo ? `situação da conta ${contaInfo.status ?? '?'}` : 'resumo da conta indisponível',
+      `${contas.length} conta(s): ${resultados.map((r) => `${r.nome} R$ ${r.gasto.toFixed(2)}`).join(', ')}`,
+      `${campanhas} campanha(s)`,
+      `${linhas} linha(s) de números em ${dias} dias`,
     ].join(' · ')
-    await supabaseAdmin.from('admin_meta_sync').insert({ origem, ok: true, linhas: linhas.length, mensagem })
-    return { campanhas: campanhas.length, linhas: linhas.length, gasto_total: gastoTotal }
+    await supabaseAdmin.from('admin_meta_sync').insert({ origem, ok: true, linhas, mensagem: mensagem.slice(0, 500) })
+    return { contas: contas.length, campanhas, linhas, gasto_total: gastoTotal }
   } catch (e) {
     await supabaseAdmin.from('admin_meta_sync').insert({ origem, ok: false, mensagem: (e as Error).message.slice(0, 500) })
     throw e

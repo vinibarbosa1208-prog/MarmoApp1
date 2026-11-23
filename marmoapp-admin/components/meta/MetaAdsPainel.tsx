@@ -30,6 +30,7 @@ const SITUACAO_CONTA: Record<number, { nome: string; ok: boolean }> = {
 }
 
 type Conta = {
+  account_id: string
   nome: string | null
   status: number | null
   moeda: string | null
@@ -54,15 +55,16 @@ export default async function MetaAdsPainel() {
   const [campRes, insRes, syncRes, invRes, leadsRes, contaRes, leadsTotalRes] = await Promise.all([
     supabaseAdmin
       .from('admin_meta_campanhas')
-      .select('campaign_id, nome, status, orcamento_diario, investimento_id, gasto_total, impressoes_total, cliques_link_total, leads_total, inicio, fim'),
+      .select('campaign_id, account_id, nome, status, orcamento_diario, orcamento_total, investimento_id, gasto_total, impressoes_total, cliques_link_total, leads_total, inicio, fim'),
     supabaseAdmin.from('admin_meta_insights').select('data, campaign_id, gasto, impressoes, cliques_link, leads_meta, conversas').gte('data', d30),
     supabaseAdmin.from('admin_meta_sync').select('iniciado_em, ok, mensagem, origem').order('iniciado_em', { ascending: false }).limit(1).maybeSingle(),
     supabaseAdmin.from('admin_fin_investimentos').select('id, nome, utm_campaign').order('created_at', { ascending: false }),
     supabaseAdmin.from('leads').select('created_at, utm_campaign').eq('utm_source', 'meta').gte('created_at', `${d30}T03:00:00Z`),
-    conta ? supabaseAdmin.from('admin_meta_conta').select('*').eq('account_id', conta).maybeSingle() : Promise.resolve({ data: null }),
+    supabaseAdmin.from('admin_meta_conta').select('*'),
     supabaseAdmin.from('leads').select('id', { count: 'exact', head: true }).eq('utm_source', 'meta'),
   ])
-  const contaInfo = (contaRes.data ?? null) as Conta | null
+  // conta principal (MarmoApp) primeiro
+  const contas = ((contaRes.data ?? []) as Conta[]).sort((a, b) => (a.account_id === conta ? -1 : b.account_id === conta ? 1 : 0))
   const leadsFormTotal = leadsTotalRes.count ?? 0
 
   const campanhas = campRes.data ?? []
@@ -108,15 +110,19 @@ export default async function MetaAdsPainel() {
     .filter((c) => c.gastoTotal > 0 || c.gasto > 0 || c.status === 'ACTIVE')
     .sort((a, b) => b.gastoTotal - a.gastoTotal || b.gasto - a.gasto)
 
-  // Resumo geral: desde o início da conta
+  // Resumo geral: soma de todas as contas de anúncios
   const gastoCampanhas = campanhas.reduce((s, c) => s + Number(c.gasto_total ?? 0), 0)
-  const gastoTotal = contaInfo?.gasto_total ?? gastoCampanhas
+  const gastoContas = contas.reduce((s, c) => s + Number(c.gasto_total ?? 0), 0)
+  const gastoTotal = contas.length ? gastoContas : gastoCampanhas
+  const saldoTotal = contas.reduce((s, c) => s + Number(c.saldo ?? 0), 0)
   const gastoMes = insights.filter((i) => String(i.data) >= mesInicio).reduce((s, i) => s + i.gasto, 0)
   const leadsMetaTotal = campanhas.reduce((s, c) => s + Number(c.leads_total ?? 0), 0)
   const leadsGerados = Math.max(leadsMetaTotal, leadsFormTotal)
-  const situacao = contaInfo?.status != null ? (SITUACAO_CONTA[contaInfo.status] ?? { nome: `Código ${contaInfo.status}`, ok: false }) : null
+  const sit = (st: number | null) => (st != null ? (SITUACAO_CONTA[st] ?? { nome: `Código ${st}`, ok: false }) : null)
+  const contasComProblema = contas.filter((c) => sit(c.status) && !sit(c.status)!.ok)
+  const contasNoLimite = contas.filter((c) => c.limite_gasto != null && Number(c.gasto_total ?? 0) >= Number(c.limite_gasto) - 0.01)
   const ativasSemGasto = campanhas.filter((c) => c.status === 'ACTIVE').length > 0 && insights.filter((i) => String(i.data) >= d7).length === 0
-  const outrasComGasto = (contaInfo?.outras_contas ?? []).filter((o) => (o.gasto_total ?? 0) > 0)
+  const nomeConta = (id: string | null) => contas.find((c) => c.account_id === id)?.nome ?? id ?? ''
   const temNumeros = pronto && (insights.length > 0 || gastoTotal > 0 || linhas.length > 0)
 
   return (
@@ -155,29 +161,17 @@ export default async function MetaAdsPainel() {
         <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">Última tentativa falhou: {sync.mensagem}</p>
       )}
 
-      {pronto && contaInfo && (
+      {pronto && contas.length > 0 && (
         <div className="card mb-4 space-y-4 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-900">
-              Resumo da conta de anúncios{contaInfo.nome ? ` · ${contaInfo.nome}` : ''}
-            </p>
-            {situacao && (
-              <span
-                className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                  situacao.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'
-                }`}
-              >
-                Conta {situacao.nome.toLowerCase()}
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <p className="text-sm font-semibold text-gray-900">
+            Resumo {contas.length > 1 ? `das ${contas.length} contas de anúncios` : 'da conta de anúncios'}
+          </p>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
-              ['Total já gasto', brl(gastoTotal), 'desde que a conta foi criada'],
+              ['Total já gasto', brl(gastoTotal), 'desde que as contas foram criadas'],
               ['Gasto neste mês', brl(gastoMes), `desde ${dataBR(mesInicio)}`],
-              ['A pagar ao Meta', contaInfo.saldo != null ? brl(contaInfo.saldo) : '—', 'gasto ainda não cobrado'],
+              ['A pagar ao Meta', brl(saldoTotal), 'gasto que ainda vai ser cobrado'],
               ['Leads gerados', num(leadsGerados), leadsGerados ? `custo por lead ${brl(gastoTotal / leadsGerados)}` : 'nenhum ainda'],
-              ['Forma de pagamento', contaInfo.forma_pagamento ?? 'não informada', contaInfo.limite_gasto ? `limite da conta ${brl(contaInfo.limite_gasto)}` : 'cobrado pelo Meta'],
             ].map(([t, v, s]) => (
               <div key={t} className="rounded-lg bg-page p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{t}</p>
@@ -187,36 +181,82 @@ export default async function MetaAdsPainel() {
             ))}
           </div>
 
-          {situacao && !situacao.ok && (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              A conta está &quot;{situacao.nome}&quot;: enquanto isso, os anúncios não rodam. Veja em Gerenciador de Anúncios → Cobrança e pagamentos.
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  {['Conta', 'Situação', 'Total gasto', 'A pagar', 'Forma de pagamento', 'Limite da conta'].map((h) => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {contas.map((c) => {
+                  const st = sit(c.status)
+                  return (
+                    <tr key={c.account_id}>
+                      <td className="px-3 py-2 font-medium text-gray-900">
+                        {c.nome ?? c.account_id}
+                        <span className="block text-xs font-normal text-gray-400">{c.account_id}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {st && (
+                          <span
+                            className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                              st.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'
+                            }`}
+                          >
+                            {st.nome}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">{c.gasto_total != null ? brl(Number(c.gasto_total)) : '—'}</td>
+                      <td className="px-3 py-2 text-gray-700">{c.saldo != null ? brl(Number(c.saldo)) : '—'}</td>
+                      <td className="px-3 py-2 text-gray-700">{c.forma_pagamento ?? '—'}</td>
+                      <td className="px-3 py-2 text-gray-700">{c.limite_gasto != null ? brl(Number(c.limite_gasto)) : 'sem limite'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {contasComProblema.map((c) => (
+            <p key={c.account_id} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              A conta {c.nome ?? c.account_id} está &quot;{sit(c.status)!.nome}&quot;: enquanto isso, os anúncios dela não rodam. Veja em Gerenciador
+              de Anúncios → Cobrança e pagamentos.
             </p>
-          )}
-          {situacao?.ok && ativasSemGasto && (
+          ))}
+          {contasNoLimite.map((c) => (
+            <p key={c.account_id} className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+              A conta {c.nome ?? c.account_id} chegou ao limite de gasto ({brl(Number(c.limite_gasto))}): os anúncios dela param até o limite ser
+              aumentado ou removido em Cobrança e pagamentos.
+            </p>
+          ))}
+          {ativasSemGasto && (
             <p className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
               Há campanha marcada como ativa, mas sem nenhum gasto nos últimos 7 dias. Confira no Gerenciador se o anúncio foi
-              aprovado e se o conjunto de anúncios está ligado.
-            </p>
-          )}
-          {outrasComGasto.length > 0 && (
-            <p className="rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
-              Também há gasto em outra(s) conta(s) que este painel não soma:{' '}
-              {outrasComGasto.map((o) => `${o.nome || o.id} (${o.gasto_total != null ? brl(o.gasto_total) : '—'})`).join(', ')}.
+              aprovado, se o conjunto de anúncios está ligado e se a conta tem limite ou saldo disponível.
             </p>
           )}
 
-          {contaInfo.cobrancas && contaInfo.cobrancas.length > 0 && (
+          {contas.some((c) => c.cobrancas && c.cobrancas.length > 0) && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Cobranças e pagamentos · últimos 90 dias</p>
               <ul className="divide-y divide-gray-100 text-sm">
-                {contaInfo.cobrancas.map((c, k) => (
-                  <li key={k} className="flex justify-between py-1.5 text-gray-700">
-                    <span>
-                      {c.data ? new Date(c.data).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—'} · {c.tipo}
-                    </span>
-                    <span className="font-medium">{c.valor != null ? brl(c.valor) : ''}</span>
-                  </li>
-                ))}
+                {contas.flatMap((c) =>
+                  (c.cobrancas ?? []).map((cb, k) => (
+                    <li key={`${c.account_id}-${k}`} className="flex justify-between py-1.5 text-gray-700">
+                      <span>
+                        {cb.data ? new Date(cb.data).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : '—'} · {cb.tipo}
+                        {contas.length > 1 && <span className="text-gray-400"> · {c.nome ?? c.account_id}</span>}
+                      </span>
+                      <span className="font-medium">{cb.valor != null ? brl(cb.valor) : ''}</span>
+                    </li>
+                  )),
+                )}
               </ul>
             </div>
           )}
@@ -278,6 +318,10 @@ export default async function MetaAdsPainel() {
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {c.nome}
                         {c.orcamento_diario != null && <span className="block text-xs text-gray-400">{brl(Number(c.orcamento_diario))}/dia</span>}
+                        {c.orcamento_diario == null && c.orcamento_total != null && (
+                          <span className="block text-xs text-gray-400">{brl(Number(c.orcamento_total))} no total</span>
+                        )}
+                        {contas.length > 1 && <span className="block text-xs text-gray-400">conta {nomeConta(c.account_id)}</span>}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${st.cor}`}>{st.nome}</span>
@@ -286,7 +330,8 @@ export default async function MetaAdsPainel() {
                         {brl(c.gastoTotal)}
                         {c.inicio && (
                           <span className="block text-xs font-normal text-gray-400">
-                            {dataBR(String(c.inicio))} a {c.fim ? dataBR(String(c.fim)) : '—'}
+                            {dataBR(String(c.inicio))}
+                            {c.fim ? ` a ${dataBR(String(c.fim))}` : ' em diante'}
                           </span>
                         )}
                       </td>
